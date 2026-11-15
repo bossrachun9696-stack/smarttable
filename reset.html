@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FBF6EE">
+  <title>SmartTable · ตั้งรหัสผ่านใหม่</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/st-style.css">
+</head>
+<body>
+<main class="st-auth">
+  <header class="st-brand">
+    <svg viewBox="0 0 48 48" aria-hidden="true">
+      <rect width="48" height="48" rx="14" fill="#E4572E"/>
+      <circle cx="24" cy="25" r="11" fill="#fff"/>
+      <circle cx="24" cy="25" r="6.5" fill="none" stroke="#E4572E" stroke-width="2"/>
+      <rect x="9" y="8" width="7" height="7" rx="1.5" fill="#fff"/>
+      <rect x="32" y="8" width="7" height="7" rx="1.5" fill="#fff"/>
+    </svg>
+    <div><h1>SmartTable</h1><p>ตั้งรหัสผ่านใหม่</p></div>
+  </header>
+
+  <section class="st-card">
+    <div id="st-msg" class="st-msg" role="status" hidden></div>
+
+    <p data-step="loading" class="st-sub">กำลังตรวจสอบลิงก์…</p>
+
+    <form id="form-reset" data-step="form" hidden novalidate>
+      <h2>ตั้งรหัสผ่านใหม่</h2>
+      <p class="st-sub">สำหรับบัญชี <b id="reset-email"></b></p>
+      <label class="st-field"><span>รหัสผ่านใหม่</span>
+        <div class="st-input">
+          <input name="password" type="password" autocomplete="new-password" minlength="8" required placeholder="อย่างน้อย 8 ตัว">
+          <button type="button" data-eye>แสดง</button>
+        </div>
+      </label>
+      <label class="st-field"><span>ยืนยันรหัสผ่านใหม่</span>
+        <div class="st-input">
+          <input name="password2" type="password" autocomplete="new-password" minlength="8" required placeholder="พิมพ์อีกครั้ง">
+          <button type="button" data-eye>แสดง</button>
+        </div>
+      </label>
+      <button class="st-btn" type="submit">บันทึกรหัสผ่านใหม่</button>
+    </form>
+
+    <div data-step="expired" hidden>
+      <h2>ลิงก์ใช้ไม่ได้</h2>
+      <p class="st-sub">ลิงก์อาจหมดอายุ ถูกใช้ไปแล้ว หรือไม่ได้เปิดจากอีเมล กรุณาขอลิงก์ใหม่</p>
+      <a class="st-btn" href="index.html#forgot" style="text-align:center;text-decoration:none">ขอลิงก์ใหม่</a>
+    </div>
+
+    <div data-step="done" hidden></div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/st-config.js"></script>
+<script src="js/st-auth.js"></script>
+<script src="js/st-reset.js"></script>
+</body>
+</html>
