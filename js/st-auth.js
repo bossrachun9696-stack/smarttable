@@ -74,7 +74,17 @@
     st_table_inactive: 'โต๊ะนี้ถูกปิดใช้งานอยู่',
     st_table_already_open: 'โต๊ะนี้เปิดอยู่แล้ว',
     st_table_not_open: 'โต๊ะนี้ยังไม่ได้เปิด',
-    st_table_not_found: 'ไม่พบโต๊ะนี้ QR อาจถูกเปลี่ยนแล้ว กรุณาแจ้งพนักงาน'
+    st_table_not_found: 'ไม่พบโต๊ะนี้ QR อาจถูกเปลี่ยนแล้ว กรุณาแจ้งพนักงาน',
+    st_session_invalid: 'โต๊ะนี้ปิดรอบแล้ว กรุณาสแกน QR ที่โต๊ะอีกครั้ง',
+    st_session_billing: 'โต๊ะนี้กำลังเช็กบิล สั่งเพิ่มไม่ได้ ถ้าต้องการสั่งเพิ่มกรุณาแจ้งพนักงาน',
+    st_shop_closed: 'ร้านปิดรับออร์เดอร์อยู่ตอนนี้',
+    st_bad_cart: 'รายการในตะกร้าไม่ถูกต้อง กรุณาลองใหม่',
+    st_too_many_orders: 'สั่งถี่เกินไป กรุณารอสักครู่แล้วลองใหม่',
+    st_item_gone: 'มีเมนูในตะกร้าที่ร้านเอาออกไปแล้ว กรุณาลบออกจากตะกร้า',
+    st_item_sold_out: 'มีเมนูหมดแล้ว กรุณาลบออกจากตะกร้า',
+    st_options_changed: 'ร้านเปลี่ยนตัวเลือกของเมนูนี้ กรุณาลบแล้วเลือกใหม่',
+    st_options_required: 'ยังเลือกตัวเลือกไม่ครบ',
+    st_order_cancelled: 'ออร์เดอร์นี้ยกเลิกไปแล้ว'
   };
   const ROLE_TH = { owner: 'เจ้าของ', manager: 'ผู้จัดการ', cashier: 'แคชเชียร์', kitchen: 'ครัว', waiter: 'พนักงานเสิร์ฟ' };
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
@@ -82,7 +92,7 @@
 
   function thaiError(e) {
     if (!e) return '';
-    if (e.message && MAP[e.message]) return MAP[e.message];
+    if (e.message && MAP[e.message]) return MAP[e.message] + (e.details ? ` (${e.details})` : '');
     if (e.code && MAP[e.code]) return MAP[e.code];
     const m = String(e.message || e).toLowerCase();
     if (m.includes('invalid login')) return MAP.invalid_credentials;

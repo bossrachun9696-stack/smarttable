@@ -31,7 +31,13 @@
     + (shop.is_open ? '' : '<br><b class="st-bad">ร้านปิดอยู่</b> ลูกค้าจะสั่งไม่ได้ (เปิดได้ที่หน้าข้อมูลร้าน)');
 
   const tableUrl = (qr) => pageUrl('table.html') + '?t=' + encodeURIComponent(qr);
+  const baht = (n) => '฿' + Number(n).toLocaleString('th-TH', { maximumFractionDigits: 2 });
+  const ORDER_TH = { new: 'ใหม่', accepted: 'รับแล้ว', cooking: 'กำลังทำ', served: 'เสิร์ฟแล้ว', cancelled: 'ยกเลิก' };
+  const CALL_TH = { call: '🙋 เรียกพนักงาน', bill: '🧾 ขอเช็กบิล' };
+  const canCancel = role !== 'kitchen';
   let tables = [];
+  let floor = { calls: [], sessions: [] };
+  let detail = null;        // รายละเอียดรอบของโต๊ะที่เปิดแผ่นอยู่
 
   // ---------- เวลา ----------
   function since(iso) {
@@ -44,14 +50,48 @@
 
   // ---------- โหลดและแสดงผังโต๊ะ ----------
   async function load() {
-    const { data, error } = await sb.rpc('st_tables_board', { p_shop: shopId });
+    const [{ data, error }, fl] = await Promise.all([
+      sb.rpc('st_tables_board', { p_shop: shopId }),
+      sb.rpc('st_floor_status', { p_shop: shopId })
+    ]);
     if (error) return showMsg(thaiError(error));
     tables = data;
+    if (!fl.error) floor = fl.data;
     render();
-    if (!$('#sheet').hidden && openId && sheetMode === 'actions') renderSheet();   // อัปเดตสถานะในแผ่นที่เปิดอยู่ (ไม่ทับฟอร์มที่กำลังพิมพ์)
+    if (!$('#sheet').hidden && openId && sheetMode === 'actions') loadDetail();   // อัปเดตแผ่นที่เปิดอยู่ (ไม่ทับฟอร์มที่กำลังพิมพ์)
   }
 
+  async function loadDetail() {
+    const id = openId;
+    const { data, error } = await sb.rpc('st_session_detail', { p_table: id });
+    if (id !== openId || sheetMode !== 'actions') return;
+    if (error) return sheetMsg(thaiError(error));
+    detail = data;
+    renderSheet();
+  }
+
+  // การเรียกจากลูกค้า (แถบด้านบน)
+  function renderCalls() {
+    $('#calls').innerHTML = floor.calls.map(c => `
+      <div class="st-call st-call--${c.kind}" data-call="${esc(c.id)}">
+        <span><b>โต๊ะ ${esc(c.table_label)}</b> ${CALL_TH[c.kind]} · ${since(c.created_at)}</span>
+        <button type="button" class="st-chip" data-act="call-done">รับทราบ</button>
+      </div>`).join('');
+  }
+  $('#calls').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-act="call-done"]');
+    if (!b) return;
+    b.disabled = true;
+    const { error } = await sb.rpc('st_handle_call', { p_call: b.closest('[data-call]').dataset.call });
+    if (error) { b.disabled = false; return showMsg(thaiError(error)); }
+    load();
+  });
+
   function render() {
+    renderCalls();
+    const sessBy = Object.fromEntries(floor.sessions.map(x => [x.table_id, x]));
+    const callsBy = {};
+    floor.calls.forEach(c => { (callsBy[c.table_id] = callsBy[c.table_id] || []).push(c.kind); });
     const active = tables.filter(t => t.is_active);
     const zones = [...new Set(active.map(t => t.zone || ''))];
     $('#board').innerHTML = active.length ? zones.map(z => `
@@ -61,8 +101,12 @@
           const s = stateOf(t);
           const info = s === 'free' ? `${t.seats} ที่นั่ง`
             : (t.session.guest_count ? t.session.guest_count + ' คน · ' : '') + since(t.session.opened_at);
-          return `<button type="button" class="st-tile st-tile--${s}" data-id="${esc(t.id)}">
-              <b>${esc(t.label)}</b><span>${esc(STATE_TH[s])}</span><small>${esc(info)}</small>
+          const fs = sessBy[t.id];
+          const calls = callsBy[t.id] || [];
+          return `<button type="button" class="st-tile st-tile--${s}${calls.length ? ' st-tile--alert' : ''}" data-id="${esc(t.id)}">
+              <b>${esc(t.label)}${calls.map(k => `<i>${k === 'bill' ? '🧾' : '🙋'}</i>`).join('')}</b>
+              <span>${esc(STATE_TH[s])}${fs && fs.new_orders ? ` · ใหม่ ${fs.new_orders}` : ''}</span>
+              <small>${esc(info)}${fs && Number(fs.subtotal) ? ' · ' + baht(fs.subtotal) : ''}</small>
             </button>`;
         }).join('')}
       </div>`).join('')
@@ -95,9 +139,11 @@
     const t = tables.find(x => x.id === id);
     guests = t ? Math.min(t.seats, 2) : 2;
     $('#sheet-msg').hidden = true;
+    detail = null;
     renderSheet();
     sheet.hidden = false;
     document.body.classList.add('st-noscroll');
+    if (mode === 'actions') loadDetail();
   }
   function closeSheet() {
     sheet.hidden = true; openId = null; sheetMode = null;
@@ -180,9 +226,47 @@
     }
     body.innerHTML = `
       <p class="st-sheet-info st-tile--${s}">${info}</p>
+      ${s === 'free' ? '' : detailHtml()}
       <div class="st-sheet-actions">${actions}
         <button class="st-btn st-btn--ghost" type="button" data-act="show-qr">แสดง QR ให้ลูกค้าสแกน</button>
       </div>`;
+  }
+
+  // ออร์เดอร์ + ยอดของรอบนี้
+  function detailHtml() {
+    if (!detail) return '<p class="st-sub" style="margin:12px 0 0">กำลังโหลดรายการ…</p>';
+    const b = detail.bill;
+    const calls = detail.calls.map(c => `
+      <div class="st-call st-call--${c.kind}" data-call="${esc(c.id)}">
+        <span>${CALL_TH[c.kind]} · ${since(c.created_at)}</span>
+        <button type="button" class="st-chip" data-act="call-done">รับทราบ</button>
+      </div>`).join('');
+    const orders = detail.orders.slice().reverse().map(o => `
+      <div class="st-order st-order--${o.status}">
+        <div class="st-order-head">
+          <b>#${o.order_no}</b>
+          <span>${new Date(o.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}${o.guest_name ? ' · ' + esc(o.guest_name) : ''}</span>
+          <em class="st-ostat st-ostat--${o.status}">${ORDER_TH[o.status]}</em>
+        </div>
+        ${o.items.map(i => `
+          <div class="st-oline">
+            <span>${i.qty}× ${esc(i.name)}${i.options.length ? `<small>${esc(i.options.map(x => x.name).join(' · '))}</small>` : ''}${i.note ? `<small>📝 ${esc(i.note)}</small>` : ''}</span>
+            <span>${baht(i.line_total)}</span>
+          </div>`).join('')}
+        ${o.note ? `<p class="st-sub" style="margin:4px 0 0">📝 ${esc(o.note)}</p>` : ''}
+        ${canCancel && o.status !== 'cancelled' ? `<div class="st-order-act"><button type="button" class="st-chip" data-act="cancel-order" data-order="${esc(o.id)}" data-no="${o.order_no}">ยกเลิกออร์เดอร์</button></div>` : ''}
+      </div>`).join('');
+    return `
+      ${calls}
+      <h4>รายการที่สั่ง (${detail.orders.filter(o => o.status !== 'cancelled').length})</h4>
+      ${orders || '<p class="st-sub">ยังไม่มีออร์เดอร์</p>'}
+      ${detail.orders.length ? `
+        <div class="st-bill">
+          <div><span>ค่าอาหาร</span><span>${baht(b.subtotal)}</span></div>
+          ${Number(b.service_pct) ? `<div><span>ค่าบริการ ${Number(b.service_pct)}%</span><span>${baht(b.service)}</span></div>` : ''}
+          ${Number(b.vat_pct) ? `<div><span>VAT ${Number(b.vat_pct)}%${b.vat_included ? ' (รวมแล้ว)' : ''}</span><span>${baht(b.vat)}</span></div>` : ''}
+          <div class="st-bill-total"><span>รวมทั้งหมด</span><b>${baht(b.total)}</b></div>
+        </div>` : ''}`;
   }
 
   // ---------- การกดในแผ่น ----------
@@ -198,7 +282,21 @@
       return;
     }
     if (act === 'show-qr') { sheetMode = 'qr'; return renderSheet(); }
-    if (act === 'back') { sheetMode = 'actions'; return renderSheet(); }
+    if (act === 'back') { sheetMode = 'actions'; renderSheet(); return loadDetail(); }
+    if (act === 'call-done') {
+      btn.disabled = true;
+      const { error: e1 } = await sb.rpc('st_handle_call', { p_call: btn.closest('[data-call]').dataset.call });
+      if (e1) { btn.disabled = false; return sheetMsg(thaiError(e1)); }
+      return load();
+    }
+    if (act === 'cancel-order') {
+      if (!confirm(`ยกเลิกออร์เดอร์ #${btn.dataset.no}? ยอดจะถูกหักออกจากบิล`)) return;
+      btn.disabled = true;
+      const { error: e2 } = await sb.rpc('st_set_order_status', { p_order: btn.dataset.order, p_status: 'cancelled' });
+      if (e2) { btn.disabled = false; return sheetMsg(thaiError(e2)); }
+      sheetMsg(`ยกเลิกออร์เดอร์ #${btn.dataset.no} แล้ว`, 'ok');
+      return load();
+    }
     if (act === 'copy-link') {
       return (await copyText(tableUrl(t.qr_token))) ? sheetMsg('คัดลอกลิงก์แล้ว', 'ok') : sheetMsg('คัดลอกไม่ได้');
     }

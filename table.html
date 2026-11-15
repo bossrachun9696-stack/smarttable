@@ -23,6 +23,12 @@
   <div id="st-msg" class="st-msg" role="status" hidden></div>
   <div id="g-state" class="st-state" hidden></div>
 
+  <div id="g-actions" class="st-guest-actions" hidden>
+    <button type="button" data-call="call">🙋 เรียกพนักงาน</button>
+    <button type="button" id="btn-orders">🧾 ที่สั่งแล้ว <span id="orders-count"></span></button>
+    <button type="button" data-call="bill">💳 ขอเช็กบิล</button>
+  </div>
+
   <div id="g-menu" hidden>
     <div class="st-guest-tools">
       <input id="g-search" type="search" placeholder="ค้นหาเมนู" autocomplete="off">
@@ -32,6 +38,26 @@
     <p class="st-center st-sub" style="margin-top:24px">SmartTable</p>
   </div>
 </main>
+
+<div id="cart-bar" class="st-cart-bar" hidden>
+  <button id="btn-cart" type="button">
+    <span id="cart-n" class="st-cart-n">0</span>
+    <span>ดูตะกร้า</span>
+    <b id="cart-total"></b>
+  </button>
+</div>
+<div id="toast" class="st-toast" role="status" hidden></div>
+
+<div id="sheet" class="st-sheet st-sheet--bottom" hidden>
+  <div class="st-sheet-panel" role="dialog" aria-modal="true">
+    <div class="st-sheet-head">
+      <b id="sheet-title"></b>
+      <button id="sheet-close" class="st-chip" type="button">ปิด</button>
+    </div>
+    <div id="sheet-msg" class="st-msg" role="status" hidden></div>
+    <div id="sheet-body"></div>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/st-config.js"></script>
