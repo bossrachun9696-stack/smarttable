@@ -30,6 +30,7 @@
   };
   renderHead();
   $('#link-menu').href = 'menu.html?id=' + encodeURIComponent(shopId);
+  $('#link-orders').href = 'orders.html?id=' + encodeURIComponent(shopId);
   $('#link-tables').href = 'tables.html?id=' + encodeURIComponent(shopId);
   $('#shop-body').hidden = false;
 

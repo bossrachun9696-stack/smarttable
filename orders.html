@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FBF6EE">
+  <title>ออร์เดอร์ · SmartTable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/st-style.css">
+</head>
+<body class="st-board-page">
+<main class="st-wide">
+  <div class="st-top">
+    <a id="back" href="home.html" class="st-chip">‹ ร้าน</a>
+    <div class="st-top-tools">
+      <span id="live" class="st-live" title="สถานะการเชื่อมต่อ">กำลังเชื่อมต่อ…</span>
+      <button id="btn-sound" class="st-chip" type="button">🔕 เปิดเสียง</button>
+      <button id="btn-wake" class="st-chip" type="button" hidden>จอไม่ดับ</button>
+      <button id="btn-mode" class="st-chip" type="button">โหมดครัว</button>
+    </div>
+  </div>
+  <h1 class="st-title">ออร์เดอร์ <small id="shop-sub" class="st-sub"></small></h1>
+
+  <div id="st-msg" class="st-msg" role="status" hidden></div>
+  <div id="sound-hint" class="st-banner" hidden>แตะ <b>🔕 เปิดเสียง</b> ด้านบน 1 ครั้ง เพื่อให้มีเสียงเมื่อออร์เดอร์ใหม่เข้า (iPhone ต้องปิดโหมดเงียบด้วย)</div>
+  <div id="calls" class="st-calls"></div>
+
+  <nav id="tabs" class="st-col-tabs" role="tablist">
+    <button type="button" data-tab="new" role="tab">ใหม่ <b id="n-new">0</b></button>
+    <button type="button" data-tab="cooking" role="tab">กำลังทำ <b id="n-cooking">0</b></button>
+    <button type="button" data-tab="served" role="tab">เสร็จแล้ว <b id="n-served">0</b></button>
+  </nav>
+
+  <div id="board" class="st-cols" hidden>
+    <section class="st-col" data-col="new"><h2>ใหม่ <b class="n"></b></h2><div class="st-col-list"></div></section>
+    <section class="st-col" data-col="cooking"><h2>กำลังทำ <b class="n"></b></h2><div class="st-col-list"></div></section>
+    <section class="st-col" data-col="served"><h2>เสร็จแล้ว (1 ชม.) <b class="n"></b></h2><div class="st-col-list"></div></section>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/st-config.js"></script>
+<script src="js/st-auth.js"></script>
+<script src="js/st-orders.js"></script>
+</body>
+</html>

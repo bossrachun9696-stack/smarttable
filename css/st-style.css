@@ -445,3 +445,68 @@ body.st-noscroll { overflow: hidden; }
 .st-line-price { font-weight: 700; color: var(--st-accent-dark); font-size: 14px; }
 .st-sum { display: flex; justify-content: space-between; align-items: baseline; font-size: 16px; }
 .st-sum b { font-size: 20px; color: var(--st-accent-dark); }
+
+/* ===== ขั้นที่ 6: กระดานออร์เดอร์ / จอครัว ===== */
+.st-wide { max-width: 1400px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top)) 14px calc(32px + env(safe-area-inset-bottom)); }
+.st-top-tools { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+.st-title small { font-size: 15px; font-weight: 400; margin-left: 6px; }
+.st-live { font-size: 12.5px; font-weight: 600; color: #9A6408; }
+.st-live.on { color: var(--st-ok); }
+.st-btn--ok { background: var(--st-ok); }
+.st-btn--ok:hover { background: #256649; }
+.st-board-page.st-flash { animation: st-flash 1.2s ease-out; }
+@keyframes st-flash { 0% { background: #FFD9C9; } 100% { background: var(--st-bg); } }
+
+.st-col-tabs { display: none; }
+.st-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 14px; align-items: start; }
+.st-col { background: #F3ECE1; border-radius: 16px; padding: 10px; min-height: 200px; }
+.st-col h2 { font-size: 16px; margin: 2px 4px 10px; display: flex; gap: 8px; align-items: center; }
+.st-col h2 .n { background: var(--st-ink); color: #fff; border-radius: 999px; font-size: 12px; padding: 1px 9px; }
+.st-col h2 .n:empty { display: none; }
+.st-col[data-col="new"] { background: #FBE3D9; }
+.st-col-list { display: grid; gap: 10px; }
+.st-col-empty { color: var(--st-muted); font-size: 14px; text-align: center; padding: 20px 0; margin: 0; }
+
+.st-ocard { background: #fff; border-radius: 14px; padding: 12px; border: 2px solid transparent; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.st-ocard--new { border-color: var(--st-accent); }
+.st-ocard.st-ocard--slow time { background: #FDF0D5; color: #8A5A06; }
+.st-ocard--late { border-color: var(--st-err); }
+.st-ocard.st-ocard--late time { background: var(--st-err); color: #fff; }
+.st-ocard--served, .st-ocard--cancelled { opacity: .7; }
+.st-ocard--cancelled .st-ocard-items { text-decoration: line-through; }
+.st-ocard header { display: flex; align-items: center; gap: 8px; }
+.st-ocard-table { font-size: 20px; }
+.st-ocard-no { color: var(--st-muted); font-weight: 600; }
+.st-ocard time { margin-left: auto; font-size: 13px; font-weight: 700; border-radius: 999px; padding: 2px 10px; background: var(--st-bg); color: var(--st-muted); white-space: nowrap; }
+.st-ocard-meta { font-size: 12.5px; color: var(--st-muted); margin: 2px 0 6px; }
+.st-ocard-items { list-style: none; margin: 0; padding: 0; }
+.st-ocard-items li { display: flex; gap: 8px; padding: 5px 0; border-top: 1px dashed var(--st-line); font-size: 15px; }
+.st-ocard-items li:first-child { border-top: 0; }
+.st-ocard-items li > b { min-width: 28px; color: var(--st-accent-dark); }
+.st-ocard-items small { display: block; color: var(--st-muted); font-size: 13px; }
+.st-ocard-items em { display: block; font-style: normal; font-size: 13px; font-weight: 600; color: var(--st-err); }
+.st-ocard-note { margin: 6px 0 0; font-size: 13px; font-weight: 600; color: var(--st-err); }
+.st-ocard footer { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.st-ocard footer .st-btn { width: auto; flex: 1; padding: 11px 14px; }
+.st-ocard-sum { margin-left: auto; font-size: 13px; color: var(--st-muted); }
+
+/* โหมดครัว: ตัวใหญ่ อ่านไกลได้ ไม่แสดงราคา */
+.st-kitchen .st-ocard-items li { font-size: 19px; }
+.st-kitchen .st-ocard-items small, .st-kitchen .st-ocard-items em { font-size: 16px; }
+.st-kitchen .st-ocard-table { font-size: 24px; }
+.st-kitchen .st-ocard-sum { display: none; }
+
+/* มือถือ: ทีละคอลัมน์ เลือกด้วยแท็บ */
+@media (max-width: 820px) {
+  .st-col-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: #EDE5D8; border-radius: 12px; padding: 4px; margin-top: 12px; position: sticky; top: 0; z-index: 4; }
+  .st-col-tabs button { font: inherit; font-weight: 600; font-size: 15px; border: 0; border-radius: 9px; padding: 9px 4px; background: transparent; color: var(--st-muted); cursor: pointer; }
+  .st-col-tabs button b { background: var(--st-line); color: var(--st-ink); border-radius: 999px; padding: 0 7px; font-size: 12px; margin-left: 2px; }
+  .st-col-tabs button[aria-selected="true"] { background: #fff; color: var(--st-ink); }
+  .st-col-tabs button[data-tab="new"] b { background: var(--st-accent); color: #fff; }
+  .st-cols { grid-template-columns: 1fr; margin-top: 10px; }
+  .st-col { display: none; background: transparent; padding: 0; }
+  .st-col.on { display: block; }
+  .st-col h2 { display: none; }
+}
+
+.st-chip { white-space: nowrap; }

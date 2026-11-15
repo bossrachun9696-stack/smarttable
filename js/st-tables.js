@@ -10,6 +10,7 @@
   const shopId = new URLSearchParams(location.search).get('id');
   if (!shopId) return location.replace('home.html');
   $('#back').href = 'shop.html?id=' + encodeURIComponent(shopId);
+  $('#link-orders').href = 'orders.html?id=' + encodeURIComponent(shopId);
   $('#btn-print').href = 'print.html?id=' + encodeURIComponent(shopId);
 
   const [{ data: shop }, { data: me }] = await Promise.all([
@@ -386,7 +387,17 @@
     });
   }
 
-  // ---------- เริ่มต้น + รีเฟรชอัตโนมัติ ----------
+  // ---------- Realtime: มีออร์เดอร์ / การเรียก / เปิดปิดโต๊ะ -> โหลดใหม่ ----------
+  let rt;
+  const schedule = () => { clearTimeout(rt); rt = setTimeout(load, 400); };
+  const filter = `shop_id=eq.${shopId}`;
+  sb.channel('st-tables-' + shopId)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'st_orders', filter }, schedule)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'st_service_calls', filter }, schedule)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'st_table_sessions', filter }, schedule)
+    .subscribe();
+
+  // ---------- เริ่มต้น + รีเฟรชอัตโนมัติ (สำรอง) ----------
   await load();
   $('#tables-body').hidden = false;
   setInterval(() => { if (!document.hidden) load(); }, 15000);

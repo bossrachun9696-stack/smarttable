@@ -439,7 +439,12 @@
   if (!(await loadMenu())) return;
   $('#g-menu').hidden = false;
 
-  // อัปเดตสถานะ + ที่สั่งแล้ว ทุก 20 วินาที
-  setInterval(() => { if (!document.hidden) scan(false); }, 20000);
+  // อัปเดตสถานะ + ที่สั่งแล้ว: ทุก 8 วินาทีถ้ามีอาหารกำลังทำ ไม่งั้นทุก 20 วินาที
+  const busy = () => !!guestInfo && guestInfo.orders.some(o => ['new', 'accepted', 'cooking'].includes(o.status));
+  let lastPoll = Date.now();
+  setInterval(() => {
+    if (document.hidden) return;
+    if (Date.now() - lastPoll >= (busy() ? 8000 : 20000)) { lastPoll = Date.now(); scan(false); }
+  }, 2000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) scan(false); });
 })();
