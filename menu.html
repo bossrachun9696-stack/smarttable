@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FBF6EE">
+  <title>เมนูอาหาร · SmartTable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/st-style.css">
+</head>
+<body>
+<main class="st-page">
+  <div class="st-top">
+    <a id="back" href="home.html" class="st-chip">‹ ร้าน</a>
+    <span id="my-role" class="st-badge"></span>
+  </div>
+  <h1 class="st-title">เมนูอาหาร</h1>
+  <p id="shop-sub" class="st-sub">กำลังโหลด…</p>
+
+  <div id="st-msg" class="st-msg" role="status" hidden></div>
+
+  <div id="menu-body" hidden>
+    <!-- หมวดหมู่ (เจ้าของ/ผู้จัดการ) -->
+    <section id="cat-card" class="st-card" hidden>
+      <h3>หมวดหมู่</h3>
+      <div id="cat-list"></div>
+      <form id="form-cat" class="st-inline" novalidate>
+        <input name="cat_name" type="text" maxlength="60" placeholder="ชื่อหมวดใหม่ เช่น อาหารจานเดียว">
+        <button class="st-btn st-btn--ghost" type="submit">เพิ่ม</button>
+      </form>
+    </section>
+
+    <div class="st-row-between">
+      <h2 class="st-h">รายการเมนู <small id="item-count"></small></h2>
+      <button id="btn-add" class="st-chip st-chip--accent" type="button" hidden>+ เพิ่มเมนู</button>
+    </div>
+    <p id="staff-hint" class="st-sub" hidden>แตะสวิตช์เพื่อบอกลูกค้าว่าเมนูนั้น "หมด" หรือ "มี"</p>
+    <div id="item-groups"></div>
+  </div>
+</main>
+
+<!-- แผ่นแก้ไขเมนู -->
+<div id="sheet" class="st-sheet" hidden>
+  <div class="st-sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="st-sheet-head">
+      <button id="sheet-close" class="st-chip" type="button">ยกเลิก</button>
+      <b id="sheet-title">เพิ่มเมนู</b>
+      <span style="width:64px"></span>
+    </div>
+    <form id="form-item" novalidate>
+      <div id="sheet-msg" class="st-msg" role="status" hidden></div>
+
+      <div class="st-photo">
+        <div id="photo-preview" class="st-photo-box">ยังไม่มีรูป</div>
+        <div class="st-photo-actions">
+          <label class="st-chip st-chip--accent">เลือกรูป / ถ่ายรูป
+            <input id="photo-input" type="file" accept="image/*" hidden>
+          </label>
+          <button id="photo-remove" class="st-chip" type="button" hidden>ลบรูป</button>
+          <small>ระบบย่อรูปให้อัตโนมัติ</small>
+        </div>
+      </div>
+
+      <label class="st-field"><span>ชื่อเมนู</span>
+        <input name="item_name" type="text" maxlength="80" required placeholder="เช่น กะเพราหมูกรอบ">
+      </label>
+      <div class="st-grid2">
+        <label class="st-field"><span>ราคา (บาท)</span>
+          <input name="price" type="number" min="0" max="100000" step="0.25" inputmode="decimal" required placeholder="65">
+        </label>
+        <label class="st-field"><span>หมวดหมู่</span>
+          <select name="category_id"></select>
+        </label>
+      </div>
+      <label class="st-field"><span>คำอธิบาย (ไม่บังคับ)</span>
+        <textarea name="description" maxlength="300" rows="2" placeholder="เช่น หมูกรอบทอดใหม่ ราดข้าวสวย"></textarea>
+      </label>
+      <div class="st-grid2">
+        <label class="st-field"><span>ป้ายความเผ็ด</span>
+          <select name="spicy_level">
+            <option value="0">ไม่แสดง</option>
+            <option value="1">🌶 เผ็ดน้อย</option>
+            <option value="2">🌶🌶 เผ็ดกลาง</option>
+            <option value="3">🌶🌶🌶 เผ็ดมาก</option>
+          </select>
+        </label>
+        <label class="st-check st-check--box"><input type="checkbox" name="is_recommended"> <span>⭐ เมนูแนะนำ</span></label>
+      </div>
+
+      <h4>ตัวเลือกเพิ่มเติม</h4>
+      <p class="st-sub">เช่น "ไข่" (ไข่ดาว +10, ไข่เจียว +15) หรือ "ความเผ็ด" (น้อย / กลาง / มาก)</p>
+      <div id="opt-groups"></div>
+      <button id="btn-add-group" class="st-btn st-btn--ghost" type="button">+ เพิ่มกลุ่มตัวเลือก</button>
+
+      <div class="st-sheet-foot">
+        <button class="st-btn" type="submit">บันทึกเมนู</button>
+        <button id="btn-delete" class="st-btn st-btn--ghost st-danger" type="button" hidden>ลบเมนูนี้</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/st-config.js"></script>
+<script src="js/st-auth.js"></script>
+<script src="js/st-menu.js"></script>
+</body>
+</html>
