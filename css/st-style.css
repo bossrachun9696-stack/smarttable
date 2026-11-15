@@ -1,0 +1,117 @@
+/* ===== SmartTable · สไตล์หน้าล็อกอิน ===== */
+:root {
+  --st-bg: #FBF6EE;
+  --st-card: #FFFFFF;
+  --st-ink: #221E1A;
+  --st-muted: #6E655C;
+  --st-line: #E9E0D3;
+  --st-accent: #E4572E;
+  --st-accent-dark: #C2441F;
+  --st-accent-soft: #FDE9E1;
+  --st-ok: #2F7D5B;
+  --st-ok-soft: #E3F2EA;
+  --st-err: #B83227;
+  --st-err-soft: #FBE6E3;
+  --st-radius: 16px;
+  --st-font: 'IBM Plex Sans Thai', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: var(--st-font);
+  background: var(--st-bg);
+  color: var(--st-ink);
+  line-height: 1.55;
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+}
+[hidden] { display: none !important; }
+
+.st-auth {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: calc(28px + env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom));
+}
+
+/* แบรนด์ */
+.st-brand { display: flex; align-items: center; gap: 12px; margin: 8px 4px 22px; }
+.st-brand svg { width: 48px; height: 48px; flex: none; }
+.st-brand h1 { font-size: 24px; margin: 0; letter-spacing: -.01em; }
+.st-brand p { margin: 0; color: var(--st-muted); font-size: 14px; }
+
+/* การ์ด */
+.st-card {
+  background: var(--st-card);
+  border: 1px solid var(--st-line);
+  border-radius: var(--st-radius);
+  padding: 20px;
+  box-shadow: 0 10px 30px -18px rgba(60, 40, 20, .25);
+}
+.st-card h2 { font-size: 20px; margin: 0 0 4px; }
+.st-card .st-sub { color: var(--st-muted); font-size: 14px; margin: 0 0 16px; }
+
+/* แท็บ */
+.st-tabs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+  background: var(--st-bg); border-radius: 12px; padding: 4px; margin-bottom: 18px;
+}
+.st-tabs button {
+  font: inherit; font-weight: 600; font-size: 15px;
+  border: 0; border-radius: 9px; padding: 10px; cursor: pointer;
+  background: transparent; color: var(--st-muted);
+}
+.st-tabs button[aria-selected="true"] { background: var(--st-card); color: var(--st-ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+/* ฟอร์ม */
+.st-field { display: block; margin-bottom: 14px; }
+.st-field > span { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.st-field small { display: block; color: var(--st-muted); font-size: 12.5px; margin-top: 5px; }
+.st-input { position: relative; }
+.st-field input {
+  width: 100%; font: inherit; font-size: 16px; /* 16px กัน iPhone ซูมหน้าเอง */
+  padding: 12px 14px; border: 1.5px solid var(--st-line); border-radius: 12px;
+  background: #fff; color: var(--st-ink); outline: none; transition: border-color .15s, box-shadow .15s;
+}
+.st-field input:focus { border-color: var(--st-accent); box-shadow: 0 0 0 4px var(--st-accent-soft); }
+.st-input input { padding-right: 64px; }
+.st-input [data-eye] {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  font: inherit; font-size: 13px; font-weight: 600; color: var(--st-muted);
+  background: none; border: 0; padding: 8px 10px; cursor: pointer;
+}
+
+.st-btn {
+  display: block; width: 100%; font: inherit; font-size: 16px; font-weight: 700;
+  padding: 13px 16px; border: 0; border-radius: 12px; cursor: pointer;
+  background: var(--st-accent); color: #fff; transition: background .15s, transform .05s;
+}
+.st-btn:hover { background: var(--st-accent-dark); }
+.st-btn:active { transform: scale(.99); }
+.st-btn:disabled { opacity: .6; cursor: progress; }
+.st-btn--ghost { background: transparent; color: var(--st-ink); border: 1.5px solid var(--st-line); }
+.st-btn--ghost:hover { background: var(--st-bg); }
+
+.st-row { display: flex; justify-content: flex-end; margin: -4px 0 16px; }
+.st-link { color: var(--st-accent-dark); font-weight: 600; font-size: 14px; text-decoration: none; }
+.st-link:hover { text-decoration: underline; }
+.st-center { text-align: center; margin-top: 16px; }
+
+/* ข้อความแจ้ง */
+.st-msg { border-radius: 12px; padding: 11px 14px; font-size: 14px; margin-bottom: 16px; }
+.st-msg--error { background: var(--st-err-soft); color: var(--st-err); }
+.st-msg--ok { background: var(--st-ok-soft); color: var(--st-ok); }
+
+.st-foot { text-align: center; color: var(--st-muted); font-size: 13px; margin-top: 20px; }
+
+/* หน้าหลัก */
+.st-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+.st-top .st-brand { margin: 0; }
+.st-top .st-brand svg { width: 36px; height: 36px; }
+.st-top .st-brand h1 { font-size: 19px; }
+.st-chip { font: inherit; font-size: 14px; font-weight: 600; background: var(--st-card); border: 1px solid var(--st-line); border-radius: 999px; padding: 7px 14px; cursor: pointer; color: var(--st-ink); }
+.st-me { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.st-avatar { width: 52px; height: 52px; border-radius: 50%; background: var(--st-accent-soft); color: var(--st-accent-dark); display: grid; place-items: center; font-weight: 700; font-size: 22px; }
+.st-me h2 { margin: 0; }
+.st-me p { margin: 0; color: var(--st-muted); font-size: 14px; word-break: break-all; }
+.st-next { margin-top: 14px; background: var(--st-bg); border: 1px dashed var(--st-line); border-radius: 12px; padding: 14px; font-size: 14px; color: var(--st-muted); }
+.st-next b { color: var(--st-ink); }
