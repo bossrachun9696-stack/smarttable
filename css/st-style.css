@@ -633,3 +633,46 @@ body.st-noscroll { overflow: hidden; }
 .st-ev-main { min-width: 0; }
 .st-ev-main b, .st-ev-main small { display: block; }
 .st-ev-main small { color: var(--st-muted); font-size: 13px; }
+
+/* ===== รอบ B: หลายภาษา โปร คูปอง คะแนน ===== */
+.st-lang { display: flex; gap: 6px; justify-content: flex-end; margin: -6px 2px 10px; }
+.st-lang button { font: inherit; font-size: 13px; font-weight: 700; border: 1px solid var(--st-line); background: #fff; color: var(--st-muted); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.st-lang button[aria-pressed="true"] { background: var(--st-ink); color: #fff; border-color: var(--st-ink); }
+.st-was { color: var(--st-muted); font-size: 13px; font-weight: 400; }
+.st-tag--promo { background: var(--st-accent); color: #fff; }
+.st-promo-line { margin: -6px 0 12px; font-size: 13.5px; font-weight: 600; color: var(--st-accent-dark); }
+.st-rate { background: #fff; border: 1.5px solid var(--st-accent); border-radius: 16px; padding: 14px; margin: 6px 0 12px; display: grid; gap: 10px; text-align: center; }
+.st-rate textarea { font: inherit; font-size: 16px; padding: 10px 12px; border: 1.5px solid var(--st-line); border-radius: 12px; resize: vertical; }
+.st-stars { display: flex; justify-content: center; gap: 6px; }
+.st-stars button { font-size: 34px; line-height: 1; background: none; border: 0; color: #D9D1C5; cursor: pointer; padding: 2px; }
+.st-stars button[aria-pressed="true"] { color: #F2B01E; }
+.st-rating-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.st-rating-head b { font-size: 34px; }
+.st-stars-ro { color: #F2B01E; font-size: 20px; letter-spacing: 1px; }
+.st-rating-head small { color: var(--st-muted); }
+.st-hbar--rate { margin-bottom: 6px; }
+.st-hbar--rate .st-hbar-track i { background: #F2B01E; }
+
+.st-disc-row { display: flex; gap: 8px; align-items: center; }
+.st-disc-row input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 11px 14px; border: 1.5px solid var(--st-line); border-radius: 12px; background: #fff; color: var(--st-ink); }
+.st-disc-row input:disabled { background: var(--st-bg); color: var(--st-muted); }
+.st-unit { display: flex; background: var(--st-bg); border-radius: 10px; padding: 3px; flex: none; }
+.st-unit button { font: inherit; font-weight: 700; border: 0; background: transparent; color: var(--st-muted); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+.st-unit button[aria-selected="true"] { background: #fff; color: var(--st-ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.st-coupon-on { display: flex; align-items: center; gap: 8px; background: var(--st-ok-soft); color: var(--st-ok); border-radius: 12px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; }
+.st-coupon-on .st-chip { margin-left: auto; }
+
+.st-i18n { border: 1px solid var(--st-line); border-radius: 14px; padding: 8px 12px 4px; margin: 0 0 10px; background: #fff; }
+.st-i18n legend { font-weight: 700; padding: 0 4px; }
+.st-i18n-opts { display: grid; gap: 6px; margin-bottom: 12px; }
+.st-i18n-opts > small { color: var(--st-muted); font-weight: 600; }
+.st-i18n-opts label { display: grid; grid-template-columns: 40% 1fr; gap: 8px; align-items: center; font-size: 14px; }
+.st-i18n-opts input { font: inherit; font-size: 16px; padding: 8px 10px; border: 1.5px solid var(--st-line); border-radius: 10px; min-width: 0; }
+
+.st-logo--code { font-size: 18px; }
+.st-code { font-family: ui-monospace, Menlo, monospace; letter-spacing: .04em; }
+.st-seg--3 { grid-template-columns: repeat(3, 1fr); }
+.st-seg--3 label { cursor: pointer; }
+.st-seg--3 input { position: absolute; opacity: 0; pointer-events: none; }
+.st-seg--3 span { display: block; text-align: center; font-size: 14px; font-weight: 600; border-radius: 9px; padding: 9px 4px; color: var(--st-muted); }
+.st-seg--3 input:checked + span { background: #fff; color: var(--st-ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }

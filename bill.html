@@ -30,9 +30,22 @@
     </section>
 
     <section class="st-card">
-      <label id="b-disc-wrap" class="st-field"><span>ส่วนลด (บาท)</span>
-        <input id="b-disc" type="number" min="0" step="1" inputmode="decimal" placeholder="0">
-      </label>
+      <div id="b-disc-wrap">
+        <div class="st-field"><span>ส่วนลด</span>
+          <div class="st-disc-row">
+            <input id="b-disc" type="number" min="0" step="1" inputmode="decimal" placeholder="0">
+            <div id="b-unit" class="st-unit" role="tablist">
+              <button type="button" data-u="baht" aria-selected="true">฿</button>
+              <button type="button" data-u="pct" aria-selected="false">%</button>
+            </div>
+          </div>
+        </div>
+        <div class="st-disc-row" style="margin-bottom:12px">
+          <input id="b-coupon" type="text" maxlength="20" placeholder="โค้ดคูปอง" autocapitalize="characters" style="text-transform:uppercase">
+          <button id="b-coupon-apply" class="st-chip" type="button">ใช้คูปอง</button>
+        </div>
+        <div id="b-coupon-on" class="st-coupon-on" hidden></div>
+      </div>
       <div id="b-bill" class="st-bill st-bill--flat"></div>
     </section>
 

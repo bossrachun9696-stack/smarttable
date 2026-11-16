@@ -73,6 +73,7 @@
     }
     report = data;
     render();
+    loadRatings(from, to);
     $('#r-body').hidden = false;
     $('#btn-csv').hidden = !data.receipts.length;
   }
@@ -202,6 +203,22 @@
     $('#top-items').innerHTML = rows.length ? `<table class="st-tbl"><thead><tr><th>#</th><th>เมนู</th><th>จำนวน</th><th>ยอดขาย</th></tr></thead><tbody>
       ${rows.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name)}</td><td>${num(r.qty)}</td><td>${money(r.revenue, 2)}</td></tr>`).join('')}
       </tbody></table><p class="st-sub" style="margin:8px 0 0">ยอดขายรายเมนูเป็นราคาก่อนส่วนลด/ค่าบริการ</p>` : '<p class="st-sub">ไม่มีข้อมูล</p>';
+  }
+
+  // ----- คะแนนจากลูกค้า -----
+  async function loadRatings(from, to) {
+    const { data: r, error } = await sb.rpc('st_rating_summary', { p_shop: shopId, p_from: from, p_to: to });
+    if (error) { $('#ratings').innerHTML = `<p class="st-sub">${esc(thaiError(error))}</p>`; return; }
+    if (!r.count) { $('#ratings').innerHTML = '<p class="st-sub">ยังไม่มีคะแนนในช่วงนี้ (ลูกค้าให้คะแนนได้ตอนเช็กบิล และภายใน 3 ชม. หลังจ่าย)</p>'; return; }
+    const max = Math.max(...r.dist, 1);
+    $('#ratings').innerHTML = `
+      <div class="st-rating-head"><b>${Number(r.avg).toFixed(1)}</b><span class="st-stars-ro" aria-label="${Number(r.avg).toFixed(1)} ดาว">${'★'.repeat(Math.round(r.avg))}${'☆'.repeat(5 - Math.round(r.avg))}</span><small>${num(r.count)} คะแนน</small></div>
+      ${[5, 4, 3, 2, 1].map(s => `
+        <div class="st-hbar st-hbar--rate"><div class="st-hbar-label"><span>${s} ★</span><b>${r.dist[s - 1]}</b></div>
+          <div class="st-hbar-track"><i style="width:${Math.max(r.dist[s - 1] ? 2 : 0, r.dist[s - 1] / max * 100)}%"></i></div></div>`).join('')}
+      ${r.comments.length ? `<h4>ความเห็นล่าสุด</h4>${r.comments.map(c => `
+        <div class="st-ev"><span class="st-ev-icon">${c.stars}★</span><div class="st-ev-main"><b>${esc(c.comment)}</b>
+          <small>โต๊ะ ${esc(c.table_label)} · ${new Date(c.at).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</small></div></div>`).join('')}` : ''}`;
   }
 
   // ---------- CSV (เปิดใน Excel / Google Sheets ภาษาไทยไม่เพี้ยน) ----------

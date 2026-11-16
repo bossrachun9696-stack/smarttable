@@ -22,6 +22,7 @@
   let current = shop;
   $('#link-reports').hidden = !canManage;
   $('#link-audit').hidden = !canManage;
+  $('#link-promos').hidden = !canManage;
 
   $('#my-role').textContent = 'คุณ: ' + (ROLE_TH[role] || '-');
   const renderHead = () => {
@@ -35,6 +36,7 @@
   $('#link-orders').href = 'orders.html?id=' + encodeURIComponent(shopId);
   $('#link-reports').href = 'reports.html?id=' + encodeURIComponent(shopId);
   $('#link-audit').href = 'audit.html?id=' + encodeURIComponent(shopId);
+  $('#link-promos').href = 'promos.html?id=' + encodeURIComponent(shopId);
   $('#link-receipts').href = 'receipts.html?id=' + encodeURIComponent(shopId);
   $('#link-tables').href = 'tables.html?id=' + encodeURIComponent(shopId);
   $('#shop-body').hidden = false;
@@ -153,6 +155,14 @@
       if (e.target.type === 'color') saveBrand({ theme_color: e.target.value.toUpperCase() }, 'เปลี่ยนสีร้านแล้ว');
     });
   }
+
+  // ภาษาสำหรับลูกค้า
+  const langBoxes = [...document.querySelectorAll('#brand-card [data-lang]')];
+  langBoxes.forEach(b => { b.checked = (current.languages || []).includes(b.dataset.lang); b.disabled = !canManage; });
+  langBoxes.forEach(b => b.addEventListener('change', () => {
+    const langs = langBoxes.filter(x => x.checked).map(x => x.dataset.lang);
+    saveBrand({ languages: langs }, langs.length ? 'เปิดภาษาแล้ว — ใส่คำแปลได้ที่หน้าเมนูอาหาร' : 'ปิดภาษาอื่นแล้ว');
+  }));
 
   // ---------- พนักงาน ----------
   const assignable = isOwner ? ['manager', 'cashier', 'kitchen', 'waiter'] : ['cashier', 'kitchen', 'waiter'];

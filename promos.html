@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FBF6EE">
+  <title>โปรโมชันและคูปอง · SmartTable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/st-style.css">
+</head>
+<body>
+<main class="st-page">
+  <div class="st-top"><a id="back" href="home.html" class="st-chip">‹ ร้าน</a></div>
+  <h1 class="st-title">โปรโมชันและคูปอง</h1>
+  <p class="st-sub" id="shop-sub"></p>
+  <div id="st-msg" class="st-msg" role="status" hidden></div>
+
+  <div id="p-body" hidden>
+    <section class="st-card">
+      <div class="st-row-between"><h3 style="margin:0">⏰ โปรตามเวลา</h3><button id="add-promo" class="st-chip st-chip--accent" type="button">+ เพิ่มโปร</button></div>
+      <p class="st-sub" style="margin-top:6px">ลดราคาอัตโนมัติตามวันและเวลา เช่น "เครื่องดื่มลด 20% จ.–ศ. 14:00–17:00" · ลูกค้าเห็นราคาลดในเมนู</p>
+      <div id="promo-list"></div>
+    </section>
+
+    <section class="st-card">
+      <div class="st-row-between"><h3 style="margin:0">🎟 คูปองส่วนลด</h3><button id="add-coupon" class="st-chip st-chip--accent" type="button">+ เพิ่มคูปอง</button></div>
+      <p class="st-sub" style="margin-top:6px">ลูกค้าบอกโค้ด → แคชเชียร์ใส่โค้ดตอนเช็กบิล · จำกัดจำนวนครั้ง/วันหมดอายุได้</p>
+      <div id="coupon-list"></div>
+    </section>
+  </div>
+</main>
+
+<div id="sheet" class="st-sheet st-sheet--bottom" hidden>
+  <div class="st-sheet-panel" role="dialog" aria-modal="true">
+    <div class="st-sheet-head"><b id="sheet-title"></b><button id="sheet-close" class="st-chip" type="button">ปิด</button></div>
+    <div id="sheet-msg" class="st-msg" role="status" hidden></div>
+    <div id="sheet-body"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/st-config.js"></script>
+<script src="js/st-auth.js"></script>
+<script src="js/st-promos.js"></script>
+</body>
+</html>

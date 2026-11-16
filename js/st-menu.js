@@ -12,7 +12,7 @@
   $('#back').href = 'shop.html?id=' + encodeURIComponent(shopId);
 
   const [{ data: shop }, { data: me }] = await Promise.all([
-    sb.from('st_shops').select('id, name').eq('id', shopId).maybeSingle(),
+    sb.from('st_shops').select('id, name, languages').eq('id', shopId).maybeSingle(),
     sb.from('st_shop_members').select('role').eq('shop_id', shopId).eq('user_id', user.id).maybeSingle()
   ]);
   if (!shop || !me) { $('#shop-sub').textContent = ''; return showMsg('ไม่พบร้านนี้ หรือคุณไม่ได้เป็นพนักงานของร้าน'); }
@@ -22,6 +22,8 @@
   $('#shop-sub').textContent = shop.name;
   $('#my-role').textContent = 'คุณ: ' + ROLE_TH[role];
   document.title = 'เมนู · ' + shop.name;
+  const LANGS = (shop.languages || []).filter(l => l === 'en' || l === 'zh');
+  const LANG_TH = { en: 'ภาษาอังกฤษ', zh: 'ภาษาจีน' };
 
   const BUCKET = 'st-images';
   const imgUrl = (path) => sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
@@ -49,6 +51,7 @@
           <button type="button" data-act="cat-down" ${i === cats.length - 1 ? 'disabled' : ''} aria-label="เลื่อนลง">↓</button>
         </div>
         <button type="button" class="st-chip" data-act="cat-rename">แก้ชื่อ</button>
+        ${LANGS.length ? `<button type="button" class="st-chip" data-act="cat-i18n" title="คำแปล">🌐</button>` : ''}
         <button type="button" class="st-icon-btn" data-act="cat-delete" aria-label="ลบหมวด">✕</button>
       </div>`).join('') : '<p class="st-sub">ยังไม่มีหมวดหมู่ ลองเพิ่ม เช่น "อาหารจานเดียว" "เครื่องดื่ม"</p>';
 
@@ -120,7 +123,15 @@
       const cat = data.categories.find(c => c.id === id);
       const act = btn.dataset.act;
       let error;
-      if (act === 'cat-rename') {
+      if (act === 'cat-i18n') {
+        const next = { ...(cat.i18n || {}) };
+        for (const l of LANGS) {
+          const v = prompt(`ชื่อหมวด "${cat.name}" เป็น${LANG_TH[l]}`, next[l] || '');
+          if (v === null) return;
+          if (v.trim()) next[l] = v.trim().slice(0, 60); else delete next[l];
+        }
+        ({ error } = await sb.rpc('st_set_category_i18n', { p_cat: id, p_i18n: next }));
+      } else if (act === 'cat-rename') {
         const name = prompt('ชื่อหมวดใหม่', cat.name);
         if (!name || !name.trim() || name.trim() === cat.name) return;
         ({ error } = await sb.rpc('st_save_category', { p_shop: shopId, p_id: id, p_name: name.trim() }));
@@ -220,6 +231,8 @@
     fi.spicy_level.value = item ? String(item.spicy_level) : '0';
     fi.is_recommended.checked = item ? item.is_recommended : false;
     fi.stock_left.value = item && item.stock_left != null ? item.stock_left : '';
+    i18nDraft = JSON.parse(JSON.stringify((item && item.i18n) || {}));
+    renderI18n();
     const have = new Set(item ? item.tags || [] : []);
     $('#tag-picks').innerHTML = Object.entries(TAGS).map(([k, t]) =>
       `<label class="st-tagchip"><input type="checkbox" value="${k}"${have.has(k) ? ' checked' : ''}><span>${t.icon} ${t.th}</span></label>`).join('');
@@ -342,6 +355,55 @@
     return out;
   }
 
+  // ---------- คำแปล (ภาษาที่ร้านเปิด) ----------
+  let i18nDraft = {};
+  const optStrings = () => {
+    const out = [];
+    $('#opt-groups').querySelectorAll('.og-name, .oc-name').forEach(i => { const v = i.value.trim(); if (v && !out.includes(v)) out.push(v); });
+    return out;
+  };
+  function keepI18nInputs() {
+    $('#i18n-fields').querySelectorAll('[data-l]').forEach(inp => {
+      const l = inp.dataset.l, f = inp.dataset.f, k = inp.dataset.k;
+      i18nDraft[l] = i18nDraft[l] || {};
+      if (f === 'opts') { i18nDraft[l].opts = i18nDraft[l].opts || {}; i18nDraft[l].opts[k] = inp.value; }
+      else i18nDraft[l][f] = inp.value;
+    });
+  }
+  function renderI18n() {
+    $('#i18n-box').hidden = !LANGS.length;
+    if (!LANGS.length) return;
+    const opts = optStrings();
+    $('#i18n-fields').innerHTML = LANGS.map(l => {
+      const d = i18nDraft[l] || {};
+      return `<fieldset class="st-i18n"><legend>${LANG_TH[l]}</legend>
+        <label class="st-field"><span>ชื่อเมนู</span><input data-l="${l}" data-f="name" maxlength="80" value="${esc(d.name || '')}" placeholder="${l === 'en' ? 'e.g. Crispy pork basil' : '例如：罗勒炒脆皮猪肉'}"></label>
+        <label class="st-field"><span>คำอธิบาย</span><input data-l="${l}" data-f="description" maxlength="300" value="${esc(d.description || '')}"></label>
+        ${opts.length ? `<div class="st-i18n-opts"><small>ตัวเลือก</small>${opts.map(s => `
+          <label><span>${esc(s)}</span><input data-l="${l}" data-f="opts" data-k="${esc(s)}" maxlength="60" value="${esc((d.opts || {})[s] || '')}"></label>`).join('')}</div>` : ''}
+      </fieldset>`;
+    }).join('') + `<button type="button" class="st-chip" id="i18n-refresh">↻ อัปเดตรายการตัวเลือกที่ต้องแปล</button>`;
+  }
+  function collectI18n() {
+    keepI18nInputs();
+    const opts = optStrings();
+    const out = {};
+    for (const l of LANGS) {
+      const d = i18nDraft[l] || {};
+      const o = {};
+      opts.forEach(s => { const v = ((d.opts || {})[s] || '').trim(); if (v) o[s] = v.slice(0, 60); });
+      const entry = {};
+      if ((d.name || '').trim()) entry.name = d.name.trim().slice(0, 80);
+      if ((d.description || '').trim()) entry.description = d.description.trim().slice(0, 300);
+      if (Object.keys(o).length) entry.opts = o;
+      if (Object.keys(entry).length) out[l] = entry;
+    }
+    return out;
+  }
+  $('#i18n-box').addEventListener('click', (e) => {
+    if (e.target.id === 'i18n-refresh') { keepI18nInputs(); renderI18n(); }
+  });
+
   // ---------- บันทึก / ลบ ----------
   fi.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -390,6 +452,10 @@
       p_stock: stockRaw === '' ? null : Math.max(0, parseInt(stockRaw, 10) || 0)
     });
     if (exErr) { showMsg('บันทึกเมนูแล้ว แต่บันทึกป้าย/จำนวนไม่สำเร็จ: ' + thaiError(exErr)); }
+    if (LANGS.length) {
+      const { error: trErr } = await sb.rpc('st_set_item_i18n', { p_item: savedId, p_i18n: collectI18n() });
+      if (trErr) showMsg('บันทึกเมนูแล้ว แต่บันทึกคำแปลไม่สำเร็จ: ' + thaiError(trErr));
+    }
     closeSheet();
     showMsg(editing ? `บันทึก "${name}" แล้ว` : `เพิ่ม "${name}" แล้ว`, 'ok');
     load();

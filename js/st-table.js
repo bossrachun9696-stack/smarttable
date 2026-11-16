@@ -1,5 +1,5 @@
 // ===== หน้า ลูกค้าสแกน QR (table.html?t=<qr_token>) — ไม่ต้องล็อกอิน =====
-// ดูเมนู · ตะกร้า · ส่งรายการเข้าร้าน · ดูที่สั่งแล้วและยอดบิล · เรียกพนักงาน / ขอเช็กบิล
+// ดูเมนู (3 ภาษา) · โปรตามเวลา · ตะกร้า · ส่งรายการ · ที่สั่งแล้ว/ยอดบิล · เรียกพนักงาน / ขอเช็กบิล · ให้คะแนน
 (async function () {
   const { sb, configOk, $, esc, thaiError, showMsg, TAGS, applyTheme } = ST;
   if (!configOk) return;
@@ -18,47 +18,108 @@
   const KEY_SESSION = 'st-session:' + qr;
   const KEY_CART = (staffMode ? 'st-cart-staff:' : 'st-cart:') + qr;
   const KEY_NAME = 'st-guest-name';
+  const KEY_LAST = 'st-last:' + qr;                 // รอบล่าสุดที่สั่งอาหาร (ไว้ให้คะแนนหลังจ่าย)
   const ls = {
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
     set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch { /* ไม่เป็นไร */ } }
   };
   const imgUrl = (path) => sb.storage.from('st-images').getPublicUrl(path).data.publicUrl;
+  const round2 = (n) => Math.round(n * 100) / 100;
   const baht = (n) => '฿' + Number(n).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const plus = (n) => Number(n) > 0 ? '+' + baht(n) : Number(n) < 0 ? '−' + baht(-n) : '';
   const rand = () => (crypto.randomUUID && crypto.randomUUID()) || (Date.now() + '-' + Math.random().toString(36).slice(2));
   const SPICY = ['', '🌶', '🌶🌶', '🌶🌶🌶'];
-  const ORDER_TH = { new: 'รอร้านรับ', accepted: 'ร้านรับแล้ว', cooking: 'กำลังทำ', served: 'เสิร์ฟแล้ว', cancelled: 'ยกเลิก' };
 
-  const STATES = {
-    open:        { cls: 'ok',   title: 'โต๊ะพร้อมสั่งอาหาร', text: 'แตะเมนูเพื่อใส่ตะกร้า แล้วกด "ดูตะกร้า" เพื่อส่งเข้าร้าน' },
-    waiting:     { cls: 'wait', title: 'รอพนักงานเปิดโต๊ะ', text: 'ดูเมนูได้ก่อน สั่งได้เมื่อพนักงานเปิดโต๊ะให้ (หน้านี้จะอัปเดตเอง)' },
-    billing:     { cls: 'wait', title: 'กำลังเช็กบิล', text: 'สั่งเพิ่มไม่ได้แล้ว ถ้าต้องการสั่งเพิ่มกรุณาแจ้งพนักงาน' },
-    shop_closed: { cls: 'off',  title: 'ร้านปิดอยู่ตอนนี้', text: 'ดูเมนูได้ แต่ยังสั่งอาหารไม่ได้' },
-    ended:       { cls: 'off',  title: 'โต๊ะนี้ปิดรอบแล้ว', text: 'ถ้ายังนั่งอยู่ที่ร้าน สแกน QR ที่โต๊ะอีกครั้งเพื่อสั่งต่อ' }
+  // ---------- ภาษา ----------
+  let lang = 'th';
+  let languages = ['th'];
+  const t = (k, vars) => {
+    let s = (ST_I18N[lang] && ST_I18N[lang][k]) ?? ST_I18N.th[k] ?? k;
+    if (vars) for (const [a, b] of Object.entries(vars)) s = s.split('{' + a + '}').join(b);
+    return s;
   };
+  const tr = (i, field) => (lang !== 'th' && i.i18n && i.i18n[lang] && i.i18n[lang][field]) || i[field];
+  const iname = (i) => tr(i, 'name');
+  const idesc = (i) => tr(i, 'description');
+  const oname = (i, s) => (lang !== 'th' && i && i.i18n && i.i18n[lang] && i.i18n[lang].opts && i.i18n[lang].opts[s]) || s;
+  const cname = (c) => (lang !== 'th' && c.i18n && c.i18n[lang]) || c.name;
+  const byThaiName = (name) => menu.items.find(x => x.name === name);
+  const gErr = (error) => (lang !== 'th' && ST_I18N_ERR[lang] && ST_I18N_ERR[lang][error?.message]) || thaiError(error);
+  const LANG_LABEL = { th: 'ไทย', en: 'EN', zh: '中文' };
+
+  function pickLang(avail) {
+    languages = ['th', ...avail.filter(l => l === 'en' || l === 'zh')];
+    const saved = ls.get('st-lang');
+    const nav = (navigator.language || '').toLowerCase();
+    lang = languages.includes(saved) ? saved
+      : nav.startsWith('zh') && languages.includes('zh') ? 'zh'
+      : nav.startsWith('en') && languages.includes('en') ? 'en' : 'th';
+    renderLang();
+  }
+  function renderLang() {
+    $('#g-lang').hidden = languages.length < 2 || staffMode;
+    $('#g-lang').innerHTML = languages.map(l => `<button type="button" data-lang="${l}" aria-pressed="${l === lang}">${LANG_LABEL[l]}</button>`).join('');
+    document.documentElement.lang = lang === 'zh' ? 'zh-Hans' : lang;
+    $('#g-search').placeholder = t('search');
+    $('#btn-orders').firstChild.textContent = t('orders') + ' ';
+    $('#cart-label').textContent = t('view_cart');
+    $('#sheet-close').textContent = t('close');
+  }
+  $('#g-lang').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-lang]');
+    if (!b) return;
+    lang = b.dataset.lang;
+    ls.set('st-lang', lang);
+    renderLang(); renderState(); renderDiet(); renderMenu(); renderButtons(); renderRate();
+    if (sheetMode === 'cart') renderCart();
+    if (sheetMode === 'orders') renderOrders();
+    if (sheetMode === 'item' && current) openItem(current.id);
+  });
 
   let state = null;
   let brandDone = false;
+  let lastScan = null;
   const diet = new Set();        // ตัวกรองป้ายอาหารที่ลูกค้าเลือก
   let token = null;
   let menu = { categories: [], items: [] };
+  let promos = [];
   let cart = [];            // [{key, item_id, name, unit, qty, choices, labels, note}]
   let pendingRef = null;    // รหัสกันส่งซ้ำ ใช้ซ้ำได้จนกว่าจะสำเร็จ หรือแก้ตะกร้า
   let guestInfo = null;     // ผลล่าสุดจาก st_guest_orders
 
   const canOrder = () => state === 'open' && !!token;
-  // จำนวนที่ยังเพิ่มได้ (หักที่อยู่ในตะกร้าแล้ว) · ไม่นับจำนวน = 20
   const remaining = (it) => it.stock_left == null ? Infinity
     : it.stock_left - cart.filter(l => l.item_id === it.id).reduce((s, l) => s + l.qty, 0);
   const maxQty = (it) => Math.max(1, Math.min(20, remaining(it)));
 
+  // ---------- โปรตามเวลา (แสดงผล · ราคาจริงคิดที่เซิร์ฟเวอร์ตอนส่ง) ----------
+  function promoFor(i) {
+    let best = null;
+    for (const p of promos) {
+      const all = !p.item_ids.length && !p.category_ids.length;
+      if ((all || p.item_ids.includes(i.id) || (i.category_id && p.category_ids.includes(i.category_id)))
+          && (!best || Number(p.percent) > Number(best.percent))) best = p;
+    }
+    return best;
+  }
+  const applyPromo = (i, amount) => { const p = promoFor(i); return p ? round2(amount * (100 - Number(p.percent)) / 100) : amount; };
+  function priceHtml(i) {
+    const p = promoFor(i);
+    return p ? `<s class="st-was">${baht(i.price)}</s> <b>${baht(applyPromo(i, Number(i.price)))}</b> <span class="st-tag st-tag--promo">−${Number(p.percent)}%</span>`
+             : `<b>${baht(i.price)}</b>`;
+  }
+  async function loadPromos() {
+    const { data } = await sb.rpc('st_public_promos', { p_qr: qr });
+    promos = Array.isArray(data) ? data : [];
+  }
+
   // ---------- ข้อความลอยด้านล่าง ----------
   let toastTimer;
   function toast(text) {
-    const t = $('#toast');
-    t.textContent = text; t.hidden = false;
+    const tt = $('#toast');
+    tt.textContent = text; tt.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+    toastTimer = setTimeout(() => { tt.hidden = true; }, 2600);
   }
 
   // ---------- ตะกร้า (เก็บในเครื่อง ผูกกับรอบของโต๊ะ) ----------
@@ -91,10 +152,11 @@
   async function scan(autoOpen) {
     const { data, error } = await sb.rpc('st_scan', { p_qr: qr, p_auto_open: !!autoOpen });
     if (error) {
-      $('#g-shop').textContent = $('#g-shop').textContent === 'กำลังโหลด…' ? 'SmartTable' : $('#g-shop').textContent;
-      showMsg(thaiError(error));
+      if (!lastScan) $('#g-shop').textContent = 'SmartTable';
+      showMsg(gErr(error));
       return null;
     }
+    lastScan = data;
     const newToken = data.session_token || null;
     if (newToken !== token) {
       token = newToken;
@@ -103,20 +165,30 @@
       guestInfo = null;
     }
     state = data.state;
-    $('#g-shop').textContent = data.shop.name;
     if (!brandDone) {
       brandDone = true;
       applyTheme(data.shop.theme_color);
       if (data.shop.cover_path) { $('#g-cover').style.backgroundImage = `url("${imgUrl(data.shop.cover_path)}")`; $('#g-cover').hidden = false; }
       if (data.shop.logo_path) { $('#g-logo').src = imgUrl(data.shop.logo_path); $('#g-logo').hidden = false; }
+      pickLang(data.shop.languages || []);
     }
+    renderState();
+    renderCartBar();
+    if (token) refreshGuest(); else { renderButtons(); renderRate(); }
+    return data;
+  }
+
+  function renderState() {
+    const data = lastScan;
+    if (!data) return;
+    $('#g-shop').textContent = data.shop.name;
     $('#g-sub').textContent = data.table.zone || '';
-    $('#g-table').textContent = 'โต๊ะ ' + data.table.label;
+    $('#g-table').textContent = t('table') + ' ' + data.table.label;
     $('#g-table').hidden = false;
-    document.title = data.shop.name + ' · โต๊ะ ' + data.table.label;
-    const s = STATES[state];
-    $('#g-state').className = 'st-state st-state--' + s.cls;
-    $('#g-state').innerHTML = `<b>${esc(s.title)}</b><span>${esc(s.text)}</span>`;
+    document.title = data.shop.name + ' · ' + t('table') + ' ' + data.table.label;
+    const cls = { open: 'ok', waiting: 'wait', billing: 'wait', shop_closed: 'off', ended: 'off' }[state];
+    $('#g-state').className = 'st-state st-state--' + cls;
+    $('#g-state').innerHTML = `<b>${esc(t('st_' + state + '_t'))}</b><span>${esc(t('st_' + state))}</span>`;
     $('#g-state').hidden = false;
     $('#g-actions').hidden = !token;
     if (staffMode) {
@@ -125,9 +197,18 @@
       $('#g-staff').hidden = false;
       if (state === 'waiting') $('#g-state').innerHTML = '<b>โต๊ะนี้ยังไม่ได้เปิด</b><span>เปิดโต๊ะที่ผังโต๊ะก่อน แล้วกลับมาหน้านี้</span>';
     }
-    renderCartBar();
-    if (token) refreshGuest();
-    return data;
+  }
+
+  function renderButtons() {
+    const pend = (guestInfo && guestInfo.pending_calls) || [];
+    const n = guestInfo ? guestInfo.orders.filter(o => o.status !== 'cancelled').length : 0;
+    $('#orders-count').textContent = n ? `(${n})` : '';
+    const bCall = document.querySelector('[data-call="call"]');
+    const bBill = document.querySelector('[data-call="bill"]');
+    bCall.disabled = pend.includes('call');
+    bCall.textContent = pend.includes('call') ? t('called') : t('call');
+    bBill.disabled = pend.includes('bill') || state === 'billing';
+    bBill.textContent = bBill.disabled ? t('billed') : t('bill');
   }
 
   async function refreshGuest() {
@@ -135,42 +216,84 @@
     const { data, error } = await sb.rpc('st_guest_orders', { p_qr: qr, p_session_token: token });
     if (error) return;
     guestInfo = data;
-    const n = data.orders.filter(o => o.status !== 'cancelled').length;
-    $('#orders-count').textContent = n ? `(${n})` : '';
-    const pend = data.pending_calls || [];
-    const bCall = document.querySelector('[data-call="call"]');
-    const bBill = document.querySelector('[data-call="bill"]');
-    bCall.disabled = pend.includes('call');
-    bCall.textContent = pend.includes('call') ? '🙋 เรียกแล้ว รอสักครู่' : '🙋 เรียกพนักงาน';
-    bBill.disabled = pend.includes('bill') || state === 'billing';
-    bBill.textContent = bBill.disabled ? '💳 ขอเช็กบิลแล้ว' : '💳 ขอเช็กบิล';
+    if (!staffMode && data.orders.some(o => o.status !== 'cancelled')) {
+      ls.set(KEY_LAST, JSON.stringify({ token, at: Date.now() }));
+    }
+    renderButtons();
+    renderRate();
     if (sheetMode === 'orders') renderOrders();
   }
+
+  // ---------- ให้คะแนน (ตอนเช็กบิล หรือภายใน 3 ชม. หลังจ่ายเงิน) ----------
+  let stars = 0;
+  function rateToken() {
+    if (staffMode) return null;
+    if (token && state === 'billing' && guestInfo && guestInfo.orders.some(o => o.status !== 'cancelled')) return token;
+    if (!token) {
+      try {
+        const last = JSON.parse(ls.get(KEY_LAST) || 'null');
+        if (last && Date.now() - last.at < 3 * 3600 * 1000) return last.token;
+      } catch { /* ไม่เป็นไร */ }
+    }
+    return null;
+  }
+  function renderRate() {
+    const tok = rateToken();
+    const box = $('#g-rate');
+    if (!tok || ls.get('st-rated:' + tok)) { if (!box.dataset.thanks) box.hidden = true; return; }
+    box.hidden = false;
+    box.innerHTML = `
+      <b>${esc(t('rate_t'))}</b>
+      <div class="st-stars" role="radiogroup" aria-label="${esc(t('rate_pick'))}">
+        ${[1, 2, 3, 4, 5].map(n => `<button type="button" data-star="${n}" aria-label="${n}" aria-pressed="${n <= stars}">★</button>`).join('')}
+      </div>
+      <textarea id="rate-comment" maxlength="300" rows="2" placeholder="${esc(t('rate_ph'))}"></textarea>
+      <button id="rate-send" class="st-btn" type="button" ${stars ? '' : 'disabled'}>${esc(t('rate_send'))}</button>`;
+  }
+  $('#g-rate').addEventListener('click', async (e) => {
+    const s = e.target.closest('[data-star]');
+    if (s) {
+      stars = Number(s.dataset.star);
+      $('#g-rate').querySelectorAll('[data-star]').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.star) <= stars)));
+      $('#rate-send').disabled = false;
+      return;
+    }
+    if (e.target.id !== 'rate-send') return;
+    const tok = rateToken();
+    if (!tok || !stars) return;
+    e.target.disabled = true;
+    const { error } = await sb.rpc('st_guest_rate', { p_qr: qr, p_session_token: tok, p_stars: stars, p_comment: $('#rate-comment').value.trim() || null });
+    if (error) { e.target.disabled = false; return showMsg(gErr(error)); }
+    ls.set('st-rated:' + tok, '1');
+    const box = $('#g-rate');
+    box.dataset.thanks = '1';
+    box.innerHTML = `<b>${esc(t('rate_thanks'))}</b>`;
+    setTimeout(() => { box.hidden = true; delete box.dataset.thanks; }, 4000);
+  });
 
   // ---------- เมนู ----------
   let activeCat = '';
   // ตัวกรอง: อาหารประเภท (ต้องมีป้าย) / ไม่มีสารก่อแพ้ (ต้องไม่มีป้าย)
   const passDiet = (i) => [...diet].every(k => TAGS[k].kind === 'diet' ? (i.tags || []).includes(k) : !(i.tags || []).includes(k));
+  const tagLabel = (k) => t('tag_' + k);
   function renderDiet() {
     const used = new Set(menu.items.flatMap(i => i.tags || []));
     const keys = Object.keys(TAGS).filter(k => used.has(k));
-    $('#g-diet').innerHTML = keys.map(k => `<button type="button" data-diet="${k}" aria-pressed="${diet.has(k)}">${TAGS[k].kind === 'diet' ? TAGS[k].icon + ' ' + TAGS[k].th : '🚫 ' + TAGS[k].none}</button>`).join('');
+    $('#g-diet').innerHTML = keys.map(k => `<button type="button" data-diet="${k}" aria-pressed="${diet.has(k)}">${TAGS[k].kind === 'diet' ? TAGS[k].icon + ' ' + esc(tagLabel(k)) : '🚫 ' + esc(t('none_' + k))}</button>`).join('');
     $('#g-diet').hidden = !keys.length;
   }
   function renderMenu() {
     const term = $('#g-search').value.trim().toLowerCase();
     const cats = menu.categories.filter(c => menu.items.some(i => i.category_id === c.id));
     const loose = menu.items.filter(i => !i.category_id);
-    const groups = cats.map(c => ({ id: c.id, name: c.name, items: menu.items.filter(i => i.category_id === c.id) }));
-    if (loose.length) groups.push({ id: 'none', name: cats.length ? 'อื่น ๆ' : 'เมนู', items: loose });
+    const groups = cats.map(c => ({ id: c.id, name: cname(c), items: menu.items.filter(i => i.category_id === c.id) }));
+    if (loose.length) groups.push({ id: 'none', name: cats.length ? t('other') : t('menu'), items: loose });
 
     $('#g-cats').innerHTML = groups.length > 1 ? groups.map(g =>
       `<button type="button" data-cat="${esc(g.id)}" class="${g.id === activeCat ? 'on' : ''}">${esc(g.name)}</button>`).join('') : '';
 
-    const shown = groups.map(g => ({
-      ...g, items: g.items.filter(i => (!term || i.name.toLowerCase().includes(term) || (i.description || '').toLowerCase().includes(term))
-                                      && passDiet(i))
-    })).filter(g => g.items.length);
+    const hit = (i) => !term || [i.name, i.description, iname(i), idesc(i)].some(x => (x || '').toLowerCase().includes(term));
+    const shown = groups.map(g => ({ ...g, items: g.items.filter(i => hit(i) && passDiet(i)) })).filter(g => g.items.length);
 
     const inCart = (id) => cart.filter(l => l.item_id === id).reduce((s, l) => s + l.qty, 0);
     $('#g-items').innerHTML = shown.length ? shown.map(g => `
@@ -180,25 +303,25 @@
           <article class="st-gitem${i.is_available ? '' : ' st-gitem--off'}" data-id="${esc(i.id)}" role="button" tabindex="0">
             <div class="st-gimg">${i.image_path ? `<img src="${esc(imgUrl(i.image_path))}" alt="" loading="lazy">` : ''}</div>
             <div class="st-gbody">
-              <h3>${esc(i.name)}</h3>
-              ${i.description ? `<p>${esc(i.description)}</p>` : ''}
+              <h3>${esc(iname(i))}</h3>
+              ${idesc(i) ? `<p>${esc(idesc(i))}</p>` : ''}
               <div class="st-gmeta">
-                <b>${baht(i.price)}</b>
-                ${i.is_recommended ? '<span class="st-tag st-tag--rec">⭐ แนะนำ</span>' : ''}
+                ${priceHtml(i)}
+                ${i.is_recommended ? `<span class="st-tag st-tag--rec">${esc(t('recommended'))}</span>` : ''}
                 ${i.spicy_level ? `<span class="st-tag">${SPICY[i.spicy_level]}</span>` : ''}
-                ${i.is_available ? '' : '<span class="st-tag st-tag--off">หมด</span>'}
-                ${i.is_available && i.stock_left != null && i.stock_left <= 5 ? `<span class="st-tag st-tag--low">เหลือ ${i.stock_left}</span>` : ''}
-                ${(i.tags || []).map(t => TAGS[t] ? `<span class="st-tag st-tag--${TAGS[t].kind}" title="${esc(TAGS[t].th)}">${TAGS[t].icon}${TAGS[t].kind === 'diet' ? ' ' + esc(TAGS[t].th) : ''}</span>` : '').join('')}
-                ${inCart(i.id) ? `<span class="st-tag st-tag--cart">ในตะกร้า ${inCart(i.id)}</span>` : ''}
+                ${i.is_available ? '' : `<span class="st-tag st-tag--off">${esc(t('sold_out'))}</span>`}
+                ${i.is_available && i.stock_left != null && i.stock_left <= 5 ? `<span class="st-tag st-tag--low">${esc(t('left', { n: i.stock_left }))}</span>` : ''}
+                ${(i.tags || []).map(k => TAGS[k] ? `<span class="st-tag st-tag--${TAGS[k].kind}" title="${esc(tagLabel(k))}">${TAGS[k].icon}${TAGS[k].kind === 'diet' ? ' ' + esc(tagLabel(k)) : ''}</span>` : '').join('')}
+                ${inCart(i.id) ? `<span class="st-tag st-tag--cart">${esc(t('in_cart', { n: inCart(i.id) }))}</span>` : ''}
               </div>
             </div>
           </article>`).join('')}
       </section>`).join('')
-      : `<div class="st-empty">${term ? 'ไม่พบเมนูที่ค้นหา' : 'ร้านยังไม่ได้เพิ่มเมนู'}</div>`;
+      : `<div class="st-empty">${esc(term ? t('no_result') : t('no_menu'))}</div>`;
   }
   async function loadMenu() {
-    const { data, error } = await sb.rpc('st_public_menu', { p_qr: qr });
-    if (error) { showMsg(thaiError(error)); return false; }
+    const [{ data, error }] = await Promise.all([sb.rpc('st_public_menu', { p_qr: qr }), loadPromos()]);
+    if (error) { showMsg(gErr(error)); return false; }
     menu = data;
     renderDiet();
     renderMenu();
@@ -256,54 +379,56 @@
 
   // ----- เลือกเมนู -----
   const ruleText = (g) => g.max_select === 1
-    ? (g.min_select >= 1 ? 'ต้องเลือก 1' : 'เลือกได้ 1 · ไม่บังคับ')
-    : (g.min_select >= 1 ? `เลือก ${g.min_select}–${g.max_select}` : `เลือกได้สูงสุด ${g.max_select}`);
+    ? (g.min_select >= 1 ? t('must1') : t('opt1'))
+    : (g.min_select >= 1 ? t('range', { a: g.min_select, b: g.max_select }) : t('upto', { b: g.max_select }));
 
   function openItem(id) {
     const it = menu.items.find(x => x.id === id);
     if (!it) return;
     current = it; qty = 1;
-    const blocked = !it.is_available ? 'เมนูนี้หมดแล้ว'
-      : !canOrder() ? (STATES[state]?.title || 'ยังสั่งไม่ได้') : '';
+    const blocked = !it.is_available ? t('item_sold_out') : !canOrder() ? (t('st_' + state + '_t') || t('cant_order')) : '';
+    const p = promoFor(it);
     $('#sheet-body').innerHTML = `
       ${it.image_path ? `<div class="st-hero"><img src="${esc(imgUrl(it.image_path))}" alt=""></div>` : ''}
-      <h2 class="st-hero-name">${esc(it.name)}</h2>
-      ${it.description ? `<p class="st-sub">${esc(it.description)}</p>` : ''}
-      <p class="st-hero-price">${baht(it.price)}${it.stock_left != null && it.is_available ? ` <small class="st-sub">· เหลือ ${it.stock_left}</small>` : ''}</p>
-      ${(it.tags || []).length ? `<p class="st-hero-tags">${it.tags.map(t => TAGS[t] ? `<span class="st-tag st-tag--${TAGS[t].kind}">${TAGS[t].icon} ${esc(TAGS[t].th)}</span>` : '').join(' ')}</p>` : ''}
+      <h2 class="st-hero-name">${esc(iname(it))}</h2>
+      ${lang !== 'th' && iname(it) !== it.name ? `<p class="st-sub" style="margin:-2px 0 4px">${esc(it.name)}</p>` : ''}
+      ${idesc(it) ? `<p class="st-sub">${esc(idesc(it))}</p>` : ''}
+      <p class="st-hero-price">${priceHtml(it)}${it.stock_left != null && it.is_available ? ` <small class="st-sub">· ${esc(t('left', { n: it.stock_left }))}</small>` : ''}</p>
+      ${p ? `<p class="st-promo-line">🏷 ${esc(t('promo_until', { x: p.name, t: p.end_time }))}</p>` : ''}
+      ${(it.tags || []).length ? `<p class="st-hero-tags">${it.tags.map(k => TAGS[k] ? `<span class="st-tag st-tag--${TAGS[k].kind}">${TAGS[k].icon} ${esc(tagLabel(k))}</span>` : '').join(' ')}</p>` : ''}
       <form id="form-add" novalidate>
         ${it.options.map(g => `
-          <fieldset class="st-optg" data-g="${esc(g.id)}" data-min="${g.min_select}" data-max="${g.max_select}" data-name="${esc(g.name)}">
-            <legend>${esc(g.name)} <small class="${g.min_select ? 'req' : ''}">${ruleText(g)}</small></legend>
+          <fieldset class="st-optg" data-g="${esc(g.id)}" data-min="${g.min_select}" data-max="${g.max_select}" data-name="${esc(oname(it, g.name))}">
+            <legend>${esc(oname(it, g.name))} <small class="${g.min_select ? 'req' : ''}">${esc(ruleText(g))}</small></legend>
             ${g.choices.map(c => `
               <label class="st-optc">
                 <input type="checkbox" value="${esc(c.id)}" data-delta="${Number(c.price_delta)}" data-name="${esc(c.name)}">
-                <span>${esc(c.name)}</span><em>${plus(c.price_delta)}</em>
+                <span>${esc(oname(it, c.name))}</span><em>${plus(c.price_delta)}</em>
               </label>`).join('')}
           </fieldset>`).join('')}
-        <label class="st-field"><span>หมายเหตุถึงครัว (ไม่บังคับ)</span>
-          <input name="note" type="text" maxlength="140" placeholder="เช่น ไม่ใส่ผัก แยกน้ำ">
+        <label class="st-field"><span>${esc(t('note_kitchen'))}</span>
+          <input name="note" type="text" maxlength="140" placeholder="${esc(t('note_kitchen_ph'))}">
         </label>
         ${blocked ? `<p class="st-msg st-msg--error">${esc(blocked)}</p>` : `
         <div class="st-add-row">
           <div class="st-qty">
-            <button type="button" data-q="-1" aria-label="ลด">−</button><b id="q-n">1</b><button type="button" data-q="1" aria-label="เพิ่ม">+</button>
+            <button type="button" data-q="-1" aria-label="−">−</button><b id="q-n">1</b><button type="button" data-q="1" aria-label="+">+</button>
           </div>
-          <button class="st-btn" type="submit" id="btn-add">ใส่ตะกร้า</button>
+          <button class="st-btn" type="submit" id="btn-add">${esc(t('add'))}</button>
         </div>`}
       </form>`;
-    openSheet('item', it.name);
+    openSheet('item', iname(it));
     updateAddPrice();
   }
 
   function selectedChoices() {
     return [...$('#sheet-body').querySelectorAll('.st-optc input:checked')];
   }
+  const unitFor = (it, picked) => applyPromo(it, Math.max(Number(it.price) + picked.reduce((s, i) => s + Number(i.dataset.delta), 0), 0));
   function updateAddPrice() {
     const btn = $('#btn-add');
     if (!btn || !current) return;
-    const unit = Number(current.price) + selectedChoices().reduce((s, i) => s + Number(i.dataset.delta), 0);
-    btn.textContent = `ใส่ตะกร้า · ${baht(Math.max(unit, 0) * qty)}`;
+    btn.textContent = `${t('add')} · ${baht(unitFor(current, selectedChoices()) * qty)}`;
   }
 
   $('#sheet-body').addEventListener('change', (e) => {
@@ -325,59 +450,62 @@
     e.preventDefault();
     for (const fs of $('#sheet-body').querySelectorAll('.st-optg')) {
       const n = fs.querySelectorAll('input:checked').length;
-      if (n < Number(fs.dataset.min)) return sheetMsg(`กรุณาเลือก "${fs.dataset.name}"`);
+      if (n < Number(fs.dataset.min)) return sheetMsg(t('please_pick', { x: fs.dataset.name }));
     }
     const picked = selectedChoices();
     const choices = picked.map(i => i.value).sort();
     const note = e.target.note.value.trim().slice(0, 140);
-    const unit = Math.max(Number(current.price) + picked.reduce((s, i) => s + Number(i.dataset.delta), 0), 0);
+    const unit = unitFor(current, picked);
     const key = [current.id, choices.join(','), note].join('|');
     const same = cart.find(l => l.key === key);
-    if (qty > remaining(current)) return sheetMsg(`"${current.name}" เหลือไม่พอ (เหลือ ${Math.max(0, remaining(current))})`);
-    if (same) same.qty = Math.min(20, same.qty + qty);
+    if (qty > remaining(current)) return sheetMsg(t('not_enough', { x: iname(current) }));
+    if (same) { same.qty = Math.min(20, same.qty + qty); same.unit = unit; }
     else cart.push({ key, item_id: current.id, name: current.name, unit, qty, choices,
                      labels: picked.map(i => i.dataset.name), note });
     saveCart();
     renderMenu();
-    const name = current.name;
+    const name = iname(current);
     closeSheet();
-    toast(`เพิ่ม ${name} ×${qty} แล้ว`);
+    toast(t('added', { x: name, n: qty }));
   });
 
   // ----- ตะกร้า -----
   function renderCart() {
     if (!cart.length) {
-      $('#sheet-body').innerHTML = '<div class="st-empty">ตะกร้าว่าง แตะเมนูเพื่อเพิ่ม</div>';
+      $('#sheet-body').innerHTML = `<div class="st-empty">${esc(t('cart_empty'))}</div>`;
       return;
     }
     $('#sheet-body').innerHTML = `
       <div class="st-lines">
-        ${cart.map(l => `
+        ${cart.map(l => {
+          const it = menu.items.find(x => x.id === l.item_id);
+          return `
           <div class="st-line" data-k="${esc(l.key)}">
             <div class="st-line-main">
-              <b>${esc(l.name)}</b>
-              ${l.labels.length ? `<small>${esc(l.labels.join(' · '))}</small>` : ''}
+              <b>${esc(it ? iname(it) : l.name)}</b>
+              ${l.labels.length ? `<small>${esc(l.labels.map(s => oname(it, s)).join(' · '))}</small>` : ''}
               ${l.note ? `<small>📝 ${esc(l.note)}</small>` : ''}
               <span class="st-line-price">${baht(l.unit * l.qty)}</span>
             </div>
             <div class="st-qty st-qty--sm">
-              <button type="button" data-d="-1" aria-label="ลด">${l.qty === 1 ? '🗑' : '−'}</button><b>${l.qty}</b><button type="button" data-d="1" aria-label="เพิ่ม">+</button>
+              <button type="button" data-d="-1" aria-label="−">${l.qty === 1 ? '🗑' : '−'}</button><b>${l.qty}</b><button type="button" data-d="1" aria-label="+">+</button>
             </div>
-          </div>`).join('')}
+          </div>`;
+        }).join('')}
       </div>
       <form id="form-send" novalidate>
-        <label class="st-field"${staffMode ? ' hidden' : ''}><span>ชื่อเล่นของคุณ (ไม่บังคับ)</span>
-          <input name="guest_name" type="text" maxlength="30" placeholder="ให้พนักงานรู้ว่าใครสั่ง" value="${esc(ls.get(KEY_NAME) || '')}">
+        <label class="st-field"${staffMode ? ' hidden' : ''}><span>${esc(t('nickname'))}</span>
+          <input name="guest_name" type="text" maxlength="30" placeholder="${esc(t('nickname_ph'))}" value="${esc(ls.get(KEY_NAME) || '')}">
         </label>
-        <label class="st-field"><span>หมายเหตุถึงร้าน (ไม่บังคับ)</span>
-          <input name="note" type="text" maxlength="200" placeholder="เช่น เสิร์ฟพร้อมกัน">
+        <label class="st-field"><span>${esc(t('note_shop'))}</span>
+          <input name="note" type="text" maxlength="200" placeholder="${esc(t('note_shop_ph'))}">
         </label>
-        <div class="st-sum"><span>รวมค่าอาหาร</span><b>${baht(cartTotal())}</b></div>
-        <p class="st-sub" style="margin-top:4px">ค่าบริการ / VAT (ถ้ามี) คิดตอนเช็กบิล</p>
-        <button class="st-btn" type="submit" id="btn-send">ส่งรายการให้ร้าน · ${cartCount()} รายการ</button>
+        <div class="st-sum"><span>${esc(t('food_total'))}</span><b>${baht(cartTotal())}</b></div>
+        <p class="st-sub" style="margin-top:4px">${esc(t('fees_later'))}${promos.length ? ' · ' + esc(t('promo_note')) : ''}</p>
+        <button class="st-btn" type="submit" id="btn-send">${esc(t('send', { n: cartCount() }))}</button>
       </form>`;
   }
-  $('#btn-cart').addEventListener('click', () => { openSheet('cart', 'ตะกร้าของฉัน'); renderCart(); });
+  $('#btn-cart').addEventListener('click', () => { openSheet('cart', t('my_cart')); renderCart(); });
 
   $('#sheet-body').addEventListener('click', (e) => {
     const qb = e.target.closest('[data-q]');
@@ -394,7 +522,7 @@
       if (line.qty <= 0) cart = cart.filter(l => l !== line);
       line.qty = Math.min(20, line.qty);
       const it = menu.items.find(x => x.id === line.item_id);
-      if (Number(db.dataset.d) > 0 && it && remaining(it) < 0) { line.qty -= 1; sheetMsg(`"${it.name}" เหลือไม่พอ`); }
+      if (Number(db.dataset.d) > 0 && it && remaining(it) < 0) { line.qty -= 1; sheetMsg(t('not_enough', { x: iname(it) })); }
       saveCart(); renderMenu(); renderCart();
     }
   });
@@ -402,13 +530,13 @@
   $('#sheet-body').addEventListener('submit', async (e) => {
     if (e.target.id !== 'form-send') return;
     e.preventDefault();
-    if (!canOrder()) return sheetMsg(STATES[state]?.title || 'ยังสั่งไม่ได้');
+    if (!canOrder()) return sheetMsg(t('st_' + state + '_t') || t('cant_order'));
     const f = e.target;
     const guestName = f.guest_name.value.trim().slice(0, 30);
     ls.set(KEY_NAME, guestName || null);
     if (!pendingRef) pendingRef = rand();
     const btn = $('#btn-send');
-    btn.disabled = true; btn.textContent = 'กำลังส่ง…';
+    btn.disabled = true; btn.textContent = t('sending');
     const items = cart.map(l => ({ item_id: l.item_id, qty: l.qty, choices: l.choices, note: l.note || null }));
     const { data, error } = staffMode
       ? await sb.rpc('st_staff_order', { p_qr: qr, p_items: items, p_note: f.note.value.trim() || null, p_client_ref: pendingRef })
@@ -417,24 +545,24 @@
           p_note: f.note.value.trim() || null, p_guest_name: guestName || null, p_client_ref: pendingRef
         });
     if (error) {
-      btn.disabled = false; btn.textContent = `ส่งรายการให้ร้าน · ${cartCount()} รายการ`;
+      btn.disabled = false; btn.textContent = t('send', { n: cartCount() });
       const code = error.message || '';
       if (code.startsWith('st_')) pendingRef = null;            // ร้านปฏิเสธ = ยังไม่ได้สร้างออร์เดอร์
       if (['st_item_sold_out', 'st_item_gone', 'st_options_changed', 'st_options_required', 'st_out_of_stock'].includes(code)) loadMenu();
       if (['st_session_invalid', 'st_session_billing', 'st_shop_closed', 'st_table_not_open'].includes(code)) scan(false);
-      return sheetMsg(thaiError(error));
+      return sheetMsg(gErr(error));
     }
     cart = []; saveCart(); renderMenu();
     await refreshGuest();
-    openSheet('orders', 'ที่สั่งแล้ว');
+    openSheet('orders', t('ordered'));
     renderOrders();
-    sheetMsg(`ส่งรายการแล้ว · ออร์เดอร์ #${data.order_no} ร้านกำลังรับรายการ`, 'ok');
+    sheetMsg(t('sent', { n: data.order_no }), 'ok');
   });
 
   // ----- ที่สั่งแล้ว + ยอดบิล -----
   function renderOrders() {
     const info = guestInfo;
-    if (!info) { $('#sheet-body').innerHTML = '<p class="st-sub">กำลังโหลด…</p>'; return; }
+    if (!info) { $('#sheet-body').innerHTML = `<p class="st-sub">${esc(t('loading'))}</p>`; return; }
     const orders = info.orders.slice().reverse();
     const b = info.bill;
     $('#sheet-body').innerHTML = `
@@ -443,25 +571,28 @@
           <div class="st-order-head">
             <b>#${o.order_no}</b>
             <span>${new Date(o.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}${o.guest_name ? ' · ' + esc(o.guest_name) : ''}</span>
-            <em class="st-ostat st-ostat--${o.status}">${ORDER_TH[o.status]}</em>
+            <em class="st-ostat st-ostat--${o.status}">${esc(t('o_' + o.status))}</em>
           </div>
-          ${o.items.map(i => `
+          ${o.items.map(i => {
+            const it = byThaiName(i.name);
+            return `
             <div class="st-oline">
-              <span>${i.qty}× ${esc(i.name)}${i.options.length ? `<small>${esc(i.options.map(x => x.name).join(' · '))}</small>` : ''}${i.note ? `<small>📝 ${esc(i.note)}</small>` : ''}</span>
+              <span>${i.qty}× ${esc(it ? iname(it) : i.name)}${i.options.length ? `<small>${esc(i.options.map(x => oname(it, x.name)).join(' · '))}</small>` : ''}${i.note ? `<small>📝 ${esc(i.note)}</small>` : ''}</span>
               <span>${baht(i.line_total)}</span>
-            </div>`).join('')}
+            </div>`;
+          }).join('')}
           ${o.note ? `<p class="st-sub" style="margin:4px 0 0">📝 ${esc(o.note)}</p>` : ''}
-        </div>`).join('') : '<div class="st-empty">ยังไม่ได้สั่งอะไร</div>'}
+        </div>`).join('') : `<div class="st-empty">${esc(t('nothing_yet'))}</div>`}
       ${orders.length ? `
         <div class="st-bill">
-          <div><span>ค่าอาหาร</span><span>${baht(b.subtotal)}</span></div>
-          ${Number(b.service_pct) ? `<div><span>ค่าบริการ ${Number(b.service_pct)}%</span><span>${baht(b.service)}</span></div>` : ''}
-          ${Number(b.vat_pct) ? `<div><span>VAT ${Number(b.vat_pct)}%${b.vat_included ? ' (รวมในราคาแล้ว)' : ''}</span><span>${b.vat_included ? '' : baht(b.vat)}${b.vat_included ? `<small>${baht(b.vat)}</small>` : ''}</span></div>` : ''}
-          <div class="st-bill-total"><span>รวมทั้งหมด</span><b>${baht(b.total)}</b></div>
+          <div><span>${esc(t('b_food'))}</span><span>${baht(b.subtotal)}</span></div>
+          ${Number(b.service_pct) ? `<div><span>${esc(t('b_service', { p: Number(b.service_pct) }))}</span><span>${baht(b.service)}</span></div>` : ''}
+          ${Number(b.vat_pct) ? `<div><span>${esc(t('b_vat', { p: Number(b.vat_pct) }))}${b.vat_included ? esc(t('b_vat_inc')) : ''}</span><span>${b.vat_included ? `<small>${baht(b.vat)}</small>` : baht(b.vat)}</span></div>` : ''}
+          <div class="st-bill-total"><span>${esc(t('b_total'))}</span><b>${baht(b.total)}</b></div>
         </div>` : ''}`;
   }
   $('#btn-orders').addEventListener('click', async () => {
-    openSheet('orders', 'ที่สั่งแล้ว');
+    openSheet('orders', t('ordered'));
     renderOrders();
     await refreshGuest();
     renderOrders();
@@ -472,31 +603,32 @@
     const b = e.target.closest('[data-call]');
     if (!b || !token) return;
     const kind = b.dataset.call;
-    if (kind === 'bill' && !confirm('ขอเช็กบิล?\nหลังจากนี้จะสั่งอาหารเพิ่มจากมือถือไม่ได้')) return;
+    if (kind === 'bill' && !confirm(t('confirm_bill'))) return;
     b.disabled = true;
     const { error } = await sb.rpc('st_guest_call', { p_qr: qr, p_session_token: token, p_kind: kind });
     if (error) {
       b.disabled = false;
       if (error.message === 'st_session_invalid') scan(false);
-      return showMsg(thaiError(error));
+      return showMsg(gErr(error));
     }
-    toast(kind === 'bill' ? 'แจ้งขอเช็กบิลแล้ว พนักงานกำลังมา' : 'เรียกพนักงานแล้ว รอสักครู่');
+    toast(kind === 'bill' ? t('toast_bill') : t('toast_call'));
     await scan(false);
   });
 
   // ---------- เริ่มต้น ----------
-  if (!qr) { $('#g-shop').textContent = 'SmartTable'; return showMsg('ลิงก์ไม่ครบ กรุณาสแกน QR ที่โต๊ะอีกครั้ง'); }
+  if (!qr) { $('#g-shop').textContent = 'SmartTable'; return showMsg(t('bad_link')); }
   const first = await scan(!staffMode);
   if (!first) return;
   if (!(await loadMenu())) return;
   $('#g-menu').hidden = false;
 
-  // อัปเดตสถานะ + ที่สั่งแล้ว: ทุก 8 วินาทีถ้ามีอาหารกำลังทำ ไม่งั้นทุก 20 วินาที
+  // อัปเดตสถานะ + ที่สั่งแล้ว: ทุก 8 วินาทีถ้ามีอาหารกำลังทำ ไม่งั้นทุก 20 วินาที · โปรทุก 5 นาที
   const busy = () => !!guestInfo && guestInfo.orders.some(o => ['new', 'accepted', 'cooking'].includes(o.status));
-  let lastPoll = Date.now();
-  setInterval(() => {
+  let lastPoll = Date.now(), lastPromo = Date.now();
+  setInterval(async () => {
     if (document.hidden) return;
     if (Date.now() - lastPoll >= (busy() ? 8000 : 20000)) { lastPoll = Date.now(); scan(false); }
+    if (Date.now() - lastPromo >= 300000) { lastPromo = Date.now(); await loadPromos(); renderMenu(); }
   }, 2000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) scan(false); });
 })();

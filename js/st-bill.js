@@ -23,9 +23,53 @@
   let method = 'cash';
   let slipBlob = null;
 
+  // ---------- ส่วนลด: บาท / % / คูปอง ----------
+  let unit = 'baht';
+  let coupon = null;             // {coupon_id, code, discount, label}
+  function discAmount() {
+    if (!canDiscount) return 0;
+    if (coupon) return Number(coupon.discount);
+    const v = Math.max(0, parseFloat($('#b-disc').value) || 0);
+    if (unit === 'pct') return data ? Math.round(Number(data.bill.subtotal) * Math.min(v, 100)) / 100 : 0;
+    return v;
+  }
+  $('#b-unit').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-u]');
+    if (!b) return;
+    unit = b.dataset.u;
+    document.querySelectorAll('#b-unit button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+    $('#b-disc').max = unit === 'pct' ? 100 : '';
+    load();
+  });
+  async function applyCoupon(code) {
+    const { data: q, error } = await sb.rpc('st_coupon_quote', { p_table: tableId, p_code: code });
+    if (error) {
+      coupon = null;
+      const MSG = { st_coupon_invalid: 'ไม่พบคูปองนี้ หรือถูกปิดแล้ว', st_coupon_expired: 'คูปองยังไม่ถึงวันใช้ หรือหมดอายุแล้ว',
+                    st_coupon_used_up: 'คูปองนี้ถูกใช้ครบจำนวนแล้ว', st_coupon_min: 'ยอดยังไม่ถึงขั้นต่ำของคูปอง' };
+      showMsg((MSG[error.message] || thaiError(error)) + (error.details && error.message === 'st_coupon_min' ? ` (${error.details} บาท)` : ''));
+    } else {
+      coupon = q;
+    }
+    renderCoupon();
+    load();
+  }
+  function renderCoupon() {
+    $('#b-coupon-on').hidden = !coupon;
+    $('#b-disc').disabled = !!coupon;
+    if (coupon) $('#b-coupon-on').innerHTML = `🎟 <b>${esc(coupon.code)}</b> · ${esc(coupon.label)} <button type="button" class="st-chip" id="b-coupon-off">เอาออก</button>`;
+  }
+  $('#b-coupon-apply').addEventListener('click', () => {
+    const code = $('#b-coupon').value.trim().toUpperCase();
+    if (code) applyCoupon(code);
+  });
+  $('#b-coupon-on').addEventListener('click', (e) => {
+    if (e.target.id === 'b-coupon-off') { coupon = null; $('#b-coupon').value = ''; renderCoupon(); load(); }
+  });
+
   // ---------- โหลด ----------
   async function load() {
-    const disc = canDiscount ? Math.max(0, parseFloat($('#b-disc').value) || 0) : 0;
+    const disc = discAmount();
     const { data: d, error } = await sb.rpc('st_checkout_preview', { p_table: tableId, p_discount: disc });
     if (error) { $('#b-sub').textContent = ''; return showMsg(thaiError(error)); }
     if (!d) {
@@ -188,13 +232,17 @@
     }
     const { data: res, error } = await sb.rpc('st_record_payment', {
       p_table: tableId, p_method: method,
-      p_discount: canDiscount ? Math.max(0, parseFloat($('#b-disc').value) || 0) : 0,
+      p_discount: discAmount(),
       p_received: received, p_slip_path: slipPath, p_note: $('#b-note').value.trim() || null
     });
     if (error) {
       btn.disabled = false; renderMethod();
       if (error.message === 'st_already_paid' || error.message === 'st_table_not_open') load();
       return showMsg(thaiError(error));
+    }
+    if (coupon && Number(res.total) >= 0) {
+      const { error: cErr } = await sb.rpc('st_coupon_redeem', { p_payment: res.payment_id, p_coupon: coupon.coupon_id });
+      if (cErr) alert('รับเงินแล้ว แต่บันทึกการใช้คูปองไม่สำเร็จ: ' + thaiError(cErr));
     }
     location.replace(`receipt.html?id=${encodeURIComponent(shopId)}&p=${encodeURIComponent(res.payment_id)}&new=1`);
   });
