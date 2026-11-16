@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FBF6EE">
+  <title>ใบเสร็จ · SmartTable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/st-style.css">
+</head>
+<body>
+<main class="st-page">
+  <div class="st-top">
+    <a id="back" href="home.html" class="st-chip">‹ ร้าน</a>
+  </div>
+  <h1 class="st-title">ใบเสร็จล่าสุด</h1>
+  <p id="sub" class="st-sub">30 ใบล่าสุด · แตะเพื่อดู / พิมพ์ซ้ำ</p>
+  <div id="st-msg" class="st-msg" role="status" hidden></div>
+  <div id="list" class="st-list"></div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/st-config.js"></script>
+<script src="js/st-auth.js"></script>
+<script>
+(async function () {
+  const { sb, configOk, $, esc, thaiError, showMsg, requireUser } = ST;
+  if (!configOk) return;
+  if (!(await requireUser())) return;
+  const shopId = new URLSearchParams(location.search).get('id');
+  if (!shopId) return location.replace('home.html');
+  $('#back').href = 'shop.html?id=' + encodeURIComponent(shopId);
+  const METHOD = { cash: '💵 เงินสด', promptpay: '📱 พร้อมเพย์', transfer: '🏦 โอน', card: '💳 บัตร' };
+  const { data, error } = await sb.rpc('st_recent_payments', { p_shop: shopId, p_limit: 30 });
+  if (error) return showMsg(thaiError(error));
+  $('#list').innerHTML = data.length ? data.map(p => {
+    const at = new Date(p.created_at);
+    return `<a class="st-item${p.status === 'void' ? ' st-item--void' : ''}" href="receipt.html?id=${encodeURIComponent(shopId)}&p=${encodeURIComponent(p.id)}">
+      <div class="st-logo">${p.receipt_no}</div>
+      <div class="st-item-main"><b>โต๊ะ ${esc(p.table_label)} · ฿${Number(p.total).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</b>
+        <small>${at.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} ${at.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} · ${METHOD[p.method]}${p.status === 'void' ? ' · ยกเลิกแล้ว' : ''}</small></div>
+      <span class="st-arrow" aria-hidden="true">›</span></a>`;
+  }).join('') : '<div class="st-empty">ยังไม่มีใบเสร็จ</div>';
+})();
+</script>
+</body>
+</html>

@@ -4,9 +4,19 @@
   const { sb, configOk, $, esc, thaiError, showMsg } = ST;
   if (!configOk) return;
 
-  const qr = new URLSearchParams(location.search).get('t') || '';
+  const params = new URLSearchParams(location.search);
+  const qr = params.get('t') || '';
+  const staffMode = params.get('staff') === '1';     // พนักงานสั่งแทนลูกค้า (ต้องล็อกอิน)
+  if (staffMode) {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      location.replace('index.html?next=' + encodeURIComponent('table.html?t=' + qr + '&staff=1'));
+      return;
+    }
+    document.body.classList.add('st-staff-mode');
+  }
   const KEY_SESSION = 'st-session:' + qr;
-  const KEY_CART = 'st-cart:' + qr;
+  const KEY_CART = (staffMode ? 'st-cart-staff:' : 'st-cart:') + qr;
   const KEY_NAME = 'st-guest-name';
   const ls = {
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
@@ -82,7 +92,7 @@
     const newToken = data.session_token || null;
     if (newToken !== token) {
       token = newToken;
-      ls.set(KEY_SESSION, token);
+      if (!staffMode) ls.set(KEY_SESSION, token);
       loadCart();                                     // รอบใหม่ = ตะกร้าใหม่
       guestInfo = null;
     }
@@ -97,6 +107,12 @@
     $('#g-state').innerHTML = `<b>${esc(s.title)}</b><span>${esc(s.text)}</span>`;
     $('#g-state').hidden = false;
     $('#g-actions').hidden = !token;
+    if (staffMode) {
+      document.querySelectorAll('[data-call]').forEach(b => { b.hidden = true; });
+      $('#g-staff').innerHTML = `🛎 <b>โหมดพนักงาน</b> · สั่งแทนลูกค้าโต๊ะ ${esc(data.table.label)} · <a href="tables.html?id=${encodeURIComponent(data.shop.id)}">กลับผังโต๊ะ</a>`;
+      $('#g-staff').hidden = false;
+      if (state === 'waiting') $('#g-state').innerHTML = '<b>โต๊ะนี้ยังไม่ได้เปิด</b><span>เปิดโต๊ะที่ผังโต๊ะก่อน แล้วกลับมาหน้านี้</span>';
+    }
     renderCartBar();
     if (token) refreshGuest();
     return data;
@@ -318,7 +334,7 @@
           </div>`).join('')}
       </div>
       <form id="form-send" novalidate>
-        <label class="st-field"><span>ชื่อเล่นของคุณ (ไม่บังคับ)</span>
+        <label class="st-field"${staffMode ? ' hidden' : ''}><span>ชื่อเล่นของคุณ (ไม่บังคับ)</span>
           <input name="guest_name" type="text" maxlength="30" placeholder="ให้พนักงานรู้ว่าใครสั่ง" value="${esc(ls.get(KEY_NAME) || '')}">
         </label>
         <label class="st-field"><span>หมายเหตุถึงร้าน (ไม่บังคับ)</span>
@@ -359,17 +375,19 @@
     if (!pendingRef) pendingRef = rand();
     const btn = $('#btn-send');
     btn.disabled = true; btn.textContent = 'กำลังส่ง…';
-    const { data, error } = await sb.rpc('st_place_order', {
-      p_qr: qr, p_session_token: token,
-      p_items: cart.map(l => ({ item_id: l.item_id, qty: l.qty, choices: l.choices, note: l.note || null })),
-      p_note: f.note.value.trim() || null, p_guest_name: guestName || null, p_client_ref: pendingRef
-    });
+    const items = cart.map(l => ({ item_id: l.item_id, qty: l.qty, choices: l.choices, note: l.note || null }));
+    const { data, error } = staffMode
+      ? await sb.rpc('st_staff_order', { p_qr: qr, p_items: items, p_note: f.note.value.trim() || null, p_client_ref: pendingRef })
+      : await sb.rpc('st_place_order', {
+          p_qr: qr, p_session_token: token, p_items: items,
+          p_note: f.note.value.trim() || null, p_guest_name: guestName || null, p_client_ref: pendingRef
+        });
     if (error) {
       btn.disabled = false; btn.textContent = `ส่งรายการให้ร้าน · ${cartCount()} รายการ`;
       const code = error.message || '';
       if (code.startsWith('st_')) pendingRef = null;            // ร้านปฏิเสธ = ยังไม่ได้สร้างออร์เดอร์
       if (['st_item_sold_out', 'st_item_gone', 'st_options_changed', 'st_options_required'].includes(code)) loadMenu();
-      if (['st_session_invalid', 'st_session_billing', 'st_shop_closed'].includes(code)) scan(false);
+      if (['st_session_invalid', 'st_session_billing', 'st_shop_closed', 'st_table_not_open'].includes(code)) scan(false);
       return sheetMsg(thaiError(error));
     }
     cart = []; saveCart(); renderMenu();
@@ -434,7 +452,7 @@
 
   // ---------- เริ่มต้น ----------
   if (!qr) { $('#g-shop').textContent = 'SmartTable'; return showMsg('ลิงก์ไม่ครบ กรุณาสแกน QR ที่โต๊ะอีกครั้ง'); }
-  const first = await scan(true);
+  const first = await scan(!staffMode);
   if (!first) return;
   if (!(await loadMenu())) return;
   $('#g-menu').hidden = false;

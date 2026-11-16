@@ -32,6 +32,8 @@
     + (shop.is_open ? '' : '<br><b class="st-bad">ร้านปิดอยู่</b> ลูกค้าจะสั่งไม่ได้ (เปิดได้ที่หน้าข้อมูลร้าน)');
 
   const tableUrl = (qr) => pageUrl('table.html') + '?t=' + encodeURIComponent(qr);
+  const billUrl = (t) => `bill.html?id=${encodeURIComponent(shopId)}&table=${encodeURIComponent(t.id)}`;
+  const staffOrderUrl = (t) => `table.html?t=${encodeURIComponent(t.qr_token)}&staff=1`;
   const baht = (n) => '฿' + Number(n).toLocaleString('th-TH', { maximumFractionDigits: 2 });
   const ORDER_TH = { new: 'ใหม่', accepted: 'รับแล้ว', cooking: 'กำลังทำ', served: 'เสิร์ฟแล้ว', cancelled: 'ยกเลิก' };
   const CALL_TH = { call: '🙋 เรียกพนักงาน', bill: '🧾 ขอเช็กบิล' };
@@ -218,12 +220,15 @@
         <button class="st-btn" type="button" data-act="open">เปิดโต๊ะ</button>`;
     } else if (s === 'open') {
       actions = `
-        <button class="st-btn" type="button" data-act="billing">เรียกเช็กบิล</button>
-        <button class="st-btn st-btn--ghost" type="button" data-act="close">ปิดโต๊ะ (ลูกค้ากลับแล้ว)</button>`;
+        <a class="st-btn st-btn-link" href="${billUrl(t)}">💵 เช็กบิล / รับเงิน</a>
+        <a class="st-btn st-btn--ghost st-btn-link" href="${staffOrderUrl(t)}">🛎 สั่งแทนลูกค้า</a>
+        <button class="st-btn st-btn--ghost" type="button" data-act="billing">ล็อกไม่ให้สั่งเพิ่ม (รอเช็กบิล)</button>
+        <button class="st-btn st-btn--ghost" type="button" data-act="close">ปิดโต๊ะโดยไม่เก็บเงิน</button>`;
     } else {
       actions = `
-        <button class="st-btn" type="button" data-act="close">ปิดโต๊ะ (จ่ายเงินแล้ว)</button>
-        <button class="st-btn st-btn--ghost" type="button" data-act="reopen">กลับไปให้สั่งเพิ่มได้</button>`;
+        <a class="st-btn st-btn-link" href="${billUrl(t)}">💵 รับเงิน</a>
+        <button class="st-btn st-btn--ghost" type="button" data-act="reopen">กลับไปให้สั่งเพิ่มได้</button>
+        <button class="st-btn st-btn--ghost" type="button" data-act="close">ปิดโต๊ะโดยไม่เก็บเงิน</button>`;
     }
     body.innerHTML = `
       <p class="st-sheet-info st-tile--${s}">${info}</p>
@@ -311,7 +316,9 @@
       ({ error } = await sb.rpc('st_set_table_status', { p_table: t.id, p_status: act === 'billing' ? 'billing' : 'open', p_guests: null }));
       okText = act === 'billing' ? `โต๊ะ ${t.label} รอเช็กบิล` : `โต๊ะ ${t.label} สั่งเพิ่มได้แล้ว`;
     } else if (act === 'close') {
-      if (!confirm(`ปิดโต๊ะ ${t.label}? ลูกค้ากลุ่มนี้จะสั่งต่อจากมือถือไม่ได้`)) { btn.disabled = false; return; }
+      const unpaid = detail && detail.orders.some(o => o.status !== 'cancelled');
+      if (!confirm(unpaid ? `โต๊ะ ${t.label} ยังไม่ได้บันทึกการรับเงิน!\nปิดโต๊ะโดยไม่เก็บเงิน? (ยอดนี้จะไม่อยู่ในรายงานยอดขาย)`
+                          : `ปิดโต๊ะ ${t.label}? ลูกค้ากลุ่มนี้จะสั่งต่อจากมือถือไม่ได้`)) { btn.disabled = false; return; }
       ({ error } = await sb.rpc('st_close_table', { p_table: t.id }));
       okText = `ปิดโต๊ะ ${t.label} แล้ว`;
     } else if (act === 'reset-qr') {
@@ -395,6 +402,7 @@
     .on('postgres_changes', { event: '*', schema: 'public', table: 'st_orders', filter }, schedule)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'st_service_calls', filter }, schedule)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'st_table_sessions', filter }, schedule)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'st_payments', filter }, schedule)
     .subscribe();
 
   // ---------- เริ่มต้น + รีเฟรชอัตโนมัติ (สำรอง) ----------

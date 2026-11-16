@@ -20,6 +20,7 @@
   const isOwner = role === 'owner';
   const canManage = isOwner || role === 'manager';
   let current = shop;
+  $('#link-reports').hidden = !canManage;
 
   $('#my-role').textContent = 'คุณ: ' + (ROLE_TH[role] || '-');
   const renderHead = () => {
@@ -31,6 +32,8 @@
   renderHead();
   $('#link-menu').href = 'menu.html?id=' + encodeURIComponent(shopId);
   $('#link-orders').href = 'orders.html?id=' + encodeURIComponent(shopId);
+  $('#link-reports').href = 'reports.html?id=' + encodeURIComponent(shopId);
+  $('#link-receipts').href = 'receipts.html?id=' + encodeURIComponent(shopId);
   $('#link-tables').href = 'tables.html?id=' + encodeURIComponent(shopId);
   $('#shop-body').hidden = false;
 

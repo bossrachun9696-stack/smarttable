@@ -84,7 +84,13 @@
     st_item_sold_out: 'มีเมนูหมดแล้ว กรุณาลบออกจากตะกร้า',
     st_options_changed: 'ร้านเปลี่ยนตัวเลือกของเมนูนี้ กรุณาลบแล้วเลือกใหม่',
     st_options_required: 'ยังเลือกตัวเลือกไม่ครบ',
-    st_order_cancelled: 'ออร์เดอร์นี้ยกเลิกไปแล้ว'
+    st_order_cancelled: 'ออร์เดอร์นี้ยกเลิกไปแล้ว',
+    st_discount_forbidden: 'ตำแหน่งของคุณให้ส่วนลดไม่ได้ ให้แคชเชียร์หรือผู้จัดการทำ',
+    st_cash_not_enough: 'รับเงินมาน้อยกว่ายอดที่ต้องจ่าย',
+    st_already_paid: 'โต๊ะนี้จ่ายเงินแล้ว',
+    st_nothing_to_pay: 'ยังไม่มีรายการให้เก็บเงิน',
+    st_void_reason: 'กรุณาใส่เหตุผลที่ยกเลิก (ไม่เกิน 200 ตัวอักษร)',
+    st_already_void: 'ใบเสร็จนี้ถูกยกเลิกไปแล้ว'
   };
   const ROLE_TH = { owner: 'เจ้าของ', manager: 'ผู้จัดการ', cashier: 'แคชเชียร์', kitchen: 'ครัว', waiter: 'พนักงานเสิร์ฟ' };
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>

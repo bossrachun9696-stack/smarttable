@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FBF6EE">
+  <title>รายงานยอดขาย · SmartTable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/st-style.css">
+</head>
+<body>
+<main class="st-page st-page--report">
+  <div class="st-top">
+    <a id="back" href="home.html" class="st-chip">‹ ร้าน</a>
+    <button id="btn-csv" class="st-chip" type="button" hidden>⬇ ดาวน์โหลด CSV</button>
+  </div>
+  <h1 class="st-title">รายงานยอดขาย <small id="shop-sub" class="st-sub"></small></h1>
+
+  <div class="st-filter">
+    <div id="presets" class="st-presets">
+      <button type="button" data-p="today">วันนี้</button>
+      <button type="button" data-p="yesterday">เมื่อวาน</button>
+      <button type="button" data-p="7d">7 วัน</button>
+      <button type="button" data-p="30d">30 วัน</button>
+      <button type="button" data-p="month">เดือนนี้</button>
+      <button type="button" data-p="lastmonth">เดือนก่อน</button>
+    </div>
+    <div class="st-range">
+      <input id="d-from" type="date" aria-label="ตั้งแต่วันที่">
+      <span>ถึง</span>
+      <input id="d-to" type="date" aria-label="ถึงวันที่">
+    </div>
+  </div>
+
+  <div id="st-msg" class="st-msg" role="status" hidden></div>
+
+  <div id="r-body" hidden>
+    <div id="leaks" class="st-msg st-msg--error" hidden></div>
+
+    <div class="st-kpis">
+      <div class="st-kpi st-kpi--hero"><span>ยอดขายสุทธิ</span><b id="k-net">–</b></div>
+      <div class="st-kpi"><span>จำนวนบิล</span><b id="k-bills">–</b></div>
+      <div class="st-kpi"><span>เฉลี่ยต่อบิล</span><b id="k-avg">–</b></div>
+      <div class="st-kpi"><span>ลูกค้า</span><b id="k-guests">–</b></div>
+    </div>
+    <div id="k-breakdown" class="st-breakdown"></div>
+
+    <section class="st-card">
+      <h3 id="chart-title">ยอดขาย</h3>
+      <div id="chart" class="st-chart"></div>
+      <details class="st-table-view"><summary>ดูเป็นตาราง</summary><div id="chart-table"></div></details>
+    </section>
+
+    <section class="st-card">
+      <h3>ช่องทางชำระ</h3>
+      <div id="methods"></div>
+    </section>
+
+    <section class="st-card">
+      <h3>เมนูขายดี (20 อันดับ)</h3>
+      <div id="top-items"></div>
+    </section>
+
+    <section class="st-card">
+      <h3>ตามหมวดหมู่</h3>
+      <div id="cats"></div>
+    </section>
+  </div>
+</main>
+<div id="tip" class="st-tip" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/st-config.js"></script>
+<script src="js/st-auth.js"></script>
+<script src="js/st-reports.js"></script>
+</body>
+</html>

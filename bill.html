@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FBF6EE">
+  <title>เช็กบิล · SmartTable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/st-style.css">
+</head>
+<body>
+<main class="st-page">
+  <div class="st-top">
+    <a id="back" href="home.html" class="st-chip">‹ ผังโต๊ะ</a>
+    <span id="b-time" class="st-badge"></span>
+  </div>
+  <h1 class="st-title" id="b-title">เช็กบิล</h1>
+  <p id="b-sub" class="st-sub">กำลังโหลด…</p>
+
+  <div id="st-msg" class="st-msg" role="status" hidden></div>
+
+  <div id="b-body" hidden>
+    <div id="b-warn" class="st-msg st-msg--error" hidden></div>
+
+    <section class="st-card">
+      <h3>รายการอาหาร</h3>
+      <div id="b-items"></div>
+    </section>
+
+    <section class="st-card">
+      <label id="b-disc-wrap" class="st-field"><span>ส่วนลด (บาท)</span>
+        <input id="b-disc" type="number" min="0" step="1" inputmode="decimal" placeholder="0">
+      </label>
+      <div id="b-bill" class="st-bill st-bill--flat"></div>
+    </section>
+
+    <section class="st-card">
+      <h3>วิธีชำระ</h3>
+      <div id="b-methods" class="st-seg" role="tablist">
+        <button type="button" data-m="cash">💵 เงินสด</button>
+        <button type="button" data-m="promptpay">📱 พร้อมเพย์</button>
+        <button type="button" data-m="transfer">🏦 โอน</button>
+        <button type="button" data-m="card">💳 บัตร</button>
+      </div>
+
+      <div data-panel="cash">
+        <label class="st-field"><span>รับเงินมา (บาท)</span>
+          <input id="b-recv" type="number" min="0" step="1" inputmode="decimal">
+        </label>
+        <div id="b-quick" class="st-quick"></div>
+        <div class="st-change"><span>เงินทอน</span><b id="b-change">฿0</b></div>
+      </div>
+
+      <div data-panel="promptpay" hidden>
+        <div id="b-pp"></div>
+      </div>
+
+      <div data-panel="slip" hidden>
+        <div class="st-photo">
+          <div id="slip-preview" class="st-photo-box">ไม่บังคับ</div>
+          <div class="st-photo-actions">
+            <label class="st-chip">ถ่าย / แนบสลิป
+              <input id="slip-input" type="file" accept="image/*" hidden>
+            </label>
+            <button id="slip-remove" class="st-chip" type="button" hidden>ลบรูป</button>
+            <small>เก็บไว้ตรวจย้อนหลัง (เห็นเฉพาะพนักงาน)</small>
+          </div>
+        </div>
+      </div>
+
+      <label class="st-field"><span>หมายเหตุ (ไม่บังคับ)</span>
+        <input id="b-note" type="text" maxlength="200" placeholder="เช่น ลูกค้าประจำ">
+      </label>
+      <button id="b-pay" class="st-btn" type="button">รับเงิน · ปิดโต๊ะ</button>
+    </section>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/st-config.js"></script>
+<script src="js/st-auth.js"></script>
+<script src="js/st-qr.js"></script>
+<script src="js/st-promptpay.js"></script>
+<script src="js/st-bill.js"></script>
+</body>
+</html>
