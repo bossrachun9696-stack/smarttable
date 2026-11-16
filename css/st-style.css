@@ -581,3 +581,55 @@ body.st-noscroll { overflow: hidden; }
 .st-tbl td { border-bottom: 1px solid var(--st-line); padding: 7px 4px; }
 .st-tbl th:nth-child(n+3), .st-tbl td:nth-child(n+3) { text-align: right; white-space: nowrap; }
 .st-tbl td:first-child { color: var(--st-muted); width: 2.5em; }
+
+/* ===== รอบ A: ป้ายอาหาร จำนวนเหลือ แบรนด์ร้าน ประวัติ ===== */
+.st-stock {
+  font: inherit; font-size: 12px; font-weight: 700; flex: none; cursor: pointer; white-space: nowrap;
+  border: 1px solid var(--st-line); background: #fff; color: var(--st-muted); border-radius: 999px; padding: 4px 9px;
+}
+.st-stock.low { background: #FDF0D5; color: #8A5A06; border-color: #E8C27A; }
+.st-tagpick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.st-tagchip { cursor: pointer; }
+.st-tagchip input { position: absolute; opacity: 0; pointer-events: none; }
+.st-tagchip span { display: inline-block; font-size: 14px; border: 1.5px solid var(--st-line); background: #fff; border-radius: 999px; padding: 6px 12px; }
+.st-tagchip input:checked + span { border-color: var(--st-accent); background: var(--st-accent-soft); color: var(--st-accent-dark); font-weight: 600; }
+.st-tagchip input:focus-visible + span { outline: 3px solid var(--st-accent-soft); }
+.st-tag--allergen { background: #FFF4E5; color: #8A5A06; }
+.st-tag--diet { background: var(--st-ok-soft); color: var(--st-ok); }
+.st-tag--low { background: var(--st-accent-soft); color: var(--st-accent-dark); }
+.st-hero-tags { margin: -6px 0 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+.st-diet { padding-top: 6px; }
+.st-diet button { font-size: 13px; font-weight: 600; }
+.st-diet button[aria-pressed="true"] { background: var(--st-ok); border-color: var(--st-ok); color: #fff; }
+
+.st-cover { height: 150px; margin: calc(-1 * (20px + env(safe-area-inset-top))) -16px 12px; background: var(--st-line) center / cover no-repeat; }
+.st-glogo { width: 56px; height: 56px; border-radius: 16px; object-fit: cover; flex: none; background: #fff; border: 1px solid var(--st-line); }
+.st-cover:not([hidden]) + .st-guest-head .st-glogo { margin-top: -40px; border: 3px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,.12); width: 72px; height: 72px; }
+.st-guest-head { align-items: flex-end; }
+
+.st-brand-edit { display: flex; gap: 14px; align-items: flex-start; }
+.st-brand-edit .st-chip { margin-top: 8px; cursor: pointer; display: inline-block; }
+.st-photo-box--round { width: 88px; height: 88px; border-radius: 20px; }
+.st-cover-box {
+  height: 88px; border-radius: 14px; overflow: hidden; display: grid; place-items: center; background: #fff;
+  border: 1.5px dashed var(--st-line); color: var(--st-muted); font-size: 13px;
+}
+.st-cover-box img { width: 100%; height: 100%; object-fit: cover; }
+.st-swatches { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.st-swatches button { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px var(--st-line); cursor: pointer; }
+.st-swatches button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--st-ink); }
+.st-swatch-custom { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--st-muted); cursor: pointer; }
+.st-swatch-custom input { width: 34px; height: 34px; border: 0; padding: 0; background: none; cursor: pointer; }
+
+.st-scroll { overflow-x: auto; }
+.st-tbl--staff th:nth-child(n+2), .st-tbl--staff td:nth-child(n+2) { text-align: right; white-space: nowrap; }
+.st-tbl--staff td:first-child { color: var(--st-ink); width: auto; font-weight: 600; }
+.st-ev { display: flex; gap: 10px; padding: 10px 0; border-top: 1px solid var(--st-line); }
+.st-ev:first-child { border-top: 0; }
+.st-ev-icon { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; flex: none; background: var(--st-bg); font-size: 14px; }
+.st-ev--r1 .st-ev-icon { background: #FDF0D5; }
+.st-ev--r2 .st-ev-icon { background: var(--st-err-soft); }
+.st-ev--r2 b { color: var(--st-err); }
+.st-ev-main { min-width: 0; }
+.st-ev-main b, .st-ev-main small { display: block; }
+.st-ev-main small { color: var(--st-muted); font-size: 13px; }

@@ -187,6 +187,21 @@
     const s = stateOf(t);
     $('#sheet-title').textContent = `โต๊ะ ${t.label}`;
 
+    if (sheetMode === 'move' || sheetMode === 'merge') {
+      const isMove = sheetMode === 'move';
+      const cands = tables.filter(x => x.id !== t.id && x.is_active && (isMove ? !x.session : !!x.session));
+      body.innerHTML = `
+        <p class="st-sub">${isMove ? `ย้ายลูกค้าและออร์เดอร์ทั้งหมดของโต๊ะ ${esc(t.label)} ไปโต๊ะที่ว่าง`
+                                   : `รวมออร์เดอร์ทั้งหมดของโต๊ะ ${esc(t.label)} เข้ากับโต๊ะที่มีลูกค้า (เช็กบิลรวมกัน)`}</p>
+        <div class="st-board">${cands.length ? cands.map(x => `
+          <button type="button" class="st-tile st-tile--${stateOf(x)}" data-act="${isMove ? 'do-move' : 'do-merge'}" data-to="${esc(x.id)}" data-label="${esc(x.label)}">
+            <b>${esc(x.label)}</b><span>${esc(STATE_TH[stateOf(x)])}</span><small>${esc(x.zone || '')}</small>
+          </button>`).join('') : `<p class="st-sub">${isMove ? 'ไม่มีโต๊ะว่าง' : 'ไม่มีโต๊ะอื่นที่มีลูกค้า'}</p>`}</div>
+        <p class="st-sub" style="margin-top:12px">ลูกค้าที่ใช้มือถือสั่งอยู่ ต้องสแกน QR ของโต๊ะ${isMove ? 'ใหม่' : 'ที่รวม'}อีกครั้ง</p>
+        <button class="st-btn st-btn--ghost" type="button" data-act="back">‹ กลับ</button>`;
+      return;
+    }
+
     if (sheetMode === 'qr') {
       const url = tableUrl(t.qr_token);
       body.innerHTML = `
@@ -234,6 +249,10 @@
       <p class="st-sheet-info st-tile--${s}">${info}</p>
       ${s === 'free' ? '' : detailHtml()}
       <div class="st-sheet-actions">${actions}
+        ${s !== 'free' && canOperate && t.is_active ? `<div class="st-grid2">
+          <button class="st-btn st-btn--ghost" type="button" data-act="move">↔ ย้ายโต๊ะ</button>
+          <button class="st-btn st-btn--ghost" type="button" data-act="merge">⇉ รวมโต๊ะ</button>
+        </div>` : ''}
         <button class="st-btn st-btn--ghost" type="button" data-act="show-qr">แสดง QR ให้ลูกค้าสแกน</button>
       </div>`;
   }
@@ -288,6 +307,19 @@
       return;
     }
     if (act === 'show-qr') { sheetMode = 'qr'; return renderSheet(); }
+    if (act === 'move' || act === 'merge') { sheetMode = act; return renderSheet(); }
+    if (act === 'do-move' || act === 'do-merge') {
+      const to = btn.dataset.label;
+      const isMove = act === 'do-move';
+      if (!confirm(isMove ? `ย้ายโต๊ะ ${t.label} ไปโต๊ะ ${to}?` : `รวมโต๊ะ ${t.label} เข้ากับโต๊ะ ${to}?\nออร์เดอร์ทั้งหมดจะไปอยู่ที่โต๊ะ ${to} และโต๊ะ ${t.label} จะว่าง`)) return;
+      btn.disabled = true;
+      const { error: em } = await sb.rpc(isMove ? 'st_move_table' : 'st_merge_tables',
+        isMove ? { p_from: t.id, p_to: btn.dataset.to } : { p_from: t.id, p_into: btn.dataset.to });
+      if (em) { btn.disabled = false; return sheetMsg(thaiError(em)); }
+      closeSheet();
+      showMsg(isMove ? `ย้ายโต๊ะ ${t.label} → ${to} แล้ว` : `รวมโต๊ะ ${t.label} เข้ากับ ${to} แล้ว`, 'ok');
+      return load();
+    }
     if (act === 'back') { sheetMode = 'actions'; renderSheet(); return loadDetail(); }
     if (act === 'call-done') {
       btn.disabled = true;

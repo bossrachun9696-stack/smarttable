@@ -1,6 +1,6 @@
 // ===== หน้า จัดการร้าน =====
 (async function () {
-  const { sb, configOk, $, esc, ROLE_TH, thaiError, pageUrl, showMsg, setBusy, requireUser, copyText } = ST;
+  const { sb, configOk, $, esc, ROLE_TH, thaiError, pageUrl, showMsg, setBusy, requireUser, copyText, shrinkImage } = ST;
   if (!configOk) return;
 
   const user = await requireUser();
@@ -21,6 +21,7 @@
   const canManage = isOwner || role === 'manager';
   let current = shop;
   $('#link-reports').hidden = !canManage;
+  $('#link-audit').hidden = !canManage;
 
   $('#my-role').textContent = 'คุณ: ' + (ROLE_TH[role] || '-');
   const renderHead = () => {
@@ -33,6 +34,7 @@
   $('#link-menu').href = 'menu.html?id=' + encodeURIComponent(shopId);
   $('#link-orders').href = 'orders.html?id=' + encodeURIComponent(shopId);
   $('#link-reports').href = 'reports.html?id=' + encodeURIComponent(shopId);
+  $('#link-audit').href = 'audit.html?id=' + encodeURIComponent(shopId);
   $('#link-receipts').href = 'receipts.html?id=' + encodeURIComponent(shopId);
   $('#link-tables').href = 'tables.html?id=' + encodeURIComponent(shopId);
   $('#shop-body').hidden = false;
@@ -96,6 +98,61 @@
     current = data; fillShop(); renderHead();
     showMsg('บันทึกข้อมูลร้านแล้ว', 'ok');
   });
+
+  // ---------- หน้าตาร้าน: โลโก้ / รูปปก / สี ----------
+  const imgUrl = (path) => sb.storage.from('st-images').getPublicUrl(path).data.publicUrl;
+  const COLORS = ['#E4572E', '#C0392B', '#D4537E', '#8E44AD', '#2F6FD6', '#0F8B8D', '#2F7D5B', '#B7791F', '#5D4037', '#222222'];
+  function renderBrand() {
+    const set = (box, del, path, label) => {
+      box.innerHTML = path ? `<img src="${esc(imgUrl(path))}" alt="">` : label;
+      del.hidden = !path || !canManage;
+    };
+    set($('#logo-box'), $('#logo-del'), current.logo_path, 'โลโก้');
+    set($('#cover-box'), $('#cover-del'), current.cover_path, 'รูปปก (แนวนอน)');
+    const cur = (current.theme_color || '#E4572E').toUpperCase();
+    $('#swatches').innerHTML = COLORS.map(c => `<button type="button" data-color="${c}" style="background:${c}"
+        aria-label="สี ${c}" aria-pressed="${c === cur}"${canManage ? '' : ' disabled'}></button>`).join('')
+      + (canManage ? `<label class="st-swatch-custom" title="เลือกสีเอง"><input type="color" value="${cur.toLowerCase()}"> อื่น ๆ</label>` : '');
+  }
+  async function saveBrand(patch, okText) {
+    const { data, error } = await sb.from('st_shops').update(patch).eq('id', shopId).select().single();
+    if (error) { showMsg(thaiError(error)); return false; }
+    current = data; renderBrand(); showMsg(okText, 'ok');
+    return true;
+  }
+  async function uploadBrand(file, kind) {
+    const blob = await shrinkImage(file, kind === 'logo' ? 512 : 1600, 0.85);
+    const path = `shops/${shopId}/brand/${kind}-${Date.now()}.jpg`;
+    const { error } = await sb.storage.from('st-images').upload(path, blob, { contentType: 'image/jpeg', cacheControl: '31536000' });
+    if (error) return showMsg('อัปโหลดไม่สำเร็จ: ' + thaiError(error));
+    const old = current[kind + '_path'];
+    if (await saveBrand({ [kind + '_path']: path }, kind === 'logo' ? 'เปลี่ยนโลโก้แล้ว' : 'เปลี่ยนรูปปกแล้ว') && old) {
+      sb.storage.from('st-images').remove([old]);
+    }
+  }
+  renderBrand();
+  if (!canManage) {
+    $('#brand-card').querySelectorAll('label.st-chip').forEach(l => { l.hidden = true; });
+  } else {
+    for (const kind of ['logo', 'cover']) {
+      $(`#${kind}-input`).addEventListener('change', async (e) => {
+        const f = e.target.files[0]; e.target.value = '';
+        if (f) { try { await uploadBrand(f, kind); } catch { showMsg('อ่านรูปนี้ไม่ได้ ลองรูปอื่น'); } }
+      });
+      $(`#${kind}-del`).addEventListener('click', async () => {
+        const old = current[kind + '_path'];
+        if (!old || !confirm('ลบรูปนี้?')) return;
+        if (await saveBrand({ [kind + '_path']: null }, 'ลบรูปแล้ว')) sb.storage.from('st-images').remove([old]);
+      });
+    }
+    $('#swatches').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-color]');
+      if (b) saveBrand({ theme_color: b.dataset.color }, 'เปลี่ยนสีร้านแล้ว');
+    });
+    $('#swatches').addEventListener('change', (e) => {
+      if (e.target.type === 'color') saveBrand({ theme_color: e.target.value.toUpperCase() }, 'เปลี่ยนสีร้านแล้ว');
+    });
+  }
 
   // ---------- พนักงาน ----------
   const assignable = isOwner ? ['manager', 'cashier', 'kitchen', 'waiter'] : ['cashier', 'kitchen', 'waiter'];

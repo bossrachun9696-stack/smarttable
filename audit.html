@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FBF6EE">
+  <title>ประวัติการทำงาน · SmartTable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/st-style.css">
+</head>
+<body>
+<main class="st-page st-page--report">
+  <div class="st-top"><a id="back" href="home.html" class="st-chip">‹ ร้าน</a></div>
+  <h1 class="st-title">ประวัติการทำงาน</h1>
+  <p class="st-sub">ใครยกเลิกออร์เดอร์ ให้ส่วนลด ปิดโต๊ะโดยไม่เก็บเงิน ยกเลิกใบเสร็จ หรือเปลี่ยนการตั้งค่าสำคัญ</p>
+
+  <div class="st-filter">
+    <div id="presets" class="st-presets">
+      <button type="button" data-p="0">วันนี้</button>
+      <button type="button" data-p="1">เมื่อวาน</button>
+      <button type="button" data-p="7">7 วัน</button>
+      <button type="button" data-p="30">30 วัน</button>
+    </div>
+    <div class="st-range">
+      <input id="d-from" type="date" aria-label="ตั้งแต่วันที่"><span>ถึง</span><input id="d-to" type="date" aria-label="ถึงวันที่">
+    </div>
+  </div>
+
+  <div id="st-msg" class="st-msg" role="status" hidden></div>
+
+  <div id="a-body" hidden>
+    <section class="st-card">
+      <h3>สรุปตามพนักงาน</h3>
+      <div id="by-staff"></div>
+    </section>
+    <section class="st-card">
+      <h3>รายการทั้งหมด</h3>
+      <div id="kinds" class="st-presets" style="margin-bottom:10px"></div>
+      <div id="events"></div>
+    </section>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/st-config.js"></script>
+<script src="js/st-auth.js"></script>
+<script src="js/st-audit.js"></script>
+</body>
+</html>

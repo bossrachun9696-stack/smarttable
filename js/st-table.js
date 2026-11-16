@@ -1,7 +1,7 @@
 // ===== หน้า ลูกค้าสแกน QR (table.html?t=<qr_token>) — ไม่ต้องล็อกอิน =====
 // ดูเมนู · ตะกร้า · ส่งรายการเข้าร้าน · ดูที่สั่งแล้วและยอดบิล · เรียกพนักงาน / ขอเช็กบิล
 (async function () {
-  const { sb, configOk, $, esc, thaiError, showMsg } = ST;
+  const { sb, configOk, $, esc, thaiError, showMsg, TAGS, applyTheme } = ST;
   if (!configOk) return;
 
   const params = new URLSearchParams(location.search);
@@ -38,6 +38,8 @@
   };
 
   let state = null;
+  let brandDone = false;
+  const diet = new Set();        // ตัวกรองป้ายอาหารที่ลูกค้าเลือก
   let token = null;
   let menu = { categories: [], items: [] };
   let cart = [];            // [{key, item_id, name, unit, qty, choices, labels, note}]
@@ -45,6 +47,10 @@
   let guestInfo = null;     // ผลล่าสุดจาก st_guest_orders
 
   const canOrder = () => state === 'open' && !!token;
+  // จำนวนที่ยังเพิ่มได้ (หักที่อยู่ในตะกร้าแล้ว) · ไม่นับจำนวน = 20
+  const remaining = (it) => it.stock_left == null ? Infinity
+    : it.stock_left - cart.filter(l => l.item_id === it.id).reduce((s, l) => s + l.qty, 0);
+  const maxQty = (it) => Math.max(1, Math.min(20, remaining(it)));
 
   // ---------- ข้อความลอยด้านล่าง ----------
   let toastTimer;
@@ -98,6 +104,12 @@
     }
     state = data.state;
     $('#g-shop').textContent = data.shop.name;
+    if (!brandDone) {
+      brandDone = true;
+      applyTheme(data.shop.theme_color);
+      if (data.shop.cover_path) { $('#g-cover').style.backgroundImage = `url("${imgUrl(data.shop.cover_path)}")`; $('#g-cover').hidden = false; }
+      if (data.shop.logo_path) { $('#g-logo').src = imgUrl(data.shop.logo_path); $('#g-logo').hidden = false; }
+    }
     $('#g-sub').textContent = data.table.zone || '';
     $('#g-table').textContent = 'โต๊ะ ' + data.table.label;
     $('#g-table').hidden = false;
@@ -137,6 +149,14 @@
 
   // ---------- เมนู ----------
   let activeCat = '';
+  // ตัวกรอง: อาหารประเภท (ต้องมีป้าย) / ไม่มีสารก่อแพ้ (ต้องไม่มีป้าย)
+  const passDiet = (i) => [...diet].every(k => TAGS[k].kind === 'diet' ? (i.tags || []).includes(k) : !(i.tags || []).includes(k));
+  function renderDiet() {
+    const used = new Set(menu.items.flatMap(i => i.tags || []));
+    const keys = Object.keys(TAGS).filter(k => used.has(k));
+    $('#g-diet').innerHTML = keys.map(k => `<button type="button" data-diet="${k}" aria-pressed="${diet.has(k)}">${TAGS[k].kind === 'diet' ? TAGS[k].icon + ' ' + TAGS[k].th : '🚫 ' + TAGS[k].none}</button>`).join('');
+    $('#g-diet').hidden = !keys.length;
+  }
   function renderMenu() {
     const term = $('#g-search').value.trim().toLowerCase();
     const cats = menu.categories.filter(c => menu.items.some(i => i.category_id === c.id));
@@ -148,7 +168,8 @@
       `<button type="button" data-cat="${esc(g.id)}" class="${g.id === activeCat ? 'on' : ''}">${esc(g.name)}</button>`).join('') : '';
 
     const shown = groups.map(g => ({
-      ...g, items: g.items.filter(i => !term || i.name.toLowerCase().includes(term) || (i.description || '').toLowerCase().includes(term))
+      ...g, items: g.items.filter(i => (!term || i.name.toLowerCase().includes(term) || (i.description || '').toLowerCase().includes(term))
+                                      && passDiet(i))
     })).filter(g => g.items.length);
 
     const inCart = (id) => cart.filter(l => l.item_id === id).reduce((s, l) => s + l.qty, 0);
@@ -166,6 +187,8 @@
                 ${i.is_recommended ? '<span class="st-tag st-tag--rec">⭐ แนะนำ</span>' : ''}
                 ${i.spicy_level ? `<span class="st-tag">${SPICY[i.spicy_level]}</span>` : ''}
                 ${i.is_available ? '' : '<span class="st-tag st-tag--off">หมด</span>'}
+                ${i.is_available && i.stock_left != null && i.stock_left <= 5 ? `<span class="st-tag st-tag--low">เหลือ ${i.stock_left}</span>` : ''}
+                ${(i.tags || []).map(t => TAGS[t] ? `<span class="st-tag st-tag--${TAGS[t].kind}" title="${esc(TAGS[t].th)}">${TAGS[t].icon}${TAGS[t].kind === 'diet' ? ' ' + esc(TAGS[t].th) : ''}</span>` : '').join('')}
                 ${inCart(i.id) ? `<span class="st-tag st-tag--cart">ในตะกร้า ${inCart(i.id)}</span>` : ''}
               </div>
             </div>
@@ -177,11 +200,18 @@
     const { data, error } = await sb.rpc('st_public_menu', { p_qr: qr });
     if (error) { showMsg(thaiError(error)); return false; }
     menu = data;
+    renderDiet();
     renderMenu();
     return true;
   }
 
   $('#g-search').addEventListener('input', renderMenu);
+  $('#g-diet').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-diet]');
+    if (!b) return;
+    diet.has(b.dataset.diet) ? diet.delete(b.dataset.diet) : diet.add(b.dataset.diet);
+    renderDiet(); renderMenu();
+  });
   $('#g-cats').addEventListener('click', (e) => {
     const b = e.target.closest('[data-cat]');
     if (!b) return;
@@ -239,7 +269,8 @@
       ${it.image_path ? `<div class="st-hero"><img src="${esc(imgUrl(it.image_path))}" alt=""></div>` : ''}
       <h2 class="st-hero-name">${esc(it.name)}</h2>
       ${it.description ? `<p class="st-sub">${esc(it.description)}</p>` : ''}
-      <p class="st-hero-price">${baht(it.price)}</p>
+      <p class="st-hero-price">${baht(it.price)}${it.stock_left != null && it.is_available ? ` <small class="st-sub">· เหลือ ${it.stock_left}</small>` : ''}</p>
+      ${(it.tags || []).length ? `<p class="st-hero-tags">${it.tags.map(t => TAGS[t] ? `<span class="st-tag st-tag--${TAGS[t].kind}">${TAGS[t].icon} ${esc(TAGS[t].th)}</span>` : '').join(' ')}</p>` : ''}
       <form id="form-add" novalidate>
         ${it.options.map(g => `
           <fieldset class="st-optg" data-g="${esc(g.id)}" data-min="${g.min_select}" data-max="${g.max_select}" data-name="${esc(g.name)}">
@@ -302,6 +333,7 @@
     const unit = Math.max(Number(current.price) + picked.reduce((s, i) => s + Number(i.dataset.delta), 0), 0);
     const key = [current.id, choices.join(','), note].join('|');
     const same = cart.find(l => l.key === key);
+    if (qty > remaining(current)) return sheetMsg(`"${current.name}" เหลือไม่พอ (เหลือ ${Math.max(0, remaining(current))})`);
     if (same) same.qty = Math.min(20, same.qty + qty);
     else cart.push({ key, item_id: current.id, name: current.name, unit, qty, choices,
                      labels: picked.map(i => i.dataset.name), note });
@@ -350,7 +382,7 @@
   $('#sheet-body').addEventListener('click', (e) => {
     const qb = e.target.closest('[data-q]');
     if (qb) {
-      qty = Math.min(20, Math.max(1, qty + Number(qb.dataset.q)));
+      qty = Math.min(maxQty(current), Math.max(1, qty + Number(qb.dataset.q)));
       $('#q-n').textContent = qty;
       return updateAddPrice();
     }
@@ -361,6 +393,8 @@
       line.qty += Number(db.dataset.d);
       if (line.qty <= 0) cart = cart.filter(l => l !== line);
       line.qty = Math.min(20, line.qty);
+      const it = menu.items.find(x => x.id === line.item_id);
+      if (Number(db.dataset.d) > 0 && it && remaining(it) < 0) { line.qty -= 1; sheetMsg(`"${it.name}" เหลือไม่พอ`); }
       saveCart(); renderMenu(); renderCart();
     }
   });
@@ -386,7 +420,7 @@
       btn.disabled = false; btn.textContent = `ส่งรายการให้ร้าน · ${cartCount()} รายการ`;
       const code = error.message || '';
       if (code.startsWith('st_')) pendingRef = null;            // ร้านปฏิเสธ = ยังไม่ได้สร้างออร์เดอร์
-      if (['st_item_sold_out', 'st_item_gone', 'st_options_changed', 'st_options_required'].includes(code)) loadMenu();
+      if (['st_item_sold_out', 'st_item_gone', 'st_options_changed', 'st_options_required', 'st_out_of_stock'].includes(code)) loadMenu();
       if (['st_session_invalid', 'st_session_billing', 'st_shop_closed', 'st_table_not_open'].includes(code)) scan(false);
       return sheetMsg(thaiError(error));
     }

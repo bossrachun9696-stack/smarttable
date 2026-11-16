@@ -12,8 +12,10 @@
 </head>
 <body>
 <main class="st-page st-guest">
+  <div id="g-cover" class="st-cover" hidden></div>
   <header class="st-guest-head">
-    <div>
+    <img id="g-logo" class="st-glogo" alt="" hidden>
+    <div style="flex:1;min-width:0">
       <h1 id="g-shop">กำลังโหลด…</h1>
       <p id="g-sub"></p>
     </div>
@@ -34,6 +36,7 @@
     <div class="st-guest-tools">
       <input id="g-search" type="search" placeholder="ค้นหาเมนู" autocomplete="off">
       <nav id="g-cats" class="st-cats"></nav>
+      <nav id="g-diet" class="st-cats st-diet" hidden aria-label="กรองตามป้ายอาหาร"></nav>
     </div>
     <div id="g-items"></div>
     <p class="st-center st-sub" style="margin-top:24px">SmartTable</p>

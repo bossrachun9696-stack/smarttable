@@ -75,7 +75,7 @@
     st_table_already_open: 'โต๊ะนี้เปิดอยู่แล้ว',
     st_table_not_open: 'โต๊ะนี้ยังไม่ได้เปิด',
     st_table_not_found: 'ไม่พบโต๊ะนี้ QR อาจถูกเปลี่ยนแล้ว กรุณาแจ้งพนักงาน',
-    st_session_invalid: 'โต๊ะนี้ปิดรอบแล้ว กรุณาสแกน QR ที่โต๊ะอีกครั้ง',
+    st_session_invalid: 'โต๊ะนี้ปิดรอบแล้ว หรือถูกย้ายโต๊ะ กรุณาสแกน QR ที่โต๊ะที่นั่งอยู่อีกครั้ง',
     st_session_billing: 'โต๊ะนี้กำลังเช็กบิล สั่งเพิ่มไม่ได้ ถ้าต้องการสั่งเพิ่มกรุณาแจ้งพนักงาน',
     st_shop_closed: 'ร้านปิดรับออร์เดอร์อยู่ตอนนี้',
     st_bad_cart: 'รายการในตะกร้าไม่ถูกต้อง กรุณาลองใหม่',
@@ -90,8 +90,47 @@
     st_already_paid: 'โต๊ะนี้จ่ายเงินแล้ว',
     st_nothing_to_pay: 'ยังไม่มีรายการให้เก็บเงิน',
     st_void_reason: 'กรุณาใส่เหตุผลที่ยกเลิก (ไม่เกิน 200 ตัวอักษร)',
-    st_already_void: 'ใบเสร็จนี้ถูกยกเลิกไปแล้ว'
+    st_already_void: 'ใบเสร็จนี้ถูกยกเลิกไปแล้ว',
+    st_out_of_stock: 'เมนูนี้เหลือไม่พอ ลดจำนวนหรือลบออกจากตะกร้า',
+    st_table_busy: 'โต๊ะปลายทางมีลูกค้าอยู่ ใช้ "รวมโต๊ะ" แทน'
   };
+  // ป้ายข้อมูลอาหาร (ต้องตรงกับ st_menu_items_tags_check)
+  const TAGS = {
+    nuts:       { th: 'มีถั่ว',      icon: '🥜', kind: 'allergen', none: 'ไม่มีถั่ว' },
+    seafood:    { th: 'อาหารทะเล',   icon: '🦐', kind: 'allergen', none: 'ไม่มีอาหารทะเล' },
+    dairy:      { th: 'มีนม',        icon: '🥛', kind: 'allergen', none: 'ไม่มีนม' },
+    egg:        { th: 'มีไข่',        icon: '🥚', kind: 'allergen', none: 'ไม่มีไข่' },
+    gluten:     { th: 'มีแป้งสาลี',   icon: '🌾', kind: 'allergen', none: 'ไม่มีแป้งสาลี' },
+    vegetarian: { th: 'มังสวิรัติ',    icon: '🥬', kind: 'diet' },
+    jay:        { th: 'เจ',          icon: '🟡', kind: 'diet' },
+    halal:      { th: 'ฮาลาล',       icon: '🕌', kind: 'diet' }
+  };
+  // ใช้สีของร้านแทนสีส้มตั้งต้น (หน้าลูกค้า)
+  function applyTheme(hex) {
+    if (!/^#[0-9a-f]{6}$/i.test(hex || '')) return;
+    const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    const mix = (c, t, k) => Math.round(c + (t - c) * k);
+    const toHex = (a) => '#' + a.map(v => v.toString(16).padStart(2, '0')).join('');
+    const s = document.documentElement.style;
+    s.setProperty('--st-accent', hex);
+    s.setProperty('--st-accent-dark', toHex([mix(r, 0, .2), mix(g, 0, .2), mix(b, 0, .2)]));
+    s.setProperty('--st-accent-soft', toHex([mix(r, 255, .86), mix(g, 255, .86), mix(b, 255, .86)]));
+    document.querySelector('meta[name=theme-color]')?.setAttribute('content', hex);
+  }
+  // ย่อรูปเป็น JPEG ก่อนอัปโหลด
+  async function shrinkImage(file, max = 1200, q = 0.82) {
+    let src, w, h;
+    try { src = await createImageBitmap(file); w = src.width; h = src.height; }
+    catch {
+      src = await new Promise((ok, fail) => { const im = new Image(); im.onload = () => ok(im); im.onerror = fail; im.src = URL.createObjectURL(file); });
+      w = src.naturalWidth; h = src.naturalHeight;
+    }
+    const k = Math.min(1, max / Math.max(w, h));
+    const c = document.createElement('canvas');
+    c.width = Math.round(w * k); c.height = Math.round(h * k);
+    c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+    return new Promise(ok => c.toBlob(ok, 'image/jpeg', q));
+  }
   const ROLE_TH = { owner: 'เจ้าของ', manager: 'ผู้จัดการ', cashier: 'แคชเชียร์', kitchen: 'ครัว', waiter: 'พนักงานเสิร์ฟ' };
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -171,5 +210,5 @@
   }
 
   window.ST = { sb, configOk, $, esc, ROLE_TH, thaiError, pageUrl, nextUrl, showMsg, hideMsg, setBusy,
-                ensureProfile, requireUser, copyText };
+                ensureProfile, requireUser, copyText, TAGS, applyTheme, shrinkImage };
 })();

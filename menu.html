@@ -89,6 +89,15 @@
         <label class="st-check st-check--box"><input type="checkbox" name="is_recommended"> <span>⭐ เมนูแนะนำ</span></label>
       </div>
 
+      <h4>ป้ายข้อมูลอาหาร</h4>
+      <p class="st-sub">ช่วยลูกค้าที่แพ้อาหารหรือกินมังสวิรัติ / เจ / ฮาลาล (ลูกค้ากรองเมนูได้)</p>
+      <div id="tag-picks" class="st-tagpick"></div>
+
+      <label class="st-field"><span>จำนวนที่เหลือขายวันนี้ (ไม่บังคับ)</span>
+        <input name="stock_left" type="number" min="0" max="100000" step="1" inputmode="numeric" placeholder="เว้นว่าง = ไม่จำกัด">
+        <small>ขายครบแล้วขึ้น "หมด" ให้เอง · ยกเลิกออร์เดอร์แล้วคืนจำนวนให้</small>
+      </label>
+
       <h4>ตัวเลือกเพิ่มเติม</h4>
       <p class="st-sub">เช่น "ไข่" (ไข่ดาว +10, ไข่เจียว +15) หรือ "ความเผ็ด" (น้อย / กลาง / มาก)</p>
       <div id="opt-groups"></div>

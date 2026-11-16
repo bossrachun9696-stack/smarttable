@@ -1,6 +1,6 @@
 // ===== หน้า เมนูอาหาร (menu.html?id=<shop_id>) =====
 (async function () {
-  const { sb, configOk, $, esc, ROLE_TH, thaiError, showMsg, setBusy, requireUser } = ST;
+  const { sb, configOk, $, esc, ROLE_TH, thaiError, showMsg, setBusy, requireUser, TAGS } = ST;
   if (!configOk) return;
 
   const user = await requireUser();
@@ -75,12 +75,15 @@
     if (it.is_recommended) tags.push('⭐ แนะนำ');
     if (it.spicy_level) tags.push(SPICY[it.spicy_level]);
     if (it.options.length) tags.push(`${it.options.length} กลุ่มตัวเลือก`);
+    (it.tags || []).forEach(t => TAGS[t] && tags.push(TAGS[t].icon + ' ' + TAGS[t].th));
     return `
       <div class="st-mi${it.is_available ? '' : ' st-mi--off'}" data-id="${esc(it.id)}">
         <div class="st-thumb">${it.image_path ? `<img src="${esc(imgUrl(it.image_path))}" alt="" loading="lazy">` : esc(it.name.charAt(0))}</div>
         <div class="st-item-main"${canEdit ? ' data-act="edit" role="button" tabindex="0"' : ''}>
           <b>${esc(it.name)}</b><small>${esc(tags.join(' · '))}</small>
         </div>
+        <button type="button" class="st-stock${it.stock_left != null && it.stock_left <= 5 ? ' low' : ''}" data-act="stock"
+          title="ตั้งจำนวนที่เหลือ">${it.stock_left == null ? '∞' : 'เหลือ ' + it.stock_left}</button>
         <label class="st-switch" title="มี / หมด">
           <input type="checkbox" data-act="avail" ${it.is_available ? 'checked' : ''} aria-label="มีขาย">
           <span></span><em>${it.is_available ? 'มี' : 'หมด'}</em>
@@ -157,6 +160,17 @@
     const id = el.closest('[data-id]')?.dataset.id;
     if (!id) return;
     if (el.dataset.act === 'edit') return openSheet(data.items.find(x => x.id === id));
+    if (el.dataset.act === 'stock') {
+      const it = data.items.find(x => x.id === id);
+      const v = prompt(`จำนวน "${it.name}" ที่เหลือขาย\n(เว้นว่าง = ไม่จำกัด · 0 = หมด)`, it.stock_left ?? '');
+      if (v === null) return;
+      const n = v.trim() === '' ? null : parseInt(v, 10);
+      if (n !== null && (!Number.isInteger(n) || n < 0)) return showMsg('ใส่เป็นตัวเลข 0 ขึ้นไป หรือเว้นว่าง');
+      const { error } = await sb.rpc('st_set_item_stock', { p_item: id, p_stock: n });
+      if (error) return showMsg(thaiError(error));
+      showMsg(n === null ? `"${it.name}" ไม่จำกัดจำนวน` : `"${it.name}" เหลือ ${n}`, 'ok');
+      return load();
+    }
     if (el.dataset.act === 'up' || el.dataset.act === 'down') {
       const it = data.items.find(x => x.id === id);
       const ids = data.items.filter(x => (x.category_id || '') === (it.category_id || '')).map(x => x.id);
@@ -205,6 +219,10 @@
     fi.category_id.value = item ? item.category_id || '' : (data.categories[0]?.id || '');
     fi.spicy_level.value = item ? String(item.spicy_level) : '0';
     fi.is_recommended.checked = item ? item.is_recommended : false;
+    fi.stock_left.value = item && item.stock_left != null ? item.stock_left : '';
+    const have = new Set(item ? item.tags || [] : []);
+    $('#tag-picks').innerHTML = Object.entries(TAGS).map(([k, t]) =>
+      `<label class="st-tagchip"><input type="checkbox" value="${k}"${have.has(k) ? ' checked' : ''}><span>${t.icon} ${t.th}</span></label>`).join('');
     $('#opt-groups').innerHTML = '';
     (item ? item.options : []).forEach(addGroup);
     setPreview();
@@ -346,7 +364,7 @@
     }
     const imagePath = newPath || (removeImage ? null : oldPath);
 
-    const { error } = await sb.rpc('st_save_item', {
+    const { data: savedId, error } = await sb.rpc('st_save_item', {
       p_shop: shopId,
       p_item: {
         id: editing ? editing.id : null,
@@ -365,6 +383,13 @@
       return sheetMsg(thaiError(error));
     }
     if (oldPath && oldPath !== imagePath) sb.storage.from(BUCKET).remove([oldPath]);
+    const stockRaw = fi.stock_left.value.trim();
+    const { error: exErr } = await sb.rpc('st_set_item_extras', {
+      p_item: savedId,
+      p_tags: [...$('#tag-picks').querySelectorAll('input:checked')].map(i => i.value),
+      p_stock: stockRaw === '' ? null : Math.max(0, parseInt(stockRaw, 10) || 0)
+    });
+    if (exErr) { showMsg('บันทึกเมนูแล้ว แต่บันทึกป้าย/จำนวนไม่สำเร็จ: ' + thaiError(exErr)); }
     closeSheet();
     showMsg(editing ? `บันทึก "${name}" แล้ว` : `เพิ่ม "${name}" แล้ว`, 'ok');
     load();
