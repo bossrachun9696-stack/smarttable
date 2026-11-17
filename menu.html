@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FBF6EE">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="SmartTable">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>เมนูอาหาร · SmartTable</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,6 +35,18 @@
       <div id="cat-list"></div>
       <form id="form-cat" class="st-inline" novalidate>
         <input name="cat_name" type="text" maxlength="60" placeholder="ชื่อหมวดใหม่ เช่น อาหารจานเดียว">
+        <button class="st-btn st-btn--ghost" type="submit">เพิ่ม</button>
+      </form>
+    </section>
+
+    <!-- สถานีครัว / บาร์ (เจ้าของ/ผู้จัดการ) -->
+    <section id="station-card" class="st-card" hidden>
+      <h3>สถานีครัว / บาร์</h3>
+      <p class="st-sub">แยกจอออร์เดอร์ตามจุดทำอาหาร เช่น "ครัว" "บาร์น้ำ" แล้วเลือกสถานีให้แต่ละหมวดด้านบน ·
+        หมวดที่ไม่ได้เลือกจะไปที่<b>สถานีแรก</b> · ที่จอออร์เดอร์ กดชื่อสถานีเพื่อดูเฉพาะจานของจุดนั้น</p>
+      <div id="station-list"></div>
+      <form id="form-station" class="st-inline" novalidate>
+        <input name="station_name" type="text" maxlength="30" placeholder="ชื่อสถานี เช่น ครัว / บาร์น้ำ">
         <button class="st-btn st-btn--ghost" type="submit">เพิ่ม</button>
       </form>
     </section>

@@ -14,7 +14,7 @@
 
   const money = (n, d = 0) => '฿' + Number(n).toLocaleString('th-TH', { minimumFractionDigits: d, maximumFractionDigits: 2 });
   const num = (n) => Number(n).toLocaleString('th-TH');
-  const METHOD = { cash: 'เงินสด', promptpay: 'พร้อมเพย์', transfer: 'โอน', card: 'บัตร' };
+  const METHOD = { cash: 'เงินสด', promptpay: 'พร้อมเพย์', transfer: 'โอน', card: 'บัตร', mixed: 'หลายช่องทาง' };
 
   // ---------- วันที่ (เวลาไทย) ----------
   const todayStr = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
@@ -224,13 +224,13 @@
   // ---------- CSV (เปิดใน Excel / Google Sheets ภาษาไทยไม่เพี้ยน) ----------
   $('#btn-csv').addEventListener('click', () => {
     const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const head = ['วันที่', 'เวลา', 'เลขที่', 'โต๊ะ', 'ช่องทาง', 'ค่าอาหาร', 'ส่วนลด', 'ค่าบริการ', 'VAT', 'ยอดสุทธิ', 'สถานะ'];
+    const head = ['วันที่', 'เวลา', 'เลขที่', 'โต๊ะ', 'ช่องทาง', 'ค่าอาหาร', 'ส่วนลด', 'ค่าบริการ', 'VAT', 'ยอดสุทธิ', 'สถานะ', 'ใบกำกับภาษีอย่างย่อ'];
     const lines = report.receipts.map(p => {
       const d = new Date(p.created_at);
       const ymd = d.toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
       return [ymd, d.toLocaleTimeString('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit' }),
               ymd.replace(/-/g, '') + '-' + String(p.receipt_no).padStart(3, '0'), p.table_label, METHOD[p.method] || p.method,
-              p.subtotal, p.discount, p.service, p.vat, p.total, p.status === 'void' ? 'ยกเลิก' : 'ชำระแล้ว'].map(q).join(',');
+              p.subtotal, p.discount, p.service, p.vat, p.total, p.status === 'void' ? 'ยกเลิก' : 'ชำระแล้ว', p.tax_invoice ? 'ใช่' : ''].map(q).join(',');
     });
     const blob = new Blob(['﻿' + [head.map(q).join(','), ...lines].join('\r\n')], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');

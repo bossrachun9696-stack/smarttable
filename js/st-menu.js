@@ -30,12 +30,17 @@
   const baht = (n) => '฿' + Number(n).toLocaleString('th-TH', { maximumFractionDigits: 2 });
   const SPICY = ['', '🌶', '🌶🌶', '🌶🌶🌶'];
   let data = { categories: [], items: [] };
+  let stations = [];
 
   // ---------- โหลดและแสดงผล ----------
   async function load() {
-    const { data: d, error } = await sb.rpc('st_menu_admin', { p_shop: shopId });
+    const [{ data: d, error }, st] = await Promise.all([
+      sb.rpc('st_menu_admin', { p_shop: shopId }),
+      sb.from('st_stations').select('id, name, sort').eq('shop_id', shopId).order('sort')
+    ]);
     if (error) return showMsg(thaiError(error));
     data = d;
+    stations = (st && Array.isArray(st.data)) ? st.data : [];
     render();
   }
 
@@ -50,10 +55,27 @@
           <button type="button" data-act="cat-up" ${i === 0 ? 'disabled' : ''} aria-label="เลื่อนขึ้น">↑</button>
           <button type="button" data-act="cat-down" ${i === cats.length - 1 ? 'disabled' : ''} aria-label="เลื่อนลง">↓</button>
         </div>
+        ${stations.length ? `<select class="st-cat-station" data-act="cat-station" aria-label="สถานี">
+          <option value="">${esc(stations[0].name)} (แรก)</option>
+          ${stations.slice(1).map(x => `<option value="${esc(x.id)}" ${c.station_id === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}
+        </select>` : ''}
         <button type="button" class="st-chip" data-act="cat-rename">แก้ชื่อ</button>
         ${LANGS.length ? `<button type="button" class="st-chip" data-act="cat-i18n" title="คำแปล">🌐</button>` : ''}
         <button type="button" class="st-icon-btn" data-act="cat-delete" aria-label="ลบหมวด">✕</button>
       </div>`).join('') : '<p class="st-sub">ยังไม่มีหมวดหมู่ ลองเพิ่ม เช่น "อาหารจานเดียว" "เครื่องดื่ม"</p>';
+
+    // สถานี
+    $('#station-list').innerHTML = stations.map((x, i) => `
+      <div class="st-item" data-station="${esc(x.id)}">
+        <div class="st-item-main"><b>${i === 0 ? '⭐ ' : ''}${esc(x.name)}</b>
+          <small>${i === 0 ? 'สถานีแรก · ' : ''}${cats.filter(c => (c.station_id || stations[0].id) === x.id).length} หมวด</small></div>
+        <div class="st-updown">
+          <button type="button" data-act="st-up" ${i === 0 ? 'disabled' : ''} aria-label="เลื่อนขึ้น">↑</button>
+          <button type="button" data-act="st-down" ${i === stations.length - 1 ? 'disabled' : ''} aria-label="เลื่อนลง">↓</button>
+        </div>
+        <button type="button" class="st-chip" data-act="st-rename">แก้ชื่อ</button>
+        <button type="button" class="st-icon-btn" data-act="st-delete" aria-label="ลบสถานี">✕</button>
+      </div>`).join('') || '<p class="st-sub">ยังไม่มีสถานี (ทุกจานขึ้นจอเดียวกัน)</p>';
 
     // ตัวเลือกหมวดในแผ่นแก้ไข
     $('#form-item').category_id.innerHTML = '<option value="">ไม่มีหมวด</option>' +
@@ -118,7 +140,7 @@
 
     $('#cat-list').addEventListener('click', async (e) => {
       const btn = e.target.closest('[data-act]');
-      if (!btn) return;
+      if (!btn || btn.dataset.act === 'cat-station') return;
       const id = btn.closest('[data-cat]').dataset.cat;
       const cat = data.categories.find(c => c.id === id);
       const act = btn.dataset.act;
@@ -146,6 +168,54 @@
         ({ error } = await sb.rpc('st_reorder', { p_shop: shopId, p_kind: 'category', p_ids: ids }));
       }
       if (error) return showMsg(thaiError(error));
+      load();
+    });
+    // ----- สถานี -----
+    $('#station-card').hidden = false;
+    $('#form-station').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.currentTarget;
+      const name = f.station_name.value.trim();
+      if (!name) return;
+      setBusy(f, true, '…');
+      const { error } = await sb.rpc('st_save_station', { p_shop: shopId, p_id: null, p_name: name, p_sort: null });
+      setBusy(f, false);
+      if (error) return showMsg(thaiError(error));
+      f.station_name.value = '';
+      load();
+    });
+    $('#station-list').addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-act]');
+      if (!btn) return;
+      const id = btn.closest('[data-station]').dataset.station;
+      const x = stations.find(s2 => s2.id === id);
+      const act = btn.dataset.act;
+      let error;
+      if (act === 'st-rename') {
+        const name = prompt('ชื่อสถานีใหม่', x.name);
+        if (!name || !name.trim() || name.trim() === x.name) return;
+        ({ error } = await sb.rpc('st_save_station', { p_shop: shopId, p_id: id, p_name: name.trim(), p_sort: null }));
+      } else if (act === 'st-delete') {
+        if (!confirm(`ลบสถานี "${x.name}"?\nหมวดที่ใช้สถานีนี้จะไปที่สถานีแรกแทน`)) return;
+        ({ error } = await sb.rpc('st_delete_station', { p_id: id }));
+      } else {
+        const ids = stations.map(s2 => s2.id);
+        const i = ids.indexOf(id), j = act === 'st-up' ? i - 1 : i + 1;
+        if (j < 0 || j >= ids.length) return;
+        [ids[i], ids[j]] = [ids[j], ids[i]];
+        for (let k = 0; k < ids.length && !error; k++) {
+          const s2 = stations.find(z => z.id === ids[k]);
+          ({ error } = await sb.rpc('st_save_station', { p_shop: shopId, p_id: s2.id, p_name: s2.name, p_sort: k + 1 }));
+        }
+      }
+      if (error) showMsg(thaiError(error));
+      load();
+    });
+    $('#cat-list').addEventListener('change', async (e) => {
+      if (e.target.dataset.act !== 'cat-station') return;
+      const id = e.target.closest('[data-cat]').dataset.cat;
+      const { error } = await sb.rpc('st_set_category_station', { p_category: id, p_station: e.target.value || null });
+      if (error) showMsg(thaiError(error)); else showMsg('บันทึกสถานีของหมวดแล้ว', 'ok');
       load();
     });
   } else {

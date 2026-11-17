@@ -3,6 +3,13 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="SmartTable">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>ใบเสร็จ · SmartTable</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +29,8 @@
 <article id="rc" class="st-rc" hidden></article>
 
 <div class="st-rc-actions no-print" id="rc-actions" hidden>
-  <button id="btn-slip" class="st-btn st-btn--ghost" type="button" hidden>ดูรูปสลิป</button>
+  <a id="btn-next" class="st-btn st-btn-link" href="#" hidden>เก็บเงินส่วนถัดไป</a>
+  <div id="slips" class="st-rc-slips"></div>
   <a id="btn-list" class="st-btn st-btn--ghost st-btn-link" href="#">ใบเสร็จทั้งหมด</a>
   <button id="btn-void" class="st-btn st-btn--ghost st-danger" type="button" hidden>ยกเลิกใบเสร็จนี้</button>
 </div>

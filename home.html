@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FBF6EE">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="SmartTable">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>ร้านของฉัน · SmartTable</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,6 +34,19 @@
   </div>
 
   <div id="st-msg" class="st-msg" role="status" hidden></div>
+
+  <!-- ติดตั้งเป็นแอป -->
+  <section id="pwa-card" class="st-card st-pwa" hidden>
+    <img src="icons/st-192.png" alt="" width="52" height="52">
+    <div class="st-pwa-main">
+      <b>ติดตั้ง SmartTable บนมือถือ</b>
+      <small id="pwa-text">เปิดจากไอคอนบนหน้าจอได้เลย เต็มจอเหมือนแอป</small>
+      <div class="st-pwa-actions">
+        <button id="pwa-install" class="st-btn st-btn--sm" type="button" hidden>📲 ติดตั้ง</button>
+        <button id="pwa-close" class="st-chip" type="button">ไว้ทีหลัง</button>
+      </div>
+    </div>
+  </section>
 
   <section class="st-card">
     <div class="st-me">
@@ -66,5 +86,6 @@
 <script src="js/st-config.js"></script>
 <script src="js/st-auth.js"></script>
 <script src="js/st-home.js"></script>
+<script src="js/st-pwa.js"></script>
 </body>
 </html>

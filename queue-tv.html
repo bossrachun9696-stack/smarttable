@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14213D">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <title>จอเรียกคิว · SmartTable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/st-style.css">
+</head>
+<body class="st-tv">
+  <header class="st-tv-head">
+    <img id="tv-logo" alt="" hidden>
+    <h1 id="tv-shop">…</h1>
+    <span id="tv-clock"></span>
+    <button id="tv-sound" type="button">🔕 แตะเพื่อเปิดเสียง</button>
+  </header>
+  <div id="st-msg" class="st-msg" role="status" hidden></div>
+  <main class="st-tv-cols">
+    <section class="st-tv-col st-tv-col--ready">
+      <h2>✅ พร้อมรับ / Ready</h2>
+      <div id="tv-ready" class="st-tv-nums"></div>
+    </section>
+    <section class="st-tv-col">
+      <h2>🍳 กำลังเตรียม / Preparing</h2>
+      <div id="tv-prep" class="st-tv-nums"></div>
+    </section>
+  </main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/st-config.js"></script>
+<script src="js/st-auth.js"></script>
+<script src="js/st-queue-tv.js"></script>
+</body>
+</html>

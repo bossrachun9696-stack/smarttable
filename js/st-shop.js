@@ -34,6 +34,7 @@
   renderHead();
   $('#link-menu').href = 'menu.html?id=' + encodeURIComponent(shopId);
   $('#link-orders').href = 'orders.html?id=' + encodeURIComponent(shopId);
+  $('#link-queue').href = 'queue.html?id=' + encodeURIComponent(shopId);
   $('#link-reports').href = 'reports.html?id=' + encodeURIComponent(shopId);
   $('#link-audit').href = 'audit.html?id=' + encodeURIComponent(shopId);
   $('#link-promos').href = 'promos.html?id=' + encodeURIComponent(shopId);
@@ -69,6 +70,20 @@
     fs.vat_pct.value = Number(current.vat_pct || 0);
     fs.vat_included.checked = !!current.vat_included;
     fs.is_open.checked = !!current.is_open;
+    fs.self_pay.checked = !!current.self_pay;
+    fs.shared_cart.checked = current.shared_cart !== false;
+    fs.tax_id.value = current.tax_id || '';
+    fs.tax_name.value = current.tax_name || '';
+    fs.tax_branch.value = current.tax_branch || '';
+    fs.pos_id.value = current.pos_id || '';
+    $('#tax-state').textContent = current.tax_id ? (Number(current.vat_pct) > 0 ? '· เปิดใช้อยู่' : '· ต้องตั้ง VAT ก่อน') : '· ปิดอยู่';
+  };
+  // ตรวจเลขผู้เสียภาษี 13 หลัก (หลักสุดท้ายเป็นเลขตรวจสอบ)
+  const taxIdOk = (id) => {
+    if (!/^\d{13}$/.test(id)) return false;
+    let sum = 0;
+    for (let i = 0; i < 12; i++) sum += Number(id[i]) * (13 - i);
+    return (11 - (sum % 11)) % 10 === Number(id[12]);
   };
   fillShop();
   if (!canManage) {
@@ -87,8 +102,18 @@
       service_pct: pct(fs.service_pct.value),
       vat_pct: pct(fs.vat_pct.value),
       vat_included: fs.vat_included.checked,
-      is_open: fs.is_open.checked
+      is_open: fs.is_open.checked,
+      self_pay: fs.self_pay.checked,
+      shared_cart: fs.shared_cart.checked,
+      tax_id: fs.tax_id.value.replace(/\D/g, '') || null,
+      tax_name: fs.tax_name.value.trim() || null,
+      tax_branch: fs.tax_branch.value.trim() || null,
+      pos_id: fs.pos_id.value.trim() || null
     };
+    if (payload.self_pay && !payload.promptpay_id) return showMsg('ให้ลูกค้าจ่ายเองได้ ต้องใส่เลขพร้อมเพย์ก่อน');
+    if (payload.tax_id && payload.tax_id.length !== 13) return showMsg('เลขผู้เสียภาษีต้องมี 13 หลัก');
+    if (payload.tax_id && !taxIdOk(payload.tax_id) && !confirm('เลขผู้เสียภาษีนี้อาจพิมพ์ผิด (เลขตรวจสอบไม่ตรง) บันทึกต่อไหม?')) return;
+    const taxWarn = payload.tax_id && !(payload.vat_pct > 0) ? ' · VAT ยังเป็น 0% ใบเสร็จจะยังไม่เป็นใบกำกับภาษี' : '';
     if (!payload.name) return showMsg('กรุณาใส่ชื่อร้าน');
     if (payload.promptpay_id && !/^\d{10,15}$/.test(payload.promptpay_id)) return showMsg('พร้อมเพย์ต้องเป็นตัวเลข 10–15 หลัก');
     if ([payload.service_pct, payload.vat_pct].some(n => n < 0 || n > 30)) return showMsg('ค่าบริการและ VAT ต้องอยู่ระหว่าง 0–30%');
@@ -98,7 +123,7 @@
     setBusy(fs, false);
     if (error) return showMsg(thaiError(error));
     current = data; fillShop(); renderHead();
-    showMsg('บันทึกข้อมูลร้านแล้ว', 'ok');
+    showMsg('บันทึกข้อมูลร้านแล้ว' + taxWarn, 'ok');
   });
 
   // ---------- หน้าตาร้าน: โลโก้ / รูปปก / สี ----------

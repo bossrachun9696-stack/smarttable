@@ -1,5 +1,8 @@
 // ===== หน้า ลูกค้าสแกน QR (table.html?t=<qr_token>) — ไม่ต้องล็อกอิน =====
 // ดูเมนู (3 ภาษา) · โปรตามเวลา · ตะกร้า · ส่งรายการ · ที่สั่งแล้ว/ยอดบิล · เรียกพนักงาน / ขอเช็กบิล · ให้คะแนน
+// จ่ายเองด้วยพร้อมเพย์ + แนบสลิป (ร้านต้องเปิดใช้)
+// QR สั่งกลับบ้าน (hub) -> สั่งครั้งแรกได้บัตรคิว (ticket) -> หน้านี้ของบัตรคิว แจ้งเตือนเมื่ออาหารพร้อม
+// ตะกร้าร่วมทั้งโต๊ะ (เก็บในฐานข้อมูล + Realtime Broadcast บอกเครื่องอื่น) · ร้านปิดได้ -> ตะกร้าในเครื่อง
 (async function () {
   const { sb, configOk, $, esc, thaiError, showMsg, TAGS, applyTheme } = ST;
   if (!configOk) return;
@@ -18,7 +21,10 @@
   const KEY_SESSION = 'st-session:' + qr;
   const KEY_CART = (staffMode ? 'st-cart-staff:' : 'st-cart:') + qr;
   const KEY_NAME = 'st-guest-name';
+  const KEY_PHONE = 'st-guest-phone';
+  const KEY_TICKET = 'st-ticket:' + qr;              // บนหน้า QR สั่งกลับบ้าน: บัตรคิวล่าสุด {qr, no, at}
   const KEY_LAST = 'st-last:' + qr;                 // รอบล่าสุดที่สั่งอาหาร (ไว้ให้คะแนนหลังจ่าย)
+  const KEY_PAY = 'st-pay:' + qr;                   // คำขอจ่ายเองล่าสุด {token, req, at}
   const ls = {
     get(k) { try { return localStorage.getItem(k); } catch { return null; } },
     set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch { /* ไม่เป็นไร */ } }
@@ -28,6 +34,14 @@
   const baht = (n) => '฿' + Number(n).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
   const plus = (n) => Number(n) > 0 ? '+' + baht(n) : Number(n) < 0 ? '−' + baht(-n) : '';
   const rand = () => (crypto.randomUUID && crypto.randomUUID()) || (Date.now() + '-' + Math.random().toString(36).slice(2));
+  const uuid = () => (crypto.randomUUID ? crypto.randomUUID()
+    : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c =>
+        (c ^ (crypto.getRandomValues(new Uint8Array(1))[0] & 15) >> (c / 4)).toString(16)));
+  const DEVICE = (() => {                           // รหัสเครื่อง (บอกว่ารายการไหนในตะกร้าโต๊ะเป็น "ของคุณ")
+    let d = ls.get('st-device');
+    if (!d) { d = String(rand()).slice(0, 36); ls.set('st-device', d); }
+    return d;
+  })();
   const SPICY = ['', '🌶', '🌶🌶', '🌶🌶🌶'];
 
   // ---------- ภาษา ----------
@@ -70,10 +84,11 @@
     if (!b) return;
     lang = b.dataset.lang;
     ls.set('st-lang', lang);
-    renderLang(); renderState(); renderDiet(); renderMenu(); renderButtons(); renderRate();
+    renderLang(); renderState(); renderTicket(); renderDiet(); renderMenu(); renderButtons(); renderRate(); renderPay();
     if (sheetMode === 'cart') renderCart();
     if (sheetMode === 'orders') renderOrders();
     if (sheetMode === 'item' && current) openItem(current.id);
+    if (sheetMode === 'pay') renderPaySheet();
   });
 
   let state = null;
@@ -85,9 +100,14 @@
   let promos = [];
   let cart = [];            // [{key, item_id, name, unit, qty, choices, labels, note}]
   let pendingRef = null;    // รหัสกันส่งซ้ำ ใช้ซ้ำได้จนกว่าจะสำเร็จ หรือแก้ตะกร้า
+  let shared = false;            // ตะกร้าร่วมทั้งโต๊ะ: ร้านเปิด และรอบนี้ใช้อยู่
+  let cartSig = '';
+  let cartCh = null, cartTopic = null;
   let guestInfo = null;     // ผลล่าสุดจาก st_guest_orders
 
-  const canOrder = () => state === 'open' && !!token;
+  const isHub = () => !!lastScan && lastScan.table.kind === 'hub';
+  const ticket = () => lastScan && lastScan.ticket;
+  const canOrder = () => (state === 'open' && !!token) || (state === 'takeaway' && !staffMode);
   const remaining = (it) => it.stock_left == null ? Infinity
     : it.stock_left - cart.filter(l => l.item_id === it.id).reduce((s, l) => s + l.qty, 0);
   const maxQty = (it) => Math.max(1, Math.min(20, remaining(it)));
@@ -131,7 +151,7 @@
   }
   function saveCart() {
     pendingRef = null;
-    ls.set(KEY_CART, cart.length ? JSON.stringify({ token, lines: cart }) : null);
+    if (!sharedOn()) ls.set(KEY_CART, cart.length ? JSON.stringify({ token, lines: cart }) : null);
     renderCartBar();
   }
   const cartTotal = () => cart.reduce((s, l) => s + l.unit * l.qty, 0);
@@ -141,6 +161,7 @@
     const show = canOrder() && cart.length > 0;
     $('#cart-bar').hidden = !show;
     document.body.classList.toggle('st-has-cart', show);
+    $('#cart-label').textContent = sharedOn() ? t('table_cart') : t('view_cart');
     if (show) {
       $('#cart-n').textContent = cartCount();
       $('#cart-total').textContent = baht(cartTotal());
@@ -163,6 +184,8 @@
       if (!staffMode) ls.set(KEY_SESSION, token);
       loadCart();                                     // รอบใหม่ = ตะกร้าใหม่
       guestInfo = null;
+      shared = false;
+      initShared();
     }
     state = data.state;
     if (!brandDone) {
@@ -173,8 +196,9 @@
       pickLang(data.shop.languages || []);
     }
     renderState();
+    renderTicket();
     renderCartBar();
-    if (token) refreshGuest(); else { renderButtons(); renderRate(); }
+    if (token) refreshGuest(); else { renderButtons(); renderRate(); renderPay(); }
     return data;
   }
 
@@ -183,17 +207,21 @@
     if (!data) return;
     $('#g-shop').textContent = data.shop.name;
     $('#g-sub').textContent = data.table.zone || '';
-    $('#g-table').textContent = t('table') + ' ' + data.table.label;
+    const place = isHub() ? '🛍 ' + t('ta_title') : ticket() ? '🛍 ' + t('queue_no', { n: ticket().queue_no })
+      : t('table') + ' ' + data.table.label;
+    $('#g-table').textContent = place;
     $('#g-table').hidden = false;
-    document.title = data.shop.name + ' · ' + t('table') + ' ' + data.table.label;
-    const cls = { open: 'ok', waiting: 'wait', billing: 'wait', shop_closed: 'off', ended: 'off' }[state];
+    document.title = data.shop.name + ' · ' + place;
+    const cls = { open: 'ok', waiting: 'wait', billing: 'wait', shop_closed: 'off', ended: 'off', takeaway: 'ok', takeaway_off: 'off' }[state];
     $('#g-state').className = 'st-state st-state--' + cls;
     $('#g-state').innerHTML = `<b>${esc(t('st_' + state + '_t'))}</b><span>${esc(t('st_' + state))}</span>`;
-    $('#g-state').hidden = false;
+    $('#g-state').hidden = !!ticket();                // บัตรคิวมีการ์ดบอกสถานะแทน
     $('#g-actions').hidden = !token;
     if (staffMode) {
       document.querySelectorAll('[data-call]').forEach(b => { b.hidden = true; });
-      $('#g-staff').innerHTML = `🛎 <b>โหมดพนักงาน</b> · สั่งแทนลูกค้าโต๊ะ ${esc(data.table.label)} · <a href="tables.html?id=${encodeURIComponent(data.shop.id)}">กลับผังโต๊ะ</a>`;
+      $('#g-staff').innerHTML = ticket()
+        ? `🛎 <b>โหมดพนักงาน</b> · สั่งกลับบ้าน คิว ${esc(ticket().queue_no)}${ticket().contact_name ? ' (' + esc(ticket().contact_name) + ')' : ''} · <a href="queue.html?id=${encodeURIComponent(data.shop.id)}">กลับหน้าคิว</a>`
+        : `🛎 <b>โหมดพนักงาน</b> · สั่งแทนลูกค้าโต๊ะ ${esc(data.table.label)} · <a href="tables.html?id=${encodeURIComponent(data.shop.id)}">กลับผังโต๊ะ</a>`;
       $('#g-staff').hidden = false;
       if (state === 'waiting') $('#g-state').innerHTML = '<b>โต๊ะนี้ยังไม่ได้เปิด</b><span>เปิดโต๊ะที่ผังโต๊ะก่อน แล้วกลับมาหน้านี้</span>';
     }
@@ -221,6 +249,7 @@
     }
     renderButtons();
     renderRate();
+    renderPay();
     if (sheetMode === 'orders') renderOrders();
   }
 
@@ -456,13 +485,17 @@
     const choices = picked.map(i => i.value).sort();
     const note = e.target.note.value.trim().slice(0, 140);
     const unit = unitFor(current, picked);
-    const key = [current.id, choices.join(','), note].join('|');
-    const same = cart.find(l => l.key === key);
+    const key = [current.id, choices.join(','), note, sharedOn() ? DEVICE : ''].join('|');
+    let same = cart.find(l => l.key === key);
     if (qty > remaining(current)) return sheetMsg(t('not_enough', { x: iname(current) }));
     if (same) { same.qty = Math.min(20, same.qty + qty); same.unit = unit; }
-    else cart.push({ key, item_id: current.id, name: current.name, unit, qty, choices,
-                     labels: picked.map(i => i.dataset.name), note });
+    else {
+      same = { id: uuid(), key, item_id: current.id, name: current.name, unit, qty, choices,
+               labels: picked.map(i => i.dataset.name), note, mine: true };
+      cart.push(same);
+    }
     saveCart();
+    if (sharedOn()) putLine(same);
     renderMenu();
     const name = iname(current);
     closeSheet();
@@ -476,8 +509,12 @@
       return;
     }
     $('#sheet-body').innerHTML = `
-      <div class="st-lines">
-        ${cart.map(l => {
+      ${sharedOn() ? `<p class="st-shared-hint">👥 ${esc(t('shared_hint'))}</p>` : ''}
+      <div class="st-lines">${linesHtml()}</div>
+      ${sendFormHtml()}`;
+  }
+  function linesHtml() {
+    return cart.map(l => {
           const it = menu.items.find(x => x.id === l.item_id);
           return `
           <div class="st-line" data-k="${esc(l.key)}">
@@ -485,27 +522,56 @@
               <b>${esc(it ? iname(it) : l.name)}</b>
               ${l.labels.length ? `<small>${esc(l.labels.map(s => oname(it, s)).join(' · '))}</small>` : ''}
               ${l.note ? `<small>📝 ${esc(l.note)}</small>` : ''}
+              ${sharedOn() ? `<small class="st-line-by">${l.mine ? '🙋 ' + esc(t('by_you')) : l.by ? '👤 ' + esc(t('by_x', { x: l.by })) : '👤 ' + esc(t('by_other'))}</small>` : ''}
               <span class="st-line-price">${baht(l.unit * l.qty)}</span>
             </div>
             <div class="st-qty st-qty--sm">
               <button type="button" data-d="-1" aria-label="−">${l.qty === 1 ? '🗑' : '−'}</button><b>${l.qty}</b><button type="button" data-d="1" aria-label="+">+</button>
             </div>
           </div>`;
-        }).join('')}
-      </div>
+        }).join('');
+  }
+  function sendFormHtml() {
+    return `
       <form id="form-send" novalidate>
+        ${state === 'takeaway' ? `
+        <label class="st-field"><span>${esc(t('ta_name'))} *</span>
+          <input name="ta_name" type="text" maxlength="40" required autocomplete="name" placeholder="${esc(t('ta_name_ph'))}" value="${esc(ls.get(KEY_NAME) || '')}">
+        </label>
+        <label class="st-field"><span>${esc(t('ta_phone'))}</span>
+          <input name="ta_phone" type="tel" maxlength="16" inputmode="tel" autocomplete="tel" value="${esc(ls.get(KEY_PHONE) || '')}">
+        </label>
+        ${lastScan.takeaway && lastScan.takeaway.preorder ? `
+        <label class="st-field"><span>${esc(t('ta_pickup'))}</span>
+          <select name="ta_pickup">${pickupOptions()}</select>
+        </label>` : ''}` : `
         <label class="st-field"${staffMode ? ' hidden' : ''}><span>${esc(t('nickname'))}</span>
           <input name="guest_name" type="text" maxlength="30" placeholder="${esc(t('nickname_ph'))}" value="${esc(ls.get(KEY_NAME) || '')}">
-        </label>
+        </label>`}
         <label class="st-field"><span>${esc(t('note_shop'))}</span>
           <input name="note" type="text" maxlength="200" placeholder="${esc(t('note_shop_ph'))}">
         </label>
         <div class="st-sum"><span>${esc(t('food_total'))}</span><b>${baht(cartTotal())}</b></div>
         <p class="st-sub" style="margin-top:4px">${esc(t('fees_later'))}${promos.length ? ' · ' + esc(t('promo_note')) : ''}</p>
-        <button class="st-btn" type="submit" id="btn-send">${esc(t('send', { n: cartCount() }))}</button>
+        <button class="st-btn" type="submit" id="btn-send">${esc(sendLabel())}</button>
       </form>`;
   }
-  $('#btn-cart').addEventListener('click', () => { openSheet('cart', t('my_cart')); renderCart(); });
+  const sendLabel = () => t(state === 'takeaway' ? 'ta_send' : sharedOn() ? 'send_all' : 'send', { n: cartCount() });
+  // อัปเดตเฉพาะรายการ + ยอด (ไม่ล้างช่องที่กำลังพิมพ์)
+  function updateCartSheet() {
+    if (sheetMode !== 'cart') return;
+    if (!cart.length || !$('#sheet-body .st-lines')) return renderCart();
+    $('#sheet-body .st-lines').innerHTML = linesHtml();
+    const sum = $('#sheet-body .st-sum b');
+    if (sum) sum.textContent = baht(cartTotal());
+    const btn = $('#btn-send');
+    if (btn && !btn.disabled) btn.textContent = sendLabel();
+  }
+  $('#btn-cart').addEventListener('click', () => {
+    openSheet('cart', sharedOn() ? t('table_cart') : t('my_cart'));
+    renderCart();
+    if (sharedOn()) pullCart();
+  });
 
   $('#sheet-body').addEventListener('click', (e) => {
     const qb = e.target.closest('[data-q]');
@@ -524,6 +590,7 @@
       const it = menu.items.find(x => x.id === line.item_id);
       if (Number(db.dataset.d) > 0 && it && remaining(it) < 0) { line.qty -= 1; sheetMsg(t('not_enough', { x: iname(it) })); }
       saveCart(); renderMenu(); renderCart();
+      if (sharedOn()) putLine(line);
     }
   });
 
@@ -532,27 +599,36 @@
     e.preventDefault();
     if (!canOrder()) return sheetMsg(t('st_' + state + '_t') || t('cant_order'));
     const f = e.target;
+    if (state === 'takeaway') return sendTakeaway(f);
     const guestName = f.guest_name.value.trim().slice(0, 30);
     ls.set(KEY_NAME, guestName || null);
     if (!pendingRef) pendingRef = rand();
     const btn = $('#btn-send');
     btn.disabled = true; btn.textContent = t('sending');
     const items = cart.map(l => ({ item_id: l.item_id, qty: l.qty, choices: l.choices, note: l.note || null }));
+    const isShared = sharedOn();
     const { data, error } = staffMode
       ? await sb.rpc('st_staff_order', { p_qr: qr, p_items: items, p_note: f.note.value.trim() || null, p_client_ref: pendingRef })
+      : isShared
+      ? await sb.rpc('st_cart_send', {
+          p_qr: qr, p_session_token: token, p_note: f.note.value.trim() || null,
+          p_guest_name: guestName || null, p_client_ref: pendingRef
+        })
       : await sb.rpc('st_place_order', {
           p_qr: qr, p_session_token: token, p_items: items,
           p_note: f.note.value.trim() || null, p_guest_name: guestName || null, p_client_ref: pendingRef
         });
     if (error) {
-      btn.disabled = false; btn.textContent = t('send', { n: cartCount() });
+      btn.disabled = false; btn.textContent = sendLabel();
       const code = error.message || '';
       if (code.startsWith('st_')) pendingRef = null;            // ร้านปฏิเสธ = ยังไม่ได้สร้างออร์เดอร์
+      if (isShared) pullCart();
       if (['st_item_sold_out', 'st_item_gone', 'st_options_changed', 'st_options_required', 'st_out_of_stock'].includes(code)) loadMenu();
       if (['st_session_invalid', 'st_session_billing', 'st_shop_closed', 'st_table_not_open'].includes(code)) scan(false);
       return sheetMsg(gErr(error));
     }
-    cart = []; saveCart(); renderMenu();
+    if (isShared) { ping('sent'); await pullCart(); } else { cart = []; saveCart(); }
+    renderMenu();
     await refreshGuest();
     openSheet('orders', t('ordered'));
     renderOrders();
@@ -577,7 +653,7 @@
             const it = byThaiName(i.name);
             return `
             <div class="st-oline">
-              <span>${i.qty}× ${esc(it ? iname(it) : i.name)}${i.options.length ? `<small>${esc(i.options.map(x => oname(it, x.name)).join(' · '))}</small>` : ''}${i.note ? `<small>📝 ${esc(i.note)}</small>` : ''}</span>
+              <span>${i.done && o.status !== 'served' && o.status !== 'cancelled' ? `<i class="st-dish-ok">✓ ${esc(t('dish_done'))}</i> ` : ''}${i.qty}× ${esc(it ? iname(it) : i.name)}${i.options.length ? `<small>${esc(i.options.map(x => oname(it, x.name)).join(' · '))}</small>` : ''}${i.note ? `<small>📝 ${esc(i.note)}</small>` : ''}</span>
               <span>${baht(i.line_total)}</span>
             </div>`;
           }).join('')}
@@ -589,6 +665,9 @@
           ${Number(b.service_pct) ? `<div><span>${esc(t('b_service', { p: Number(b.service_pct) }))}</span><span>${baht(b.service)}</span></div>` : ''}
           ${Number(b.vat_pct) ? `<div><span>${esc(t('b_vat', { p: Number(b.vat_pct) }))}${b.vat_included ? esc(t('b_vat_inc')) : ''}</span><span>${b.vat_included ? `<small>${baht(b.vat)}</small>` : baht(b.vat)}</span></div>` : ''}
           <div class="st-bill-total"><span>${esc(t('b_total'))}</span><b>${baht(b.total)}</b></div>
+          ${info.pay && Number(info.pay.paid_total) > 0 ? `
+            <div><span>${esc(t('pay_paid'))}</span><span>−${baht(info.pay.paid_total)}</span></div>
+            <div class="st-bill-total"><span>${esc(t('pay_left'))}</span><b>${baht(info.pay.remaining.total)}</b></div>` : ''}
         </div>` : ''}`;
   }
   $('#btn-orders').addEventListener('click', async () => {
@@ -615,6 +694,393 @@
     await scan(false);
   });
 
+  // ---------- ตะกร้าร่วมทั้งโต๊ะ ----------
+  function sharedOn() { return shared && !staffMode && !!token && state === 'open'; }
+
+  function fromServer(l) {
+    const m = l.meta || {};
+    const it = menu.items.find(x => x.id === l.item_id);
+    const choices = Array.isArray(l.choices) ? l.choices : [];
+    return {
+      id: l.id, item_id: l.item_id, qty: l.qty, choices, note: l.note || '',
+      key: [l.item_id, choices.slice().sort().join(','), l.note || '', l.device || ''].join('|'),
+      name: m.name || (it ? it.name : ''), unit: Number(m.unit) || (it ? Number(it.price) : 0),
+      labels: Array.isArray(m.labels) ? m.labels : [], by: l.added_by || '', mine: l.device === DEVICE
+    };
+  }
+  function setShared(lines) {
+    const sig = JSON.stringify(lines.map(l => [l.id, l.qty, l.updated_at]));
+    if (sig === cartSig) return;
+    cartSig = sig;
+    cart = lines.map(fromServer);
+    renderCartBar();
+    renderMenu();
+    updateCartSheet();
+  }
+
+  // ร้านเปิดตะกร้าร่วมไหม -> ย้ายของในตะกร้าเครื่องนี้ (ถ้ามี) ขึ้นตะกร้าโต๊ะ -> ฟังสัญญาณจากเครื่องอื่น
+  async function initShared() {
+    if (staffMode || !token) return;
+    const myToken = token;
+    const { data, error } = await sb.rpc('st_cart_get', { p_qr: qr, p_session_token: token });
+    if (error || myToken !== token || !data || !data.enabled) return;
+    shared = true;
+    cartSig = '';
+    const local = cart.slice();
+    if (local.length && state === 'open') {
+      for (const l of local) { l.id = uuid(); l.mine = true; await putLine(l, true); }
+      ls.set(KEY_CART, null);
+      const again = await sb.rpc('st_cart_get', { p_qr: qr, p_session_token: token });
+      if (again.data) setShared(again.data.lines);
+      ping();
+    } else setShared(data.lines);
+    joinChannel();
+    if (sheetMode === 'cart') renderCart();
+  }
+
+  async function pullCart() {
+    if (!shared || !token) return;
+    const { data, error } = await sb.rpc('st_cart_get', { p_qr: qr, p_session_token: token });
+    if (error || !data) return;
+    if (!data.enabled) {                        // ร้านเพิ่งปิดตะกร้าร่วม -> กลับไปใช้ตะกร้าในเครื่อง
+      shared = false; cart = []; loadCart(); renderCartBar(); renderMenu(); updateCartSheet();
+      return;
+    }
+    setShared(data.lines);
+  }
+
+  async function putLine(l, quiet) {
+    const { data, error } = await sb.rpc('st_cart_put', {
+      p_qr: qr, p_session_token: token,
+      p_line: {
+        id: l.id, item_id: l.item_id, qty: l.qty, choices: l.choices, note: l.note || null,
+        added_by: l.mine ? (ls.get(KEY_NAME) || null) : null, device: DEVICE,
+        meta: { name: l.name, unit: l.unit, labels: l.labels || [] }
+      }
+    });
+    if (quiet) return;
+    if (error) {
+      (sheetMode ? sheetMsg : showMsg)(gErr(error));
+      if (['st_session_invalid', 'st_session_billing'].includes(error.message)) scan(false);
+      return pullCart();
+    }
+    cartSig = '';
+    setShared(data);
+    ping();
+  }
+
+  // ช่อง Broadcast ของโต๊ะ: ชื่อมาจาก session_token ที่แฮชแล้ว (คนนอกโต๊ะเดาไม่ได้)
+  async function joinChannel() {
+    try {
+      if (!token || !window.crypto || !crypto.subtle || typeof sb.channel !== 'function') return;
+      const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('st-cart:' + token));
+      const topic = 'st-cart-' + Array.from(new Uint8Array(h)).slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join('');
+      if (topic === cartTopic) return;
+      if (cartCh && typeof sb.removeChannel === 'function') sb.removeChannel(cartCh);
+      cartTopic = topic;
+      cartCh = sb.channel(topic, { config: { broadcast: { self: false } } })
+        .on('broadcast', { event: 'cart' }, (msg) => {
+          pullCart();
+          if (msg && msg.payload && msg.payload.k === 'sent') { refreshGuest(); toast(t('cart_sent_other')); }
+        })
+        .subscribe();
+    } catch { /* ไม่มี Realtime ก็ยังดึงซ้ำเป็นระยะได้ */ }
+  }
+  function ping(k) {
+    try { if (cartCh && cartCh.send) cartCh.send({ type: 'broadcast', event: 'cart', payload: { k: k || 'cart' } }); }
+    catch { /* ไม่เป็นไร */ }
+  }
+  // ดึงตะกร้าโต๊ะซ้ำเป็นระยะ (เผื่อ Realtime หลุด) — เร็วขึ้นตอนเปิดดูตะกร้า
+  let pullTick = 0;
+  setInterval(() => {
+    if (!sharedOn() || document.hidden) return;
+    pullTick++;
+    if (sheetMode === 'cart' || pullTick % 3 === 0) pullCart();
+  }, 5000);
+
+  // ---------- สั่งกลับบ้าน ----------
+  const lhhmm = (d) => new Date(d).toLocaleTimeString(lang === 'th' ? 'th-TH' : lang === 'zh' ? 'zh-CN' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
+  function pickupOptions() {
+    const out = [`<option value="">${esc(t('ta_asap'))}</option>`];
+    const d = new Date(Date.now() + 15 * 60000);
+    d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15, 0, 0);
+    const today = new Date().toDateString();
+    for (let k = 0; k < 92; k++) {                     // 23 ชั่วโมงข้างหน้า ทีละ 15 นาที
+      const x = new Date(d.getTime() + k * 15 * 60000);
+      const day = x.toDateString() === today ? '' : x.toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-GB', { day: 'numeric', month: 'short' }) + ' ';
+      out.push(`<option value="${x.toISOString()}">${esc(day + lhhmm(x))}</option>`);
+    }
+    return out.join('');
+  }
+
+  async function sendTakeaway(f) {
+    const name = f.ta_name.value.trim().slice(0, 40);
+    const phone = f.ta_phone.value.trim();
+    if (!name) { f.ta_name.focus(); return sheetMsg(t('ta_need_name')); }
+    ls.set(KEY_NAME, name);
+    ls.set(KEY_PHONE, phone || null);
+    if (!pendingRef) pendingRef = rand();
+    const btn = $('#btn-send');
+    btn.disabled = true; btn.textContent = t('sending');
+    const items = cart.map(l => ({ item_id: l.item_id, qty: l.qty, choices: l.choices, note: l.note || null }));
+    const { data, error } = await sb.rpc('st_takeaway_order', {
+      p_hub_qr: qr, p_items: items, p_name: name, p_phone: phone || null,
+      p_pickup_at: (f.ta_pickup && f.ta_pickup.value) || null,
+      p_note: f.note.value.trim() || null, p_client_ref: pendingRef
+    });
+    if (error) {
+      btn.disabled = false; btn.textContent = t('ta_send', { n: cartCount() });
+      const code = error.message || '';
+      if (code.startsWith('st_')) pendingRef = null;
+      if (['st_item_sold_out', 'st_item_gone', 'st_options_changed', 'st_options_required', 'st_out_of_stock'].includes(code)) loadMenu();
+      if (['st_shop_closed', 'st_takeaway_off'].includes(code)) scan(false);
+      return sheetMsg(gErr(error));
+    }
+    cart = []; saveCart();
+    ls.set(KEY_TICKET, JSON.stringify({ qr: data.qr_token, no: data.queue_no, at: Date.now() }));
+    ls.set('st-session:' + data.qr_token, data.session_token);
+    location.replace('table.html?t=' + encodeURIComponent(data.qr_token));
+  }
+
+  // หน้า QR สั่งกลับบ้าน: ลิงก์กลับไปบัตรคิวล่าสุด (12 ชม.)
+  function renderMine() {
+    const a = $('#g-mine');
+    a.hidden = true;
+    if (!isHub() || staffMode) return;
+    try {
+      const v = JSON.parse(ls.get(KEY_TICKET) || 'null');
+      if (v && Date.now() - v.at < 12 * 3600 * 1000) {
+        a.href = 'table.html?t=' + encodeURIComponent(v.qr);
+        a.textContent = '🛍 ' + t('tk_mine', { n: v.no });
+        a.hidden = false;
+      }
+    } catch { /* ไม่เป็นไร */ }
+  }
+
+  // บัตรคิว: เลขคิว + สถานะ + เวลามารับ · แจ้งเตือนเมื่อพร้อม
+  let wasReady = null;
+  function renderTicket() {
+    renderMine();
+    const box = $('#g-ticket');
+    const k = ticket();
+    if (!k) { box.hidden = true; return; }
+    const ready = !!k.ready_at && !k.closed;
+    if (wasReady === false && ready && !staffMode) {
+      try { navigator.vibrate && navigator.vibrate([300, 150, 300, 150, 500]); } catch { /* ไม่เป็นไร */ }
+      toast(t('tk_ready_t'));
+    }
+    wasReady = ready;
+    const pick = k.pickup_at ? t('tk_pickup', { t: lhhmm(k.pickup_at) }) : t('tk_asap');
+    let head, sub, cls;
+    if (k.closed) {
+      cls = 'done'; head = k.picked_up_at ? t('tk_done_t') : t('tk_cancel_t'); sub = '';
+    } else if (ready) {
+      cls = 'ready'; head = t('tk_ready_t'); sub = t('tk_ready', { n: k.queue_no });
+    } else {
+      cls = 'prep'; head = t('tk_prep_t', { n: k.queue_no }); sub = t('tk_keep');
+    }
+    box.className = 'st-ticket st-ticket--' + cls;
+    box.innerHTML = `
+      <div class="st-ticket-no"><small>${esc(t('queue_no', { n: '' }).trim())}</small><b>${esc(k.queue_no)}</b></div>
+      <div class="st-ticket-main">
+        <b>${esc(head)}</b>
+        ${sub ? `<span>${esc(sub)}</span>` : ''}
+        <small>${esc(k.contact_name || '')}${k.contact_name ? ' · ' : ''}${esc(pick)}${k.closed ? '' : ' · ' + esc(k.paid ? t('tk_paid') : t('tk_unpaid'))}</small>
+        ${k.closed && k.hub_qr && !staffMode ? `<a class="st-chip" href="table.html?t=${encodeURIComponent(k.hub_qr)}">🛍 ${esc(t('tk_new'))}</a>` : ''}
+      </div>`;
+    box.hidden = false;
+  }
+
+  // ---------- จ่ายเองด้วยพร้อมเพย์ + แนบสลิป ----------
+  const money = (n) => '฿' + Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  let payStart = null;      // ผล st_guest_pay_start {request_id, amount, promptpay_id, shop_name, upload_path}
+  let payQrUrl = null;      // รูป QR (PNG) สำหรับบันทึก
+  let slipBlob = null;
+  let doneStatus = null;    // สถานะคำขอหลังโต๊ะปิด (ชำระเรียบร้อย)
+  let doneFor = null;
+
+  function savedPay() {
+    try {
+      const v = JSON.parse(ls.get(KEY_PAY) || 'null');
+      return v && Date.now() - v.at < 3 * 3600 * 1000 ? v : null;
+    } catch { return null; }
+  }
+
+  async function renderPay() {
+    const box = $('#g-pay');
+    if (staffMode) { box.hidden = true; return; }
+    const info = token && guestInfo ? guestInfo.pay : null;
+
+    if (!token) {                                  // โต๊ะปิดแล้ว: ถ้าเพิ่งจ่ายเองจากเครื่องนี้ แสดงว่าชำระเรียบร้อย
+      const sp = savedPay();
+      if (!sp) { box.hidden = true; return; }
+      if (doneFor !== sp.req) {
+        doneFor = sp.req;
+        const { data } = await sb.rpc('st_guest_pay_status', { p_qr: qr, p_session_token: sp.token, p_request: sp.req });
+        doneStatus = data || null;
+      }
+      if (doneStatus && doneStatus.status === 'confirmed') {
+        box.className = 'st-paycard st-paycard--ok';
+        box.innerHTML = `<b>${esc(t('pay_done_t'))}</b><span>${esc(t('pay_done', { n: doneStatus.receipt_no }))} · ${money(doneStatus.amount)}</span>`;
+        box.hidden = false;
+      } else box.hidden = true;
+      return;
+    }
+    if (!info) { box.hidden = true; return; }
+    const req = info.request;
+    const left = Number(info.remaining.total);
+    const hasOrders = guestInfo.orders.some(o => o.status !== 'cancelled');
+
+    if (req && req.status === 'pending') {
+      box.className = 'st-paycard st-paycard--wait';
+      box.innerHTML = `<b>⏳ ${esc(t('pay_pending_t'))} · ${money(req.amount)}</b><span>${esc(t('pay_pending'))}</span>
+        <button type="button" class="st-chip" data-pay="cancel">${esc(t('pay_cancel'))}</button>`;
+      box.hidden = false;
+      return;
+    }
+    if (!info.self_pay || !hasOrders || left <= 0) { box.hidden = true; return; }
+    const rejected = req && req.status === 'rejected';
+    box.className = 'st-paycard' + (rejected ? ' st-paycard--bad' : '');
+    box.innerHTML = `
+      ${rejected ? `<b>${esc(t('pay_rejected_t'))}</b><span>${esc(t('pay_rejected', { x: req.reject_reason || '' }))}</span>` : ''}
+      <div class="st-paycard-row">
+        <span>${esc(t('pay_left_t'))}${Number(info.paid_total) > 0 ? ` <small>(${esc(t('pay_paid'))} ${money(info.paid_total)})</small>` : ''}</span>
+        <b>${money(left)}</b>
+      </div>
+      <button type="button" class="st-btn" data-pay="open">${esc(rejected ? t('pay_retry') : t('pay_btn'))}</button>`;
+    box.hidden = false;
+  }
+
+  // QR -> PNG พร้อมชื่อร้านและยอด (ลูกค้าบันทึกรูปไปสแกนในแอปธนาคารได้)
+  function qrPng(payload, title, amountText) {
+    return new Promise((ok) => {
+      const svg = STQR.svg(payload, { margin: 2 });
+      const img = new Image();
+      img.onload = () => {
+        const W = 720, Q = 560;
+        const c = document.createElement('canvas');
+        c.width = W; c.height = 860;
+        const g = c.getContext('2d');
+        g.fillStyle = '#fff'; g.fillRect(0, 0, W, c.height);
+        g.fillStyle = '#0B3D6B'; g.fillRect(0, 0, W, 90);
+        g.fillStyle = '#fff'; g.font = '700 40px sans-serif'; g.textAlign = 'center';
+        g.fillText('PromptPay', W / 2, 60);
+        g.imageSmoothingEnabled = false;
+        g.drawImage(img, (W - Q) / 2, 120, Q, Q);
+        g.fillStyle = '#111'; g.font = '700 52px sans-serif';
+        g.fillText(amountText, W / 2, 760);
+        g.fillStyle = '#555'; g.font = '30px sans-serif';
+        g.fillText(title.slice(0, 32), W / 2, 815);
+        ok(c.toDataURL('image/png'));
+      };
+      img.onerror = () => ok(null);
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    });
+  }
+
+  function renderPaySheet() {
+    const p = payStart;
+    if (!p) { $('#sheet-body').innerHTML = `<p class="st-sub">${esc(t('loading'))}</p>`; return; }
+    const pp = String(p.promptpay_id);
+    $('#sheet-body').innerHTML = `
+      <div class="st-pay-amt"><span>${esc(t('pay_amount'))}</span><b>${money(p.amount)}</b></div>
+      <p class="st-pay-step">${esc(t('pay_s1'))}</p>
+      <div class="st-pay-qr">${payQrUrl ? `<img src="${payQrUrl}" alt="PromptPay QR">` : STQR.svg(window.STPromptPay.payload(pp, p.amount), { margin: 2 })}</div>
+      <div class="st-pay-tools">
+        ${payQrUrl ? `<a class="st-chip" href="${payQrUrl}" download="promptpay-${Number(p.amount).toFixed(2)}.png">${esc(t('pay_save'))}</a>` : ''}
+        <button type="button" class="st-chip" data-pay="copy">${esc(t('pay_copy'))} · ${esc(pp)}</button>
+      </div>
+      <p class="st-pay-step">${esc(t('pay_s2'))}</p>
+      <div class="st-photo">
+        <div id="pay-slip" class="st-photo-box">${slipBlob ? `<img src="${URL.createObjectURL(slipBlob)}" alt="">` : '🧾'}</div>
+        <div class="st-photo-actions">
+          <label class="st-chip">${esc(slipBlob ? t('pay_change') : t('pay_attach'))}
+            <input id="pay-file" type="file" accept="image/*" hidden>
+          </label>
+        </div>
+      </div>
+      <button id="pay-send" class="st-btn" type="button" ${slipBlob ? '' : 'disabled'}>${esc(t('pay_send'))}</button>
+      <p class="st-sub" style="margin-top:8px">${esc(t('pay_note'))}</p>
+      <button type="button" class="st-btn st-btn--ghost" data-pay="cancel" style="margin-top:6px">${esc(t('pay_cancel'))}</button>`;
+  }
+
+  async function openPay() {
+    if (!token) return;
+    openSheet('pay', t('pay_t'));
+    payStart = null; payQrUrl = null; slipBlob = null;
+    renderPaySheet();
+    const { data, error } = await sb.rpc('st_guest_pay_start', { p_qr: qr, p_session_token: token });
+    if (error) {
+      $('#sheet-body').innerHTML = '';
+      if (['st_session_invalid'].includes(error.message)) scan(false);
+      if (error.message === 'st_request_pending') { closeSheet(); refreshGuest(); }
+      return sheetMsg(gErr(error));
+    }
+    payStart = data;
+    state = 'billing';
+    renderState(); renderCartBar();
+    renderPaySheet();
+    const pl = window.STPromptPay.payload(String(data.promptpay_id), data.amount);
+    payQrUrl = pl ? await qrPng(pl, data.shop_name || '', money(data.amount)) : null;
+    if (sheetMode === 'pay') renderPaySheet();
+  }
+
+  async function cancelPay(reqId) {
+    if (!reqId || !confirm(t('pay_confirm_cancel'))) return;
+    const { error } = await sb.rpc('st_guest_pay_cancel', { p_qr: qr, p_session_token: token, p_request: reqId });
+    if (error && error.message !== 'st_request_handled') return showMsg(gErr(error));
+    ls.set(KEY_PAY, null);
+    if (sheetMode === 'pay') closeSheet();
+    await scan(false);
+  }
+
+  $('#g-pay').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-pay]');
+    if (!b) return;
+    if (b.dataset.pay === 'open') openPay();
+    if (b.dataset.pay === 'cancel') cancelPay(guestInfo && guestInfo.pay && guestInfo.pay.request && guestInfo.pay.request.id);
+  });
+  $('#sheet-body').addEventListener('click', async (e) => {
+    if (sheetMode !== 'pay') return;
+    const b = e.target.closest('[data-pay]');
+    if (b && b.dataset.pay === 'copy' && payStart) {
+      if (await ST.copyText(String(payStart.promptpay_id))) toast(t('pay_copied'));
+    }
+    if (b && b.dataset.pay === 'cancel' && payStart) cancelPay(payStart.request_id);
+    if (e.target.id === 'pay-send') sendSlip();
+  });
+  $('#sheet-body').addEventListener('change', async (e) => {
+    if (e.target.id !== 'pay-file') return;
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    try { slipBlob = await ST.shrinkImage(file, 1400, 0.85); renderPaySheet(); }
+    catch { sheetMsg(t('pay_bad_img')); }
+  });
+
+  async function sendSlip() {
+    if (!payStart) return;
+    if (!slipBlob) return sheetMsg(t('pay_need_slip'));
+    const btn = $('#pay-send');
+    btn.disabled = true; btn.textContent = t('pay_sending');
+    const { error: upErr } = await sb.storage.from('st-slips')
+      .upload(payStart.upload_path, slipBlob, { contentType: 'image/jpeg', upsert: false });
+    // อัปโหลดไปแล้วรอบก่อน (กดส่งซ้ำ) = ใช้ไฟล์เดิม
+    if (upErr && !/exist|duplicate|409/i.test((upErr.message || '') + (upErr.statusCode || '') + (upErr.error || ''))) {
+      btn.disabled = false; btn.textContent = t('pay_send');
+      return sheetMsg(gErr({ message: 'st_slip_missing' }));
+    }
+    const { error } = await sb.rpc('st_guest_pay_submit', { p_qr: qr, p_session_token: token, p_request: payStart.request_id });
+    if (error) {
+      btn.disabled = false; btn.textContent = t('pay_send');
+      return sheetMsg(gErr(error));
+    }
+    ls.set(KEY_PAY, JSON.stringify({ token, req: payStart.request_id, at: Date.now() }));
+    closeSheet();
+    toast(t('pay_pending_t'));
+    await refreshGuest();
+  }
+
   // ---------- เริ่มต้น ----------
   if (!qr) { $('#g-shop').textContent = 'SmartTable'; return showMsg(t('bad_link')); }
   const first = await scan(!staffMode);
@@ -623,7 +1089,8 @@
   $('#g-menu').hidden = false;
 
   // อัปเดตสถานะ + ที่สั่งแล้ว: ทุก 8 วินาทีถ้ามีอาหารกำลังทำ ไม่งั้นทุก 20 วินาที · โปรทุก 5 นาที
-  const busy = () => !!guestInfo && guestInfo.orders.some(o => ['new', 'accepted', 'cooking'].includes(o.status));
+  const busy = () => (ticket() && !ticket().closed && !ticket().ready_at) || !!guestInfo && (guestInfo.orders.some(o => ['new', 'accepted', 'cooking'].includes(o.status))
+                                     || (guestInfo.pay && guestInfo.pay.request && guestInfo.pay.request.status === 'pending'));
   let lastPoll = Date.now(), lastPromo = Date.now();
   setInterval(async () => {
     if (document.hidden) return;

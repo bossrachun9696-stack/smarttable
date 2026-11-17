@@ -1,0 +1,21 @@
+{
+  "name": "SmartTable · ระบบร้านอาหาร",
+  "short_name": "SmartTable",
+  "description": "ออร์เดอร์ จอครัว ผังโต๊ะ เช็กบิล คิวกลับบ้าน สำหรับพนักงานร้าน",
+  "lang": "th",
+  "id": "./home.html",
+  "start_url": "./home.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#FBF6EE",
+  "theme_color": "#FBF6EE",
+  "icons": [
+    { "src": "icons/st-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/st-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/st-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "ร้านของฉัน", "url": "./home.html", "icons": [{ "src": "icons/st-192.png", "sizes": "192x192" }] }
+  ]
+}

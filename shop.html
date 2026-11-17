@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FBF6EE">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="SmartTable">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>จัดการร้าน · SmartTable</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,6 +34,11 @@
       <a id="link-orders" class="st-item" href="#">
         <div class="st-logo">🔔</div>
         <div class="st-item-main"><b>ออร์เดอร์ / จอครัว</b><small>ออร์เดอร์เด้งทันทีพร้อมเสียง กดรับ · เสิร์ฟแล้ว</small></div>
+        <span class="st-arrow" aria-hidden="true">›</span>
+      </a>
+      <a id="link-queue" class="st-item" href="#">
+        <div class="st-logo">🛍</div>
+        <div class="st-item-main"><b>สั่งกลับบ้าน / คิว</b><small>QR สั่งกลับบ้าน สั่งล่วงหน้า เลขคิว จอเรียกคิว</small></div>
         <span class="st-arrow" aria-hidden="true">›</span>
       </a>
       <a id="link-menu" class="st-item" href="#">
@@ -96,6 +108,8 @@
           <input name="promptpay_id" type="text" inputmode="numeric" maxlength="15" placeholder="ตัวเลขล้วน 10–15 หลัก">
           <small>ใช้สร้าง QR ให้ลูกค้าสแกนจ่ายตอนเช็กบิล</small>
         </label>
+        <label class="st-check"><input type="checkbox" name="shared_cart"> <span>ตะกร้าร่วมทั้งโต๊ะ<small>ทุกมือถือในโต๊ะเห็นตะกร้าเดียวกัน ใครกดส่งก็ส่งทั้งโต๊ะ · ไม่ติ๊ก = ต่างคนต่างสั่ง</small></span></label>
+        <label class="st-check"><input type="checkbox" name="self_pay"> <span>ให้ลูกค้าจ่ายเองด้วยพร้อมเพย์จากมือถือ + แนบสลิป<small>พนักงานต้องตรวจยอดเข้าในแอปธนาคาร แล้วกดยืนยันที่หน้าเช็กบิล</small></span></label>
         <div class="st-grid2">
           <label class="st-field"><span>ค่าบริการ (%)</span>
             <input name="service_pct" type="number" min="0" max="30" step="0.5" inputmode="decimal">
@@ -105,6 +119,26 @@
           </label>
         </div>
         <label class="st-check"><input type="checkbox" name="vat_included"> <span>ราคาในเมนูรวม VAT แล้ว</span></label>
+        <details class="st-details" id="tax-box">
+          <summary>🧾 ใบกำกับภาษีอย่างย่อ <small id="tax-state"></small></summary>
+          <p class="st-sub">ใส่เลขผู้เสียภาษีและตั้ง VAT มากกว่า 0% แล้ว ใบเสร็จจะพิมพ์เป็น "ใบเสร็จรับเงิน/ใบกำกับภาษีอย่างย่อ" ให้เอง
+            · สำหรับร้านที่จดทะเบียนภาษีมูลค่าเพิ่มแล้วเท่านั้น · ถ้าใช้เครื่องพิมพ์ออกใบกำกับภาษีจากระบบขายหน้าร้าน (POS)
+            ต้องขออนุมัติจากกรมสรรพากรก่อน ปรึกษาผู้ทำบัญชีของร้าน</p>
+          <label class="st-field"><span>เลขประจำตัวผู้เสียภาษี (13 หลัก)</span>
+            <input name="tax_id" type="text" inputmode="numeric" maxlength="17" placeholder="เว้นว่าง = ไม่ออกใบกำกับภาษี">
+          </label>
+          <label class="st-field"><span>ชื่อผู้ประกอบการตามที่จดทะเบียน (ถ้าต่างจากชื่อร้าน)</span>
+            <input name="tax_name" type="text" maxlength="120" placeholder="เช่น บริษัท ป้าแดง จำกัด">
+          </label>
+          <div class="st-grid2">
+            <label class="st-field"><span>สาขา</span>
+              <input name="tax_branch" type="text" maxlength="40" placeholder="สำนักงานใหญ่">
+            </label>
+            <label class="st-field"><span>POS ID (ถ้ามี)</span>
+              <input name="pos_id" type="text" maxlength="40" placeholder="เลขที่ได้รับอนุมัติ">
+            </label>
+          </div>
+        </details>
         <button class="st-btn" type="submit">บันทึกข้อมูลร้าน</button>
       </form>
     </section>

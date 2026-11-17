@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FBF6EE">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="SmartTable">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>ใบเสร็จ · SmartTable</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,15 +39,15 @@
   const shopId = new URLSearchParams(location.search).get('id');
   if (!shopId) return location.replace('home.html');
   $('#back').href = 'shop.html?id=' + encodeURIComponent(shopId);
-  const METHOD = { cash: '💵 เงินสด', promptpay: '📱 พร้อมเพย์', transfer: '🏦 โอน', card: '💳 บัตร' };
+  const METHOD = { cash: '💵 เงินสด', promptpay: '📱 พร้อมเพย์', transfer: '🏦 โอน', card: '💳 บัตร', mixed: '🔀 หลายช่องทาง' };
   const { data, error } = await sb.rpc('st_recent_payments', { p_shop: shopId, p_limit: 30 });
   if (error) return showMsg(thaiError(error));
   $('#list').innerHTML = data.length ? data.map(p => {
     const at = new Date(p.created_at);
     return `<a class="st-item${p.status === 'void' ? ' st-item--void' : ''}" href="receipt.html?id=${encodeURIComponent(shopId)}&p=${encodeURIComponent(p.id)}">
       <div class="st-logo">${p.receipt_no}</div>
-      <div class="st-item-main"><b>โต๊ะ ${esc(p.table_label)} · ฿${Number(p.total).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</b>
-        <small>${at.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} ${at.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} · ${METHOD[p.method]}${p.status === 'void' ? ' · ยกเลิกแล้ว' : ''}</small></div>
+      <div class="st-item-main"><b>โต๊ะ ${esc(p.table_label)}${p.part_no > 1 || p.portion !== 'full' ? ` (ใบที่ ${p.part_no})` : ''} · ฿${Number(p.total).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</b>
+        <small>${at.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })} ${at.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} · ${METHOD[p.method]}${p.self_pay ? ' · ลูกค้าจ่ายเอง' : ''}${p.tax ? ' · ใบกำกับภาษี' : ''}${p.status === 'void' ? ' · ยกเลิกแล้ว' : ''}</small></div>
       <span class="st-arrow" aria-hidden="true">›</span></a>`;
   }).join('') : '<div class="st-empty">ยังไม่มีใบเสร็จ</div>';
 })();

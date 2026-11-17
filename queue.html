@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FBF6EE">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="SmartTable">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>สั่งกลับบ้าน / คิว · SmartTable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/st-style.css">
+</head>
+<body>
+<main class="st-page">
+  <div class="st-top">
+    <a id="back" href="home.html" class="st-chip">‹ ร้าน</a>
+    <span id="live" class="st-live">กำลังเชื่อมต่อ…</span>
+  </div>
+  <h1 class="st-title">สั่งกลับบ้าน / คิว</h1>
+  <p id="shop-sub" class="st-sub">กำลังโหลด…</p>
+
+  <div id="st-msg" class="st-msg" role="status" hidden></div>
+
+  <div id="q-body" hidden>
+    <!-- ตั้งค่า + QR สั่งกลับบ้าน (เจ้าของ/ผู้จัดการ) -->
+    <section id="q-setup" class="st-card" hidden>
+      <h3>QR สั่งกลับบ้าน</h3>
+      <label class="st-check"><input type="checkbox" id="q-enabled"> <span>เปิดให้ลูกค้าสั่งกลับบ้านเอง<small>ลูกค้าสแกน QR / เปิดลิงก์ → สั่ง → ได้เลขคิว ติดตามสถานะบนมือถือ</small></span></label>
+      <label class="st-check"><input type="checkbox" id="q-preorder"> <span>ให้เลือกเวลามารับล่วงหน้าได้ (ภายใน 24 ชม.)<small>ไม่ติ๊ก = รับเร็วที่สุดอย่างเดียว</small></span></label>
+      <div id="q-hub" hidden>
+        <div class="st-hub">
+          <div id="q-qr" class="st-hub-qr"></div>
+          <div class="st-hub-main">
+            <small>ลิงก์สั่งกลับบ้าน (แชร์ใน LINE / เพจได้)</small>
+            <code id="q-link"></code>
+            <div class="st-hub-actions">
+              <button type="button" class="st-chip" id="q-copy">คัดลอกลิงก์</button>
+              <a class="st-chip" id="q-tv" target="_blank" rel="noopener">📺 จอเรียกคิว</a>
+              <button type="button" class="st-chip" id="q-print">พิมพ์ QR</button>
+              <button type="button" class="st-chip" id="q-reset">สร้าง QR ใหม่</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <button id="q-new" class="st-btn" type="button">+ รับออร์เดอร์กลับบ้านหน้าร้าน / ทางโทรศัพท์</button>
+    <form id="q-new-form" class="st-card" hidden novalidate>
+      <h3>บัตรคิวใหม่</h3>
+      <div class="st-grid2">
+        <label class="st-field"><span>ชื่อลูกค้า (ไม่บังคับ)</span><input name="name" maxlength="40" placeholder="หน้าร้าน"></label>
+        <label class="st-field"><span>เบอร์โทร (ไม่บังคับ)</span><input name="phone" type="tel" inputmode="tel" maxlength="16"></label>
+      </div>
+      <label class="st-field"><span>เวลามารับ</span>
+        <select name="pickup"></select>
+      </label>
+      <div class="st-row-between">
+        <button type="button" class="st-btn st-btn--ghost" id="q-new-cancel">ยกเลิก</button>
+        <button type="submit" class="st-btn">ออกเลขคิว แล้วเลือกเมนู</button>
+      </div>
+    </form>
+
+    <nav id="q-tabs" class="st-seg st-seg--3" role="tablist" style="margin:16px 0 12px">
+      <button type="button" data-tab="cooking">กำลังทำ <b id="n-cooking"></b></button>
+      <button type="button" data-tab="ready">พร้อมรับ <b id="n-ready"></b></button>
+      <button type="button" data-tab="done">เสร็จแล้ว <b id="n-done"></b></button>
+    </nav>
+    <div id="q-list"></div>
+  </div>
+</main>
+
+<!-- ใบ QR สำหรับพิมพ์ -->
+<div id="q-printcard" class="st-hub-print">
+  <h2 id="qp-shop"></h2>
+  <div id="qp-qr"></div>
+  <p class="big">🛍 สแกนสั่งกลับบ้าน</p>
+  <p>สั่งแล้วรอเรียกเลขคิว · ติดตามสถานะบนมือถือ</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/st-config.js"></script>
+<script src="js/st-auth.js"></script>
+<script src="js/st-qr.js"></script>
+<script src="js/st-queue.js"></script>
+</body>
+</html>

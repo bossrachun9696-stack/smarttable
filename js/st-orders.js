@@ -1,4 +1,5 @@
 // ===== หน้า กระดานออร์เดอร์ / จอครัว (orders.html?id=<shop_id>) =====
+// เลือกสถานี (ครัว / บาร์ …) ต่อเครื่อง · แตะช่องหน้าจานเพื่อติ๊กเสร็จ · คิวกลับบ้านแสดง 🛍
 // ออร์เดอร์ใหม่เด้งทันทีผ่าน Supabase Realtime + เสียงแจ้งเตือน · สำรองด้วยการรีเฟรชทุก 30 วินาที
 (async function () {
   const { sb, configOk, $, esc, thaiError, showMsg, requireUser } = ST;
@@ -28,10 +29,18 @@
   };
   const baht = (n) => '฿' + Number(n).toLocaleString('th-TH', { maximumFractionDigits: 2 });
   const COL = { new: 'new', accepted: 'cooking', cooking: 'cooking', served: 'served', cancelled: 'served' };
-  const CALL_TH = { call: '🙋 เรียกพนักงาน', bill: '🧾 ขอเช็กบิล' };
+  const CALL_TH = { call: '🙋 เรียกพนักงาน', bill: '🧾 ขอเช็กบิล', slip: '💸 แนบสลิปรอตรวจ' };
+  // สลิปรอตรวจ: ไปหน้าเช็กบิลเพื่อยืนยัน / ปฏิเสธ (กด รับทราบ ไม่ได้)
+  const callBtn = (c) => c.kind === 'slip'
+    ? `<a class="st-chip st-chip--accent" href="bill.html?id=${encodeURIComponent(shopId)}&table=${encodeURIComponent(c.table_id)}">ตรวจสลิป</a>`
+    : '<button type="button" class="st-chip" data-act="call-done">รับทราบ</button>';
 
   let orders = [];
   let calls = [];
+  let stations = [];
+  // สถานีที่จอนี้ดู ('' = ทุกสถานี) · จำแยกเครื่อง
+  const KEY_STATION = 'st-station:' + shopId;
+  let station = ls.get(KEY_STATION) || '';
   let offset = 0;                 // เวลาเซิร์ฟเวอร์ - เวลาเครื่อง
   let seenOrders = null;          // id ที่เคยเห็น (null = ยังไม่โหลดครั้งแรก)
   let seenCalls = null;
@@ -120,6 +129,8 @@
     else {
       offset = new Date(b.data.now).getTime() - Date.now();
       orders = b.data.orders;
+      stations = b.data.stations || [];
+      if (station && !stations.some(x => x.id === station)) station = '';
       const ids = new Set(orders.map(o => o.id));
       if (seenOrders && orders.some(o => o.status === 'new' && !seenOrders.has(o.id))) {
         beep('order');
@@ -147,44 +158,77 @@
   }
 
   // ---------- แสดงผล ----------
+  // จานของสถานีที่เลือก (จานที่ไม่มีสถานี = ขึ้นทุกสถานี)
+  const myItems = (o) => station ? o.items.filter(i => !i.station_id || i.station_id === station) : o.items;
+  function colOf(o) {
+    if (o.status === 'cancelled') return 'served';
+    if (station) {
+      const its = myItems(o);
+      if (its.length && its.every(i => i.done)) return 'served';
+      return o.status === 'new' ? 'new' : 'cooking';
+    }
+    return COL[o.status];
+  }
+  const hhmm = (iso) => new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  const isTicket = (o) => o.order_type === 'takeaway';
+  const placeLabel = (o) => isTicket(o) ? `🛍 คิว ${o.queue_no}` : `โต๊ะ ${esc(o.table_label)}`;
+
   function card(o) {
     const m = mins(o.created_at);
     const open = o.status === 'new' || o.status === 'accepted' || o.status === 'cooking';
-    const age = !open ? '' : m >= 20 ? ' st-ocard--late' : m >= 10 ? ' st-ocard--slow' : '';
+    const col = colOf(o);
+    const its = myItems(o);
+    const left = its.filter(i => !i.done);
+    const age = col === 'served' ? '' : m >= 20 ? ' st-ocard--late' : m >= 10 ? ' st-ocard--slow' : '';
     let btns = '';
     if (o.status === 'new') btns = `<button type="button" class="st-btn" data-set="cooking">รับ · เริ่มทำ</button>`;
-    else if (o.status === 'accepted' || o.status === 'cooking') btns = `<button type="button" class="st-btn st-btn--ok" data-set="served">เสิร์ฟแล้ว ✓</button>`;
-    else if (o.status === 'served') btns = `<button type="button" class="st-chip" data-set="cooking">ย้อนกลับไปกำลังทำ</button>`;
-    if (canCancel && open) btns += `<button type="button" class="st-chip" data-set="cancelled">ยกเลิก</button>`;
+    else if (station && open && left.length) btns = `<button type="button" class="st-btn st-btn--ok" data-done-all>เสร็จ ${left.length} จาน ✓</button>`;
+    else if (!station && (o.status === 'accepted' || o.status === 'cooking')) btns = `<button type="button" class="st-btn st-btn--ok" data-set="served">เสิร์ฟแล้ว ✓</button>`;
+    else if (o.status === 'served' && !station) btns = `<button type="button" class="st-chip" data-set="cooking">ย้อนกลับไปกำลังทำ</button>`;
+    if (canCancel && open && !station) btns += `<button type="button" class="st-chip" data-set="cancelled">ยกเลิก</button>`;
+    const pickSoon = o.pickup_at ? `<span class="st-pickup">รับ ${hhmm(o.pickup_at)}</span>` : '';
+    const others = station ? o.items.length - its.length : 0;
     return `
-      <article class="st-ocard st-ocard--${o.status}${age}" data-id="${esc(o.id)}" data-no="${o.order_no}">
+      <article class="st-ocard st-ocard--${o.status}${age}${isTicket(o) ? ' st-ocard--ta' : ''}" data-id="${esc(o.id)}" data-no="${o.order_no}">
         <header>
-          <b class="st-ocard-table">โต๊ะ ${esc(o.table_label)}</b>
+          <b class="st-ocard-table">${placeLabel(o)}</b>
           <span class="st-ocard-no">#${o.order_no}</span>
-          <time>${o.status === 'cancelled' ? 'ยกเลิก' : open ? ageText(m) : 'เสิร์ฟแล้ว'}</time>
+          <time>${o.status === 'cancelled' ? 'ยกเลิก' : col !== 'served' ? ageText(m) : 'เสร็จแล้ว'}</time>
         </header>
-        <div class="st-ocard-meta">${new Date(o.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}${o.guest_name ? ' · ' + esc(o.guest_name) : ''}${o.zone ? ' · ' + esc(o.zone) : ''}${o.source === 'staff' ? ' · พนักงานสั่ง' : ''}</div>
+        <div class="st-ocard-meta">${hhmm(o.created_at)}${isTicket(o) ? ' · กลับบ้าน' + (o.contact_name ? ' · ' + esc(o.contact_name) : '') : ''}${o.guest_name && !isTicket(o) ? ' · ' + esc(o.guest_name) : ''}${o.zone ? ' · ' + esc(o.zone) : ''}${o.source === 'staff' ? ' · พนักงานสั่ง' : ''} ${pickSoon}</div>
         <ul class="st-ocard-items">
-          ${o.items.map(i => `
-            <li><b>${i.qty}×</b> <span>${esc(i.name)}
+          ${its.map(i => `
+            <li class="${i.done ? 'done' : ''}">
+              <button type="button" class="st-dish" data-item="${esc(i.id)}" ${o.status === 'cancelled' ? 'disabled' : ''} aria-pressed="${i.done}" aria-label="${i.done ? 'เอาติ๊กออก' : 'ติ๊กว่าเสร็จ'}">${i.done ? '✓' : ''}</button>
+              <b>${i.qty}×</b> <span>${esc(i.name)}
               ${i.options.length ? `<small>${esc(i.options.map(x => x.name).join(' · '))}</small>` : ''}
               ${i.note ? `<em>📝 ${esc(i.note)}</em>` : ''}</span></li>`).join('')}
         </ul>
+        ${others ? `<p class="st-ocard-other">+ อีก ${others} รายการที่สถานีอื่น</p>` : ''}
         ${o.note ? `<p class="st-ocard-note">📝 ${esc(o.note)}</p>` : ''}
-        <footer>${btns}<span class="st-ocard-sum">${baht(o.subtotal)}</span></footer>
+        <footer>${btns}<span class="st-ocard-sum">${station ? '' : baht(o.subtotal)}</span></footer>
       </article>`;
+  }
+
+  function renderStations() {
+    const box = $('#stations');
+    box.hidden = !stations.length;
+    if (!stations.length) return;
+    box.innerHTML = [{ id: '', name: 'ทุกสถานี' }, ...stations].map(x =>
+      `<button type="button" class="st-chip" data-station="${esc(x.id)}" aria-pressed="${x.id === station}">${esc(x.name)}</button>`).join('');
   }
 
   function render() {
     // การเรียก
     $('#calls').innerHTML = calls.map(c => `
       <div class="st-call st-call--${c.kind}" data-call="${esc(c.id)}">
-        <span><b>โต๊ะ ${esc(c.table_label)}</b> ${CALL_TH[c.kind]} · ${ageText(mins(c.created_at))}</span>
-        <button type="button" class="st-chip" data-act="call-done">รับทราบ</button>
+        <span><b>${/^คิว /.test(c.table_label) ? '🛍 ' + esc(c.table_label.replace(/ \(.*\)$/, '')) : 'โต๊ะ ' + esc(c.table_label)}</b> ${CALL_TH[c.kind]} · ${ageText(mins(c.created_at))}</span>
+        ${callBtn(c)}
       </div>`).join('');
 
+    renderStations();
     const cols = { new: [], cooking: [], served: [] };
-    orders.forEach(o => cols[COL[o.status]].push(o));
+    orders.filter(o => myItems(o).length).forEach(o => cols[colOf(o)].push(o));
     cols.served.reverse();                                // เสร็จล่าสุดอยู่บน
     for (const k of Object.keys(cols)) {
       const sec = document.querySelector(`[data-col="${k}"]`);
@@ -205,7 +249,46 @@
   });
 
   // ---------- ปุ่มบนการ์ด ----------
+  $('#stations').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-station]');
+    if (!b) return;
+    station = b.dataset.station;
+    ls.set(KEY_STATION, station || null);
+    render();
+  });
+
+  // ติ๊กเสร็จรายจาน / ทั้งสถานี
+  async function setDone(ids, done, cardEl) {
+    if (!ids.length) return;
+    cardEl.querySelectorAll('button').forEach(x => x.disabled = true);
+    const { error } = await sb.rpc('st_set_items_done', { p_items: ids, p_done: done });
+    if (error) {
+      cardEl.querySelectorAll('button').forEach(x => x.disabled = false);
+      return showMsg(thaiError(error));
+    }
+    const o = orders.find(x => x.id === cardEl.dataset.id);
+    if (o) {
+      o.items.forEach(i => { if (ids.includes(i.id)) i.done = done; });
+      if (o.items.every(i => i.done)) o.status = 'served';
+      else if (o.status === 'served' || (done && ['new', 'accepted'].includes(o.status))) o.status = 'cooking';
+      o.updated_at = new Date(nowMs()).toISOString();
+    }
+    render();
+    schedule();
+  }
+
   $('#board').addEventListener('click', async (e) => {
+    const dish = e.target.closest('[data-item]');
+    if (dish) {
+      const cardEl = dish.closest('[data-id]');
+      return setDone([dish.dataset.item], dish.getAttribute('aria-pressed') !== 'true', cardEl);
+    }
+    const all = e.target.closest('[data-done-all]');
+    if (all) {
+      const cardEl = all.closest('[data-id]');
+      const o = orders.find(x => x.id === cardEl.dataset.id);
+      return setDone(myItems(o).filter(i => !i.done).map(i => i.id), true, cardEl);
+    }
     const b = e.target.closest('[data-set]');
     if (!b) return;
     const cardEl = b.closest('[data-id]');
@@ -218,7 +301,7 @@
       return showMsg(thaiError(error));
     }
     const o = orders.find(x => x.id === cardEl.dataset.id);
-    if (o) { o.status = st; o.updated_at = new Date(nowMs()).toISOString(); }   // แสดงทันที ไม่ต้องรอ
+    if (o) { o.status = st; o.updated_at = new Date(nowMs()).toISOString(); if (st === 'served') o.items.forEach(i => { i.done = true; }); }   // แสดงทันที ไม่ต้องรอ
     render();
     schedule();
   });

@@ -676,3 +676,161 @@ body.st-noscroll { overflow: hidden; }
 .st-seg--3 input { position: absolute; opacity: 0; pointer-events: none; }
 .st-seg--3 span { display: block; text-align: center; font-size: 14px; font-weight: 600; border-radius: 9px; padding: 9px 4px; color: var(--st-muted); }
 .st-seg--3 input:checked + span { background: #fff; color: var(--st-ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+/* ===== รอบ C · แยกบิล / หลายช่องทาง / ลูกค้าจ่ายเอง ===== */
+.st-seg button:disabled { opacity: .4; cursor: not-allowed; }
+.st-card--alert { border: 2px solid var(--st-accent); background: var(--st-accent-soft); }
+.st-split-n { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.st-split-n small { color: var(--st-muted); }
+.st-link-line { color: inherit; text-decoration: none; padding: 8px 0; border-bottom: 1px solid var(--st-line); }
+.st-strong { font-weight: 700; padding-top: 8px; }
+.st-strong small { font-weight: 400; color: var(--st-muted); }
+.st-paid { opacity: .55; }
+.st-pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; margin: 0 -10px; border-radius: 12px; }
+.st-pick.on { background: var(--st-accent-soft); }
+.st-pick small { display: block; color: var(--st-muted); font-size: 12.5px; }
+.st-pick .st-qty button:disabled { opacity: .35; }
+.st-switch-label { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.st-switch-label input { width: 20px; height: 20px; accent-color: var(--st-accent); }
+.st-tenders { display: grid; gap: 8px; margin: 10px 0 14px; }
+.st-tender { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
+.st-tender select, .st-tender input {
+  font: inherit; font-size: 16px; padding: 10px 12px; border: 1.5px solid var(--st-line); border-radius: 12px; background: #fff; min-width: 0;
+}
+.st-tender-auto { text-align: right; padding: 10px 4px; font-size: 17px; }
+.st-req { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: start; padding-top: 4px; }
+.st-req + .st-req { border-top: 1px solid var(--st-line); margin-top: 10px; padding-top: 14px; }
+.st-req-slip { display: grid; place-items: center; width: 110px; height: 160px; border-radius: 12px; background: #fff; overflow: hidden; color: var(--st-muted); font-size: 12px; text-align: center; border: 1px solid var(--st-line); }
+.st-req-slip img { width: 100%; height: 100%; object-fit: cover; }
+.st-req-main b { font-size: 24px; display: block; }
+.st-req-main small { display: block; color: var(--st-muted); font-size: 12.5px; margin-bottom: 10px; }
+.st-req-actions { display: grid; gap: 8px; }
+
+/* ลูกค้า: การ์ดจ่ายเอง */
+.st-paycard { background: #fff; border: 1.5px solid var(--st-line); border-radius: 16px; padding: 14px; margin: 6px 0 12px; display: grid; gap: 8px; }
+.st-paycard > span { color: var(--st-muted); font-size: 14px; }
+.st-paycard--wait { border-color: #E0B44C; background: #FFF8E6; }
+.st-paycard--ok { border-color: var(--st-ok); background: var(--st-ok-soft); text-align: center; }
+.st-paycard--ok b { color: var(--st-ok); font-size: 18px; }
+.st-paycard--bad { border-color: var(--st-err); }
+.st-paycard--bad > b { color: var(--st-err); }
+.st-paycard-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.st-paycard-row b { font-size: 22px; }
+.st-paycard-row small { color: var(--st-muted); }
+.st-paycard .st-chip { justify-self: start; }
+.st-pay-amt { display: flex; justify-content: space-between; align-items: baseline; background: var(--st-bg); border-radius: 14px; padding: 12px 14px; }
+.st-pay-amt b { font-size: 26px; }
+.st-pay-step { font-size: 14px; margin: 14px 0 8px; line-height: 1.5; }
+.st-pay-qr { display: grid; place-items: center; }
+.st-pay-qr img, .st-pay-qr svg { width: min(280px, 78vw); height: auto; border-radius: 12px; border: 1px solid var(--st-line); -webkit-touch-callout: default; }
+.st-pay-tools { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
+.st-pay-tools a.st-chip { text-decoration: none; }
+.st-call--slip { background: #E3F2EA; color: #1F5E43; }
+.st-check span small { display: block; color: var(--st-muted); font-size: 12.5px; font-weight: 400; margin-top: 2px; }
+.st-details { border: 1.5px solid var(--st-line); border-radius: 14px; padding: 12px 14px; margin: 4px 0 16px; }
+.st-details summary { font-weight: 700; cursor: pointer; }
+.st-details summary small { font-weight: 400; color: var(--st-muted); }
+.st-details[open] summary { margin-bottom: 10px; }
+.st-details .st-sub { font-size: 13px; line-height: 1.55; }
+
+/* ===== รอบ D · สถานี / ติ๊กรายจาน / กลับบ้าน ===== */
+.st-stations { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 12px; -webkit-overflow-scrolling: touch; }
+.st-stations .st-chip[aria-pressed="true"] { background: var(--st-ink, #222); color: #fff; border-color: transparent; }
+.st-ocard-items li { align-items: flex-start; }
+.st-dish {
+  flex: 0 0 auto; width: 26px; height: 26px; margin-top: -1px; border-radius: 8px; border: 2px solid var(--st-line);
+  background: #fff; color: #fff; font: 700 15px/1 inherit; display: grid; place-items: center; cursor: pointer; padding: 0;
+}
+.st-dish[aria-pressed="true"] { background: var(--st-ok); border-color: var(--st-ok); }
+.st-dish:disabled { opacity: .4; }
+.st-ocard-items li.done > span, .st-ocard-items li.done > b { opacity: .45; text-decoration: line-through; }
+.st-kitchen .st-dish { width: 34px; height: 34px; font-size: 20px; }
+.st-ocard-other { margin: 6px 0 0; font-size: 12.5px; color: var(--st-muted); }
+.st-ocard--ta { border-left: 5px solid #7A5AF8; }
+.st-pickup { display: inline-block; background: #EFEAFE; color: #4B2FC2; font-weight: 700; border-radius: 999px; padding: 1px 8px; font-size: 12.5px; }
+.st-cat-station { font: inherit; font-size: 14px; padding: 6px 8px; border: 1.5px solid var(--st-line); border-radius: 10px; background: #fff; max-width: 120px; }
+
+/* คิวกลับบ้าน (queue.html) */
+.st-badge--ok { background: var(--st-ok-soft); color: var(--st-ok); }
+.st-badge--warn { background: #FFF1D6; color: #8A5A00; }
+.st-btn--sm { width: auto; padding: 8px 14px; font-size: 14px; min-height: 0; }
+.st-ok-text { color: var(--st-ok); }
+.st-hub { display: grid; grid-template-columns: 120px 1fr; gap: 14px; align-items: start; margin-top: 4px; }
+.st-hub-qr svg { width: 120px; height: 120px; display: block; border: 1px solid var(--st-line); border-radius: 10px; background: #fff; }
+.st-hub-main small { color: var(--st-muted); font-size: 12.5px; }
+.st-hub-main code { display: block; font-size: 12px; word-break: break-all; background: var(--st-bg); padding: 6px 8px; border-radius: 8px; margin: 4px 0 8px; }
+.st-hub-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.st-hub-actions a { text-decoration: none; }
+.st-qcard { display: grid; grid-template-columns: 64px 1fr; gap: 12px; background: #fff; border: 1.5px solid var(--st-line); border-radius: 16px; padding: 12px; margin-bottom: 10px; }
+.st-qcard--ready { border-color: var(--st-ok); background: var(--st-ok-soft); }
+.st-qcard--late { border-color: var(--st-err); }
+.st-qcard--done { opacity: .6; }
+.st-qno { display: grid; place-items: center; align-content: center; background: #EFEAFE; color: #4B2FC2; border-radius: 12px; min-height: 64px; }
+.st-qcard--ready .st-qno { background: var(--st-ok); color: #fff; }
+.st-qno small { font-size: 11px; line-height: 1; }
+.st-qno b { font-size: 28px; line-height: 1.1; }
+.st-qhead { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.st-qhead a { color: inherit; font-size: 14px; }
+.st-qmeta { font-size: 13px; color: var(--st-muted); margin: 4px 0; }
+.st-qitems { font-size: 14px; margin: 4px 0 8px; }
+.st-qactions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.st-qactions a { text-decoration: none; }
+.st-hub-print { display: none; }
+@media print {
+  body.st-print-hub > *:not(.st-hub-print) { display: none !important; }
+  body.st-print-hub .st-hub-print { display: block; text-align: center; padding-top: 30mm; font-family: inherit; }
+  .st-hub-print h2 { font-size: 28pt; margin: 0 0 10mm; }
+  .st-hub-print svg { width: 110mm; height: 110mm; }
+  .st-hub-print .big { font-size: 24pt; font-weight: 700; margin: 8mm 0 2mm; }
+  .st-hub-print p { font-size: 14pt; }
+}
+
+/* จอเรียกคิว (queue-tv.html) */
+body.st-tv { background: #14213D; color: #fff; min-height: 100vh; margin: 0; }
+.st-tv-head { display: flex; align-items: center; gap: 16px; padding: 18px 28px; background: rgba(255,255,255,.06); }
+.st-tv-head img { width: 56px; height: 56px; border-radius: 14px; object-fit: cover; }
+.st-tv-head h1 { margin: 0; font-size: clamp(22px, 3vw, 40px); flex: 1; }
+#tv-clock { font-size: clamp(20px, 2.4vw, 34px); font-weight: 700; opacity: .85; }
+#tv-sound { font: inherit; border: 0; border-radius: 999px; padding: 8px 14px; background: #fff; color: #14213D; font-weight: 700; cursor: pointer; }
+.st-tv-cols { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; padding: 24px 28px; }
+@media (max-width: 700px) { .st-tv-cols { grid-template-columns: 1fr; } }
+.st-tv-col { background: rgba(255,255,255,.07); border-radius: 22px; padding: 18px 22px; min-height: 60vh; }
+.st-tv-col h2 { margin: 0 0 16px; font-size: clamp(20px, 2.4vw, 34px); }
+.st-tv-col--ready { background: rgba(47,125,91,.35); }
+.st-tv-nums { display: flex; flex-wrap: wrap; gap: 14px; }
+.st-tv-nums b { display: grid; place-items: center; min-width: 2.2em; padding: 6px 14px; border-radius: 18px; background: rgba(255,255,255,.12); font-size: clamp(40px, 6vw, 96px); line-height: 1.1; }
+.st-tv-col--ready .st-tv-nums b { background: #fff; color: #1F5E43; }
+.st-tv-nums b.new { animation: st-tv-blink 1s ease-in-out infinite; }
+.st-tv-nums p { opacity: .5; font-size: 28px; margin: 0; }
+@keyframes st-tv-blink { 50% { background: #FFD43B; color: #14213D; transform: scale(1.06); } }
+
+/* ลูกค้า: บัตรคิวกลับบ้าน */
+.st-mine { display: block; background: #EFEAFE; color: #4B2FC2; font-weight: 700; text-decoration: none; border-radius: 14px; padding: 12px 14px; margin: 6px 0 10px; }
+.st-ticket { display: grid; grid-template-columns: 84px 1fr; gap: 14px; align-items: center; border-radius: 18px; padding: 14px; margin: 6px 0 12px; background: #fff; border: 2px solid #CFC3FB; }
+.st-ticket-no { display: grid; place-items: center; align-content: center; background: #EFEAFE; color: #4B2FC2; border-radius: 14px; min-height: 84px; }
+.st-ticket-no small { font-size: 12px; line-height: 1; }
+.st-ticket-no b { font-size: 40px; line-height: 1.05; }
+.st-ticket-main { display: grid; gap: 4px; }
+.st-ticket-main > b { font-size: 18px; }
+.st-ticket-main > span { font-size: 14px; }
+.st-ticket-main small { color: var(--st-muted); font-size: 13px; }
+.st-ticket-main .st-chip { justify-self: start; text-decoration: none; margin-top: 4px; }
+.st-ticket--ready { border-color: var(--st-ok); background: var(--st-ok-soft); animation: st-ticket-pulse 1.6s ease-in-out 3; }
+.st-ticket--ready .st-ticket-no { background: var(--st-ok); color: #fff; }
+.st-ticket--ready .st-ticket-main > b { color: var(--st-ok); font-size: 21px; }
+.st-ticket--done { opacity: .75; border-color: var(--st-line); }
+@keyframes st-ticket-pulse { 50% { transform: scale(1.02); box-shadow: 0 0 0 6px rgba(47,125,91,.18); } }
+.st-dish-ok { font-style: normal; font-size: 12px; font-weight: 700; color: var(--st-ok); background: var(--st-ok-soft); border-radius: 6px; padding: 0 5px; }
+
+/* ===== รอบ E · ตะกร้าร่วมทั้งโต๊ะ ===== */
+.st-shared-hint { background: #EEF6FF; color: #1D4F86; border-radius: 12px; padding: 10px 12px; font-size: 13.5px; margin: 0 0 10px; line-height: 1.5; }
+.st-line-by { color: #1D4F86 !important; }
+
+/* ติดตั้งเป็นแอป (home.html) */
+.st-pwa { display: grid; grid-template-columns: 52px 1fr; gap: 12px; align-items: start; }
+.st-pwa img { border-radius: 14px; }
+.st-pwa-main > b { display: block; }
+.st-pwa-main small { display: block; color: var(--st-muted); font-size: 13.5px; line-height: 1.55; margin: 2px 0 10px; }
+.st-pwa-actions { display: flex; gap: 8px; align-items: center; }
+/* เปิดจากแอปที่ติดตั้ง: เว้นขอบบนให้แถบสถานะ iPhone */
+@media (display-mode: standalone) { .st-page { padding-top: max(16px, env(safe-area-inset-top)); } }

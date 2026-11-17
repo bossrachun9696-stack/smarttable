@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#FBF6EE">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="SmartTable">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>เช็กบิล · SmartTable</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,14 +31,35 @@
   <div id="b-body" hidden>
     <div id="b-warn" class="st-msg st-msg--error" hidden></div>
 
+    <!-- ลูกค้าแนบสลิปพร้อมเพย์ รอตรวจ -->
+    <section id="b-req" class="st-card st-card--alert" hidden></section>
+
+    <!-- ใบที่จ่ายไปแล้วในรอบนี้ (แยกบิล) -->
+    <section id="b-parts" class="st-card" hidden></section>
+
     <section class="st-card">
-      <h3>รายการอาหาร</h3>
+      <h3>เก็บเงินแบบไหน</h3>
+      <div id="b-split" class="st-seg st-seg--3" role="tablist">
+        <button type="button" data-s="all">ทั้งหมด</button>
+        <button type="button" data-s="equal">หารเท่ากัน</button>
+        <button type="button" data-s="items">เลือกรายการ</button>
+      </div>
+      <div data-split="equal" hidden>
+        <div class="st-split-n">
+          <span>หารกี่คน <small>(คนที่ยังไม่จ่าย)</small></span>
+          <div class="st-qty st-qty--sm">
+            <button type="button" data-n="-1" aria-label="ลด">−</button><b id="b-n">2</b><button type="button" data-n="1" aria-label="เพิ่ม">+</button>
+          </div>
+        </div>
+        <p id="b-equal-note" class="st-sub"></p>
+      </div>
+      <p data-split="items" class="st-sub" hidden>แตะ + เพื่อเลือกรายการที่คนนี้จ่าย</p>
       <div id="b-items"></div>
     </section>
 
     <section class="st-card">
       <div id="b-disc-wrap">
-        <div class="st-field"><span>ส่วนลด</span>
+        <div class="st-field"><span>ส่วนลด (เฉพาะใบนี้)</span>
           <div class="st-disc-row">
             <input id="b-disc" type="number" min="0" step="1" inputmode="decimal" placeholder="0">
             <div id="b-unit" class="st-unit" role="tablist">
@@ -50,13 +78,17 @@
     </section>
 
     <section class="st-card">
-      <h3>วิธีชำระ</h3>
-      <div id="b-methods" class="st-seg" role="tablist">
+      <div class="st-row-between">
+        <h3 style="margin:0">วิธีชำระ</h3>
+        <label class="st-switch-label"><input id="b-multi" type="checkbox"> หลายช่องทาง</label>
+      </div>
+      <div id="b-methods" class="st-seg" role="tablist" style="margin-top:10px">
         <button type="button" data-m="cash">💵 เงินสด</button>
         <button type="button" data-m="promptpay">📱 พร้อมเพย์</button>
         <button type="button" data-m="transfer">🏦 โอน</button>
         <button type="button" data-m="card">💳 บัตร</button>
       </div>
+      <div id="b-tenders" class="st-tenders" hidden></div>
 
       <div data-panel="cash">
         <label class="st-field"><span>รับเงินมา (บาท)</span>
@@ -86,7 +118,7 @@
       <label class="st-field"><span>หมายเหตุ (ไม่บังคับ)</span>
         <input id="b-note" type="text" maxlength="200" placeholder="เช่น ลูกค้าประจำ">
       </label>
-      <button id="b-pay" class="st-btn" type="button">รับเงิน · ปิดโต๊ะ</button>
+      <button id="b-pay" class="st-btn" type="button">รับเงิน</button>
     </section>
   </div>
 </main>

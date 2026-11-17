@@ -36,7 +36,11 @@
   const staffOrderUrl = (t) => `table.html?t=${encodeURIComponent(t.qr_token)}&staff=1`;
   const baht = (n) => '฿' + Number(n).toLocaleString('th-TH', { maximumFractionDigits: 2 });
   const ORDER_TH = { new: 'ใหม่', accepted: 'รับแล้ว', cooking: 'กำลังทำ', served: 'เสิร์ฟแล้ว', cancelled: 'ยกเลิก' };
-  const CALL_TH = { call: '🙋 เรียกพนักงาน', bill: '🧾 ขอเช็กบิล' };
+  const CALL_TH = { call: '🙋 เรียกพนักงาน', bill: '🧾 ขอเช็กบิล', slip: '💸 แนบสลิปรอตรวจ' };
+  // สลิปรอตรวจ: ไปหน้าเช็กบิลเพื่อยืนยัน / ปฏิเสธ (กด รับทราบ ไม่ได้)
+  const callBtn = (c) => c.kind === 'slip'
+    ? `<a class="st-chip st-chip--accent" href="bill.html?id=${encodeURIComponent(shopId)}&table=${encodeURIComponent(c.table_id || (typeof openId !== "undefined" ? openId : ""))}">ตรวจสลิป</a>`
+    : '<button type="button" class="st-chip" data-act="call-done">รับทราบ</button>';
   const canCancel = role !== 'kitchen';
   let tables = [];
   let floor = { calls: [], sessions: [] };
@@ -77,8 +81,8 @@
   function renderCalls() {
     $('#calls').innerHTML = floor.calls.map(c => `
       <div class="st-call st-call--${c.kind}" data-call="${esc(c.id)}">
-        <span><b>โต๊ะ ${esc(c.table_label)}</b> ${CALL_TH[c.kind]} · ${since(c.created_at)}</span>
-        <button type="button" class="st-chip" data-act="call-done">รับทราบ</button>
+        <span><b>${/^คิว /.test(c.table_label) ? '🛍 ' + esc(c.table_label.replace(/ \(.*\)$/, '')) : 'โต๊ะ ' + esc(c.table_label)}</b> ${CALL_TH[c.kind]} · ${since(c.created_at)}</span>
+        ${callBtn(c)}
       </div>`).join('');
   }
   $('#calls').addEventListener('click', async (e) => {
@@ -107,7 +111,7 @@
           const fs = sessBy[t.id];
           const calls = callsBy[t.id] || [];
           return `<button type="button" class="st-tile st-tile--${s}${calls.length ? ' st-tile--alert' : ''}" data-id="${esc(t.id)}">
-              <b>${esc(t.label)}${calls.map(k => `<i>${k === 'bill' ? '🧾' : '🙋'}</i>`).join('')}</b>
+              <b>${esc(t.label)}${calls.map(k => `<i>${k === 'bill' ? '🧾' : k === 'slip' ? '💸' : '🙋'}</i>`).join('')}</b>
               <span>${esc(STATE_TH[s])}${fs && fs.new_orders ? ` · ใหม่ ${fs.new_orders}` : ''}</span>
               <small>${esc(info)}${fs && Number(fs.subtotal) ? ' · ' + baht(fs.subtotal) : ''}</small>
             </button>`;
@@ -264,7 +268,7 @@
     const calls = detail.calls.map(c => `
       <div class="st-call st-call--${c.kind}" data-call="${esc(c.id)}">
         <span>${CALL_TH[c.kind]} · ${since(c.created_at)}</span>
-        <button type="button" class="st-chip" data-act="call-done">รับทราบ</button>
+        ${callBtn(c)}
       </div>`).join('');
     const orders = detail.orders.slice().reverse().map(o => `
       <div class="st-order st-order--${o.status}">
