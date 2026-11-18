@@ -29,7 +29,7 @@
   };
   const baht = (n) => '฿' + Number(n).toLocaleString('th-TH', { maximumFractionDigits: 2 });
   const COL = { new: 'new', accepted: 'cooking', cooking: 'cooking', served: 'served', cancelled: 'served' };
-  const CALL_TH = { call: '🙋 เรียกพนักงาน', bill: '🧾 ขอเช็กบิล', slip: '💸 แนบสลิปรอตรวจ', open: '🆕 ลูกค้าเปิดโต๊ะเอง' };
+  const CALL_TH = { call: '🙋 เรียกพนักงาน', bill: '🧾 ขอเช็กบิล', slip: '💸 แนบสลิปรอตรวจ', open: '🆕 ลูกค้าเปิดโต๊ะ รอยืนยัน', coupon: '🎟 คูปอง' };
   // สลิปรอตรวจ: ไปหน้าเช็กบิลเพื่อยืนยัน / ปฏิเสธ (กด รับทราบ ไม่ได้)
   // ลูกค้าเปิดโต๊ะเอง (โหมด "ร้านยืนยัน"): ยืนยัน / ปฏิเสธ
   const CAN_CONFIRM = ['owner', 'manager', 'cashier', 'waiter'].includes(role);
@@ -61,10 +61,12 @@
   $('#btn-mode').addEventListener('click', () => { kitchen = !kitchen; ls.set('st-kitchen-mode', kitchen ? '1' : '0'); applyMode(); });
   applyMode();
 
-  // ---------- เสียงแจ้งเตือน (ต้องแตะเปิด 1 ครั้งตามกติกาของเบราว์เซอร์) ----------
+  // ---------- เสียงแจ้งเตือน + จอไม่ดับ: เปิดไว้เป็นค่าเริ่มต้น ----------
+  // เบราว์เซอร์ให้เล่นเสียงได้หลังผู้ใช้แตะจอ 1 ครั้ง -> แตะตรงไหนก็ได้ ระบบเปิดให้เอง
   let audio = null;
+  let wantSound = ls.get('st-sound') !== '0';
   function beep(kind) {
-    if (!audio) return;
+    if (!audio || audio.state !== 'running') return;
     const tones = kind === 'call' ? [660, 520, 660] : [880, 1175];
     let t = audio.currentTime + 0.02;
     for (const f of tones) {
@@ -78,43 +80,64 @@
       t += 0.32;
     }
   }
-  $('#sound-hint').hidden = false;
-  $('#btn-sound').addEventListener('click', async () => {
-    if (audio) { audio.close(); audio = null; }
-    else {
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) return showMsg('เครื่องนี้เล่นเสียงแจ้งเตือนไม่ได้');
-      audio = new AC();
-      await audio.resume();
-      beep('order');
-    }
-    $('#btn-sound').textContent = audio ? '🔔 เสียงเปิด' : '🔕 เปิดเสียง';
-    $('#sound-hint').hidden = !!audio;
+  function renderSound() {
+    const on = wantSound && audio && audio.state === 'running';
+    $('#btn-sound').textContent = !wantSound ? '🔕 เสียงปิด' : on ? '🔔 เสียงเปิด' : '🔔 แตะจอเพื่อเปิดเสียง';
+    $('#sound-hint').hidden = !wantSound || on;
+  }
+  async function startAudio() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!audio) audio = new AC();
+    try { await audio.resume(); } catch { /* รอแตะจอ */ }
+    if (audio.onstatechange === null) audio.onstatechange = renderSound;
+    renderSound();
+  }
+  $('#btn-sound').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    wantSound = !(wantSound && audio && audio.state === 'running');
+    ls.set('st-sound', wantSound ? '1' : '0');
+    if (wantSound) { await startAudio(); beep('order'); }
+    else if (audio) { await audio.suspend().catch(() => {}); }
+    renderSound();
   });
 
   // ---------- จอไม่ดับ (Wake Lock) · ระบบปล่อยเองเมื่อสลับแอป จึงขอใหม่เมื่อกลับมา ----------
-  let wake = null, wantWake = false;
-  if ('wakeLock' in navigator) {
-    const btn = $('#btn-wake');
-    btn.hidden = false;
-    const renderWake = () => { btn.textContent = wake ? '☀️ จอไม่ดับ: เปิด' : 'จอไม่ดับ'; };
-    const acquire = async () => {
-      try {
-        wake = await navigator.wakeLock.request('screen');
-        wake.addEventListener('release', () => { wake = null; renderWake(); });
-      } catch {
-        wake = null;
-        showMsg('เปิดโหมดจอไม่ดับไม่ได้ ใช้ตั้งค่า > จอภาพ > ล็อกอัตโนมัติ > "ไม่ใช้" แทนได้');
-      }
-      renderWake();
-    };
-    btn.addEventListener('click', async () => {
-      wantWake = !wake;
-      if (wantWake) await acquire();
-      else { await wake.release(); wake = null; renderWake(); }
-    });
-    document.addEventListener('visibilitychange', () => { if (!document.hidden && wantWake && !wake) acquire(); });
+  let wake = null;
+  let wantWake = ls.get('st-wake') !== '0';
+  const btnWake = $('#btn-wake');
+  const renderWake = () => { btnWake.textContent = wake ? '☀️ จอไม่ดับ: เปิด' : wantWake ? '☀️ จอไม่ดับ: รอแตะจอ' : 'จอไม่ดับ: ปิด'; };
+  async function acquireWake(loud) {
+    if (!('wakeLock' in navigator) || wake || !wantWake || document.hidden) return renderWake();
+    try {
+      wake = await navigator.wakeLock.request('screen');
+      wake.addEventListener('release', () => { wake = null; renderWake(); });
+    } catch {
+      wake = null;
+      if (loud) showMsg('เปิดโหมดจอไม่ดับไม่ได้ ใช้ตั้งค่า > จอภาพ > ล็อกอัตโนมัติ > "ไม่ใช้" แทนได้');
+    }
+    renderWake();
   }
+  if ('wakeLock' in navigator) {
+    btnWake.hidden = false;
+    btnWake.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      wantWake = !wake;
+      ls.set('st-wake', wantWake ? '1' : '0');
+      if (wantWake) await acquireWake(true);
+      else { await wake?.release().catch(() => {}); wake = null; renderWake(); }
+    });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) acquireWake(false); });
+  }
+  // แตะจอครั้งแรก (หรือทุกครั้งที่ยังไม่ติด) -> เปิดเสียง + จอไม่ดับ ให้เอง
+  const kick = () => {
+    if (wantSound && (!audio || audio.state !== 'running')) startAudio();
+    if (wantWake && !wake) acquireWake(false);
+  };
+  ['pointerdown', 'keydown', 'touchend'].forEach(ev => document.addEventListener(ev, kick, { passive: true }));
+  if (wantSound) startAudio();
+  acquireWake(false);
+  renderSound();
 
   // ---------- เวลา ----------
   const nowMs = () => Date.now() + offset;
@@ -206,7 +229,7 @@
           ${its.map(i => `
             <li class="${i.done ? 'done' : ''}">
               <button type="button" class="st-dish" data-item="${esc(i.id)}" ${o.status === 'cancelled' ? 'disabled' : ''} aria-pressed="${i.done}" aria-label="${i.done ? 'เอาติ๊กออก' : 'ติ๊กว่าเสร็จ'}">${i.done ? '✓' : ''}</button>
-              <b>${i.qty}×</b> <span>${esc(i.name)}
+              ${i.image ? `<img class="st-dish-img" src="${esc(ST.avatarUrl(i.image))}" alt="" loading="lazy">` : ''}<b>${i.qty}×</b> <span>${esc(i.name)}
               ${i.options.length ? `<small>${esc(i.options.map(x => x.name).join(' · '))}</small>` : ''}
               ${i.note ? `<em>📝 ${esc(i.note)}</em>` : ''}</span></li>`).join('')}
         </ul>
@@ -228,7 +251,7 @@
     // การเรียก
     $('#calls').innerHTML = calls.map(c => `
       <div class="st-call st-call--${c.kind}" data-call="${esc(c.id)}">
-        <span><b>${/^คิว /.test(c.table_label) ? '🛍 ' + esc(c.table_label.replace(/ \(.*\)$/, '')) : 'โต๊ะ ' + esc(c.table_label)}</b> ${CALL_TH[c.kind]} · ${ageText(mins(c.created_at))}</span>
+        <span><b>${/^คิว /.test(c.table_label) ? '🛍 ' + esc(c.table_label.replace(/ \(.*\)$/, '')) : 'โต๊ะ ' + esc(c.table_label)}</b> ${CALL_TH[c.kind] || esc(c.kind)}${c.detail ? ' <small class="st-call-detail">' + esc(c.detail) + '</small>' : ''} · ${ageText(mins(c.created_at))}</span>
         ${callBtn(c)}
       </div>`).join('');
 

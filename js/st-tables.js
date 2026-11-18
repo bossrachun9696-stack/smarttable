@@ -38,7 +38,7 @@
   const staffOrderUrl = (t) => `table.html?t=${encodeURIComponent(t.qr_token)}&staff=1`;
   const baht = (n) => '฿' + Number(n).toLocaleString('th-TH', { maximumFractionDigits: 2 });
   const ORDER_TH = { new: 'ใหม่', accepted: 'รับแล้ว', cooking: 'กำลังทำ', served: 'เสิร์ฟแล้ว', cancelled: 'ยกเลิก' };
-  const CALL_TH = { call: '🙋 เรียกพนักงาน', bill: '🧾 ขอเช็กบิล', slip: '💸 แนบสลิปรอตรวจ', open: '🆕 ลูกค้าเปิดโต๊ะเอง' };
+  const CALL_TH = { call: '🙋 เรียกพนักงาน', bill: '🧾 ขอเช็กบิล', slip: '💸 แนบสลิปรอตรวจ', open: '🆕 ลูกค้าเปิดโต๊ะ รอยืนยัน', coupon: '🎟 คูปอง' };
   // สลิปรอตรวจ: ไปหน้าเช็กบิลเพื่อยืนยัน / ปฏิเสธ (กด รับทราบ ไม่ได้)
   // ลูกค้าเปิดโต๊ะเอง (โหมด "ร้านยืนยัน"): ยืนยัน / ปฏิเสธ
   const CAN_CONFIRM = ['owner', 'manager', 'cashier', 'waiter'].includes(role);
@@ -89,7 +89,7 @@
   function renderCalls() {
     $('#calls').innerHTML = floor.calls.map(c => `
       <div class="st-call st-call--${c.kind}" data-call="${esc(c.id)}">
-        <span><b>${/^คิว /.test(c.table_label) ? '🛍 ' + esc(c.table_label.replace(/ \(.*\)$/, '')) : 'โต๊ะ ' + esc(c.table_label)}</b> ${CALL_TH[c.kind]} · ${since(c.created_at)}</span>
+        <span><b>${/^คิว /.test(c.table_label) ? '🛍 ' + esc(c.table_label.replace(/ \(.*\)$/, '')) : 'โต๊ะ ' + esc(c.table_label)}</b> ${CALL_TH[c.kind] || esc(c.kind)}${c.detail ? ' <small class="st-call-detail">' + esc(c.detail) + '</small>' : ''} · ${since(c.created_at)}</span>
         ${callBtn(c)}
       </div>`).join('');
   }
@@ -133,7 +133,7 @@
           const fs = sessBy[t.id];
           const calls = callsBy[t.id] || [];
           return `<button type="button" class="st-tile st-tile--${s}${calls.length ? ' st-tile--alert' : ''}" data-id="${esc(t.id)}">
-              <b>${esc(t.label)}${calls.map(k => `<i>${k === 'bill' ? '🧾' : k === 'slip' ? '💸' : k === 'open' ? '🆕' : '🙋'}</i>`).join('')}</b>
+              <b>${esc(t.label)}${calls.map(k => `<i>${k === 'bill' ? '🧾' : k === 'slip' ? '💸' : k === 'open' ? '🆕' : k === 'coupon' ? '🎟' : '🙋'}</i>`).join('')}</b>
               <span>${t.session && t.session.confirm_status === 'pending' ? '<em class="st-badge st-badge--wait">รอยืนยัน</em> ' : ''}${esc(STATE_TH[s])}${fs && fs.new_orders ? ` · ใหม่ ${fs.new_orders}` : ''}</span>
               <small>${esc(info)}${fs && Number(fs.subtotal) ? ' · ' + baht(fs.subtotal) : ''}</small>
             </button>`;
@@ -289,7 +289,7 @@
     const b = detail.bill;
     const calls = detail.calls.map(c => `
       <div class="st-call st-call--${c.kind}" data-call="${esc(c.id)}">
-        <span>${CALL_TH[c.kind]} · ${since(c.created_at)}</span>
+        <span>${CALL_TH[c.kind] || esc(c.kind)}${c.detail ? ' <small class="st-call-detail">' + esc(c.detail) + '</small>' : ''} · ${since(c.created_at)}</span>
         ${callBtn(c)}
       </div>`).join('');
     const orders = detail.orders.slice().reverse().map(o => `

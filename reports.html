@@ -33,6 +33,9 @@
       <button type="button" data-p="30d">30 วัน</button>
       <button type="button" data-p="month">เดือนนี้</button>
       <button type="button" data-p="lastmonth">เดือนก่อน</button>
+      <button type="button" data-p="year">ปีนี้</button>
+      <button type="button" data-p="12m">12 เดือน</button>
+      <button type="button" data-p="3y">3 ปี</button>
     </div>
     <div class="st-range">
       <input id="d-from" type="date" aria-label="ตั้งแต่วันที่">
@@ -54,30 +57,64 @@
     </div>
     <div id="k-breakdown" class="st-breakdown"></div>
 
-    <section class="st-card">
-      <h3 id="chart-title">ยอดขาย</h3>
+    <div class="st-row-between st-cards-head">
+      <span class="st-sub">กราฟและสรุป</span>
+      <button id="btn-cards" class="st-chip st-chip--sm" type="button" aria-expanded="false">⚙️ เลือกการ์ดที่จะแสดง</button>
+    </div>
+    <div id="cards-pick" class="st-card st-cards-pick" hidden></div>
+    <section class="st-card" data-card="sales">
+      <div class="st-row-between"><h3 id="chart-title" style="margin:0">ยอดขาย</h3><div id="group-by" class="st-seg st-seg--mini" hidden></div></div>
       <div id="chart" class="st-chart"></div>
       <details class="st-table-view"><summary>ดูเป็นตาราง</summary><div id="chart-table"></div></details>
     </section>
-
-    <section class="st-card">
+    <section class="st-card" data-card="money">
+      <h3>💰 รายรับหลังหักส่วนลด</h3>
+      <div id="money"></div>
+    </section>
+    <section class="st-card" data-card="hours">
+      <h3>🕒 ช่วงเวลาที่ลูกค้าสั่ง</h3>
+      <p id="hours-peak" class="st-sub"></p>
+      <div id="hours" class="st-chart"></div>
+    </section>
+    <section class="st-card" data-card="top_qty">
+      <h3>🔥 เมนูที่ลูกค้าสั่งเยอะที่สุด</h3>
+      <div id="top-qty"></div>
+    </section>
+    <section class="st-card" data-card="top">
+      <h3>เมนูขายดี (ตามยอดเงิน · 20 อันดับ)</h3>
+      <div id="top-items"></div>
+    </section>
+    <section class="st-card" data-card="weekday">
+      <h3>📅 ยอดขายตามวันในสัปดาห์</h3>
+      <div id="weekday" class="st-chart"></div>
+    </section>
+    <section class="st-card" data-card="coupons">
+      <h3>🎟 คูปองที่ใช้มากที่สุด</h3>
+      <div id="coupons"></div>
+    </section>
+    <section class="st-card" data-card="promos">
+      <h3>⏰ โปรตามเวลา</h3>
+      <div id="promos"></div>
+    </section>
+    <section class="st-card" data-card="methods">
       <h3>ช่องทางชำระ</h3>
       <div id="methods"></div>
     </section>
-
-    <section class="st-card">
-      <h3>เมนูขายดี (20 อันดับ)</h3>
-      <div id="top-items"></div>
+    <section class="st-card" data-card="type">
+      <h3>🍽 ทานที่ร้าน / 🛍 กลับบ้าน</h3>
+      <div id="otype"></div>
     </section>
-
-    <section class="st-card">
-      <h3>⭐ คะแนนจากลูกค้า</h3>
-      <div id="ratings"></div>
-    </section>
-
-    <section class="st-card">
+    <section class="st-card" data-card="cats">
       <h3>ตามหมวดหมู่</h3>
       <div id="cats"></div>
+    </section>
+    <section class="st-card" data-card="kitchen">
+      <h3>⏱ ความเร็วครัวและการยกเลิก</h3>
+      <div id="kitchen" class="st-kpis st-kpis--sm"></div>
+    </section>
+    <section class="st-card" data-card="ratings">
+      <h3>⭐ คะแนนจากลูกค้า</h3>
+      <div id="ratings"></div>
     </section>
   </div>
 </main>

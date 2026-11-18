@@ -1,6 +1,6 @@
 // ===== หน้า จัดการร้าน =====
 (async function () {
-  const { sb, configOk, $, esc, ROLE_TH, thaiError, pageUrl, showMsg, setBusy, requireUser, copyText, shrinkImage, getPrefs, avatarUrl } = ST;
+  const { sb, configOk, $, esc, ROLE_TH, thaiError, pageUrl, showMsg, setBusy, requireUser, copyText, shrinkImage, getPrefs, setPrefs, avatarUrl, getSeen, markSeen } = ST;
   if (!configOk) return;
 
   const user = await requireUser();
@@ -45,9 +45,17 @@
   $('#shop-body').hidden = false;
 
   // ---------- รูปแบบหน้า (ตั้งที่ ⚙️ ตั้งค่า): รายการ / ช่องใหญ่ / ไอคอน / แบ่งหมวด ----------
+  // ลำดับปุ่ม (ตั้งเองได้ด้วยปุ่ม "จัดลำดับ" · จำไว้ในบัญชี)
+  // (ใช้ function เพื่อให้เรียกได้ก่อนบรรทัดนี้ — applyLayout ถูกเรียกตั้งแต่ด้านบน)
+  function linkOrder() {
+    const def = ['orders', 'tables', 'queue', 'receipts', 'menu', 'promos', 'reports', 'audit'];
+    const saved = (getPrefs().order || []).filter(k => def.includes(k));
+    return [...saved, ...def.filter(k => !saved.includes(k))];
+  }
+  function rank(a) { const i = linkOrder().indexOf(a.id.replace('link-', '')); return i < 0 ? 99 : i; }
   function applyLayout(layout) {
     const nav = $('#shop-links');
-    const links = [...nav.querySelectorAll('a.st-item')];
+    const links = [...nav.querySelectorAll('a.st-item')].sort((x, y) => rank(x) - rank(y));
     nav.className = 'st-list st-links st-links--' + (['tiles', 'icons', 'groups'].includes(layout) ? layout : 'list');
     nav.querySelectorAll('.st-links-group').forEach(g => g.remove());
     if (layout !== 'groups') { links.forEach(a => nav.appendChild(a)); return; }
@@ -60,11 +68,109 @@
       const box = document.createElement('div');
       box.className = 'st-links-group';
       box.innerHTML = `<h4>${title}</h4><div class="st-links-grid"></div>`;
-      ids.forEach(id => { const a = document.getElementById(id); if (a) box.lastChild.appendChild(a); });
+      ids.map(id => document.getElementById(id)).filter(Boolean).sort((x, y) => rank(x) - rank(y)).forEach(a => box.lastChild.appendChild(a));
       if ([...box.querySelectorAll('a.st-item')].some(a => !a.hidden)) nav.appendChild(box);
       else links.filter(a => ids.includes(a.id)).forEach(a => nav.appendChild(a));
     }
   }
+
+  // ---------- จัดลำดับปุ่ม ----------
+  let editing = false;
+  const nav = $('#shop-links');
+  function moveControls(on) {
+    nav.querySelectorAll('a.st-item').forEach(a => {
+      a.querySelector('.st-move')?.remove();
+      if (on) a.insertAdjacentHTML('beforeend', '<span class="st-move"><button type="button" data-mv="-1" aria-label="เลื่อนขึ้น">▲</button><button type="button" data-mv="1" aria-label="เลื่อนลง">▼</button></span>');
+    });
+  }
+  $('#btn-reorder').addEventListener('click', async () => {
+    editing = !editing;
+    $('#btn-reorder').textContent = editing ? '✓ เสร็จ' : '↕️ จัดลำดับ';
+    $('#btn-reorder').classList.toggle('st-chip--accent', editing);
+    if (editing) {
+      applyLayout('list');
+      nav.classList.add('st-links--edit');
+      moveControls(true);
+      showMsg('กด ▲ ▼ เพื่อเลื่อนปุ่ม แล้วกด "✓ เสร็จ"', 'ok');
+      return;
+    }
+    moveControls(false);
+    nav.classList.remove('st-links--edit');
+    const order = [...nav.querySelectorAll('a.st-item')].map(a => a.id.replace('link-', ''));
+    setPrefs({ order });
+    applyLayout(getPrefs().layout);
+    const { error } = await sb.rpc('st_update_profile', { p: { prefs: { order } } });
+    showMsg(error ? 'จัดลำดับในเครื่องนี้แล้ว (บันทึกในบัญชีไม่สำเร็จ)' : 'บันทึกลำดับแล้ว ✓', error ? 'error' : 'ok');
+  });
+  nav.addEventListener('click', (e) => {
+    if (!editing) {
+      const a = e.target.closest('a.st-item');
+      if (a && ['link-receipts', 'link-audit', 'link-promos'].includes(a.id)) markSeen(shopId, { 'link-receipts': 'receipts', 'link-audit': 'audit', 'link-promos': 'coupons' }[a.id]);
+      return;
+    }
+    e.preventDefault();
+    const b = e.target.closest('[data-mv]');
+    if (!b) return;
+    const a = b.closest('a.st-item');
+    const all = [...nav.querySelectorAll('a.st-item')].filter(x => !x.hidden);
+    const i = all.indexOf(a), j = i + Number(b.dataset.mv);
+    if (j < 0 || j >= all.length) return;
+    if (Number(b.dataset.mv) < 0) all[j].before(a); else all[j].after(a);
+    a.classList.add('st-moved'); setTimeout(() => a.classList.remove('st-moved'), 400);
+  });
+
+  // ---------- แจ้งเตือนรวม: ตัวเลขกะพริบบนปุ่ม จนกว่าจะมีคนจัดการ ----------
+  const CALL_LABEL = { open: '🆕 ลูกค้าเปิดโต๊ะรอยืนยัน', call: '🙋 เรียกพนักงาน', bill: '🧾 ขอเช็กบิล', slip: '💸 สลิปรอตรวจ', coupon: '🎟 คูปอง' };
+  function setBadge(id, n, urgent) {
+    const a = document.getElementById(id);
+    if (!a) return;
+    const logo = a.querySelector('.st-logo');
+    let b = logo.querySelector('.st-nbadge');
+    if (!n) { b?.remove(); a.classList.remove('st-blink', 'st-has-badge'); return; }
+    if (!b) { b = document.createElement('span'); b.className = 'st-nbadge'; logo.appendChild(b); }
+    b.textContent = n > 99 ? '99+' : String(n);
+    b.classList.toggle('st-nbadge--info', !urgent);
+    a.classList.add('st-has-badge');
+    a.classList.toggle('st-blink', !!urgent);
+  }
+  let lastUrgent = 0;
+  async function loadAlerts() {
+    const { data: a, error } = await sb.rpc('st_shop_alerts', { p_shop: shopId, p_since: getSeen(shopId) });
+    if (error || !a) return;
+    const c = a.calls || {};
+    const tableCalls = (c.call || 0) + (c.bill || 0) + (c.slip || 0) + (c.open || 0);
+    setBadge('link-orders', a.orders_new, true);
+    setBadge('link-queue', a.takeaway_new, true);
+    setBadge('link-tables', tableCalls, true);
+    setBadge('link-promos', (c.coupon || 0) + (a.coupons || 0), !!c.coupon);
+    setBadge('link-receipts', a.receipts, false);
+    setBadge('link-audit', a.audit, false);
+    const href = (page) => page + '.html?id=' + encodeURIComponent(shopId);
+    const parts = [];
+    if (a.orders_new) parts.push(`<a href="${href('orders')}">🔔 ออร์เดอร์ใหม่ <b>${a.orders_new}</b></a>`);
+    if (a.takeaway_new) parts.push(`<a href="${href('queue')}">🛍 สั่งกลับบ้าน <b>${a.takeaway_new}</b></a>`);
+    for (const k of ['open', 'call', 'bill', 'slip']) if (c[k]) parts.push(`<a href="${href('tables')}">${CALL_LABEL[k]} <b>${c[k]}</b></a>`);
+    if (c.coupon && canManage) parts.push(`<a href="${href('promos')}">${CALL_LABEL.coupon} <b>${c.coupon}</b></a>`);
+    else if (c.coupon) parts.push(`<a href="${href('tables')}">${CALL_LABEL.coupon} <b>${c.coupon}</b></a>`);
+    $('#alert-sum').innerHTML = parts.join('');
+    $('#alert-sum').hidden = !parts.length;
+    const urgent = a.orders_new + a.takeaway_new + tableCalls + (c.coupon || 0);
+    document.title = (urgent ? `(${urgent}) ` : '') + current.name + ' · SmartTable';
+    lastUrgent = urgent;
+  }
+  let alertT;
+  const alertSoon = () => { clearTimeout(alertT); alertT = setTimeout(loadAlerts, 600); };
+  try {
+    const ch = sb.channel('st-hub-' + shopId);
+    for (const table of ['st_orders', 'st_service_calls', 'st_payments', 'st_table_sessions']) {
+      ch.on('postgres_changes', { event: '*', schema: 'public', table, filter: 'shop_id=eq.' + shopId }, alertSoon);
+    }
+    ch.subscribe();
+  } catch { /* ไม่มี Realtime ก็ดึงซ้ำเป็นระยะ */ }
+  setInterval(() => { if (!document.hidden) loadAlerts(); }, 20000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) loadAlerts(); });
+  window.addEventListener('pageshow', (e) => { if (e.persisted) loadAlerts(); });
+  loadAlerts();
 
   // ---------- รูปแบบการสั่งอาหาร (บันทึกทันทีเมื่อเลือก) ----------
   const fm = $('#form-mode');
@@ -79,7 +185,7 @@
         return showMsg(thaiError(error));
       }
       current = data;
-      showMsg(r.value === 'confirm' ? 'บันทึกแล้ว — ลูกค้าสั่งได้ทันที ร้านจะได้แจ้งเตือนให้ยืนยันโต๊ะที่ผังโต๊ะ / จอออร์เดอร์' : 'บันทึกรูปแบบการสั่งอาหารแล้ว', 'ok');
+      showMsg(r.value === 'confirm' ? 'บันทึกแล้ว — ลูกค้าสแกนแล้วเปิดโต๊ะรอไว้ ร้านกด ✓ ยืนยัน ที่ผังโต๊ะ / จอออร์เดอร์ แล้วลูกค้าจึงสั่งได้' : 'บันทึกรูปแบบการสั่งอาหารแล้ว', 'ok');
     });
   });
 

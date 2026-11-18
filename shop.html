@@ -30,8 +30,9 @@
   <div id="st-msg" class="st-msg" role="status" hidden></div>
 
   <div id="shop-body" hidden>
+    <div id="alert-sum" class="st-alert-sum" hidden></div>
     <div class="st-row-between st-links-head">
-      <span></span>
+      <button id="btn-reorder" class="st-chip st-chip--sm" type="button">↕️ จัดลำดับ</button>
       <a id="link-layout" class="st-chip st-chip--sm" href="settings.html">🎨 เปลี่ยนรูปแบบ / ธีม</a>
     </div>
     <nav id="shop-links" class="st-list" style="margin-bottom:14px">
@@ -93,8 +94,8 @@
         </label>
         <label class="st-choice">
           <input type="radio" name="order_mode" value="confirm">
-          <div><b>ลูกค้าเปิดโต๊ะเอง ร้านยืนยัน</b>
-            <small>ลูกค้าสแกนแล้วสั่งได้ทันที ไม่ต้องรอ · ร้านได้แจ้งเตือน "ลูกค้าเปิดโต๊ะเอง" แล้วกดยืนยัน (หรือปฏิเสธ ถ้าไม่มีลูกค้าอยู่ที่โต๊ะจริง)</small></div>
+          <div><b>ลูกค้ากดเปิดโต๊ะ ร้านยืนยันก่อนสั่ง</b>
+            <small>ลูกค้าสแกน = เปิดโต๊ะรอไว้ ดูเมนู/ใส่ตะกร้าได้ · ร้านได้แจ้งเตือน (ปุ่มโต๊ะกะพริบ) → กด ✓ ยืนยัน แล้วลูกค้าจึงส่งรายการได้ · พนักงานสั่งแทน = ยืนยันให้อัตโนมัติ</small></div>
         </label>
       </form>
     </section>

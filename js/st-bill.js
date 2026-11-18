@@ -105,6 +105,22 @@
   $('#b-coupon-on').addEventListener('click', (e) => {
     if (e.target.id === 'b-coupon-off') { coupon = null; $('#b-coupon').value = ''; renderCoupon(); load(); }
   });
+  // คูปองที่ลูกค้าใส่ไว้เองในหน้าสั่งอาหาร (st-15) -> กดใช้ได้ทันที
+  async function loadGuestCoupons() {
+    if (!canDiscount) return;
+    const { data } = await sb.rpc('st_table_coupons', { p_table: tableId });
+    const list = (data || []).filter(c => c.status === 'pending');
+    const box = $('#b-coupon-guest');
+    box.hidden = !list.length;
+    box.innerHTML = list.length ? `<small>ลูกค้าใส่คูปองไว้:</small> ` + list.map(c =>
+      `<button type="button" class="st-chip st-chip--accent" data-guest-code="${esc(c.code)}">🎟 ${esc(c.code)}${c.title ? ' · ' + esc(c.title) : ''} — ใช้</button>`).join(' ') : '';
+    if (list.length === 1 && !coupon && !$('#b-coupon').value) { $('#b-coupon').value = list[0].code; applyCoupon(list[0].code, true); }
+  }
+  $('#b-coupon-guest').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-guest-code]');
+    if (b) { $('#b-coupon').value = b.dataset.guestCode; applyCoupon(b.dataset.guestCode); }
+  });
+
   // เปลี่ยนส่วนที่จ่าย = คิดคูปองใหม่
   const partChanged = () => coupon ? applyCoupon(coupon.code, true) : load();
 
@@ -528,4 +544,5 @@
     .subscribe();
 
   await load();
+  loadGuestCoupons();
 })();

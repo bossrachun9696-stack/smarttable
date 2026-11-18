@@ -110,6 +110,11 @@
     st_coupon_expired: 'คูปองยังไม่ถึงวันใช้ หรือหมดอายุแล้ว',
     st_coupon_used_up: 'คูปองนี้ถูกใช้ครบจำนวนแล้ว',
     st_coupon_min: 'ยอดยังไม่ถึงขั้นต่ำของคูปอง',
+    st_coupon_already: 'ใส่คูปองนี้ไว้แล้ว',
+    st_coupon_limit: 'ใส่คูปองครบจำนวนที่ร้านให้ใช้ต่อโต๊ะแล้ว',
+    st_coupon_no_promo: 'คูปองนี้ใช้ร่วมกับโปรลดราคาตามเวลาไม่ได้',
+    st_coupon_need_staff: 'มีคูปองที่ใส่ไว้ กรุณากด "ขอเช็กบิล" ให้พนักงานคิดส่วนลดให้',
+    st_wait_confirm: 'ร้านยังไม่ได้ยืนยันโต๊ะ รอสักครู่แล้วกดส่งอีกครั้ง',
     // รอบ D: สถานี / สั่งกลับบ้าน
     st_station_taken: 'มีสถานีชื่อนี้แล้ว',
     st_station_limit: 'สร้างสถานีได้สูงสุด 10 จุด',
@@ -299,7 +304,12 @@
     window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => null); });
   }
 
+  // เวลาที่เปิดดูหน้าต่าง ๆ ล่าสุด (ใช้นับป้ายแจ้งเตือนบนหน้าร้าน) · เก็บในเครื่อง
+  function getSeen(shop) { try { return JSON.parse(localStorage.getItem('st-seen:' + shop) || '{}') || {}; } catch { return {}; } }
+  function markSeen(shop, key) {
+    try { const v = getSeen(shop); v[key] = new Date().toISOString(); localStorage.setItem('st-seen:' + shop, JSON.stringify(v)); } catch { /* ไม่เป็นไร */ }
+  }
   window.ST = { sb, configOk, $, esc, ROLE_TH, thaiError, pageUrl, nextUrl, showMsg, hideMsg, setBusy,
                 ensureProfile, requireUser, copyText, TAGS, applyTheme, shrinkImage,
-                getPrefs, setPrefs, applyMode, avatarUrl };
+                getPrefs, setPrefs, applyMode, avatarUrl, getSeen, markSeen };
 })();

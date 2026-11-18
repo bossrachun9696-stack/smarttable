@@ -38,6 +38,7 @@
   if (!(await requireUser())) return;
   const shopId = new URLSearchParams(location.search).get('id');
   if (!shopId) return location.replace('home.html');
+  ST.markSeen(shopId, 'receipts');
   $('#back').href = 'shop.html?id=' + encodeURIComponent(shopId);
   const METHOD = { cash: '💵 เงินสด', promptpay: '📱 พร้อมเพย์', transfer: '🏦 โอน', card: '💳 บัตร', mixed: '🔀 หลายช่องทาง' };
   const { data, error } = await sb.rpc('st_recent_payments', { p_shop: shopId, p_limit: 30 });

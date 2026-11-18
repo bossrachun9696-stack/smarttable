@@ -32,8 +32,16 @@
     </section>
 
     <section class="st-card">
+      <h3 style="margin:0 0 6px">📏 กติกาการใช้คูปอง</h3>
+      <label class="st-field" style="margin:0"><span>หนึ่งโต๊ะ (หนึ่งรอบ) ใช้คูปองได้กี่ใบ</span>
+        <select id="per-table"></select>
+      </label>
+      <p class="st-sub" style="margin:6px 0 0">นับรวมทุกคูปอง · คูปองเดิมใช้ซ้ำในโต๊ะเดียวกันไม่ได้ · ใช้ร่วมกับโปรตามเวลาได้ไหม ตั้งแยกในแต่ละคูปอง</p>
+    </section>
+
+    <section class="st-card">
       <div class="st-row-between"><h3 style="margin:0">🎟 คูปองส่วนลด</h3><button id="add-coupon" class="st-chip st-chip--accent" type="button">+ เพิ่มคูปอง</button></div>
-      <p class="st-sub" style="margin-top:6px">ลูกค้าบอกโค้ด → แคชเชียร์ใส่โค้ดตอนเช็กบิล · จำกัดจำนวนครั้ง/วันหมดอายุได้</p>
+      <p class="st-sub" style="margin-top:6px">ลูกค้าเห็นคูปองในหน้าสั่งอาหาร (ปุ่ม 🎁) · ใส่โค้ด/สแกน QR เองได้ · หรือกดเรียกพนักงานมาตรวจสิทธิ์ · ส่วนลดคิดตอนเช็กบิล</p>
       <div id="coupon-list"></div>
     </section>
   </div>
@@ -52,6 +60,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/st-config.js"></script>
 <script src="js/st-auth.js"></script>
+<script src="js/st-qr.js"></script>
 <script src="js/st-promos.js"></script>
 </body>
 </html>

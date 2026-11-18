@@ -36,6 +36,7 @@
     <button type="button" id="btn-orders">🧾 ที่สั่งแล้ว <span id="orders-count"></span></button>
     <button type="button" data-call="bill">💳 ขอเช็กบิล</button>
   </div>
+  <button id="g-deals" type="button" class="st-deals-btn" hidden><span id="deals-label">🎁 โปรโมชันและคูปอง</span><b id="deals-n"></b><i aria-hidden="true">›</i></button>
   <div id="g-pay" class="st-paycard" hidden></div>
   <div id="g-rate" class="st-rate" hidden></div>
 
@@ -58,6 +59,14 @@
   </button>
 </div>
 <div id="toast" class="st-toast" role="status" hidden></div>
+<div id="scanner" class="st-scanner" hidden>
+  <div class="st-scanner-box">
+    <div class="st-scanner-head"><b id="scan-title">สแกน QR คูปอง</b><button id="scan-close" class="st-chip" type="button">ปิด</button></div>
+    <div class="st-scanner-view"><video id="scan-video" playsinline muted></video><i class="st-scanner-frame"></i></div>
+    <p id="scan-hint" class="st-sub"></p>
+    <label class="st-btn st-btn--ghost st-scanner-photo"><span id="scan-photo">ถ่ายรูป QR แทน</span><input id="scan-file" type="file" accept="image/*" capture="environment" hidden></label>
+  </div>
+</div>
 
 <div id="sheet" class="st-sheet st-sheet--bottom" hidden>
   <div class="st-sheet-panel st-split" role="dialog" aria-modal="true">

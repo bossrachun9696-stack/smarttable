@@ -5,6 +5,7 @@
   if (!(await requireUser())) return;
   const shopId = new URLSearchParams(location.search).get('id');
   if (!shopId) return location.replace('home.html');
+  ST.markSeen(shopId, 'audit');
   $('#back').href = 'shop.html?id=' + encodeURIComponent(shopId);
 
   const money = (n) => '฿' + Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

@@ -4,7 +4,7 @@
 // QR สั่งกลับบ้าน (hub) -> สั่งครั้งแรกได้บัตรคิว (ticket) -> หน้านี้ของบัตรคิว แจ้งเตือนเมื่ออาหารพร้อม
 // ตะกร้าร่วมทั้งโต๊ะ (เก็บในฐานข้อมูล + Realtime Broadcast บอกเครื่องอื่น) · ร้านปิดได้ -> ตะกร้าในเครื่อง
 (async function () {
-  const { sb, configOk, $, esc, thaiError, showMsg, TAGS, applyTheme } = ST;
+  const { sb, configOk, $, esc, thaiError, showMsg, hideMsg, TAGS, applyTheme } = ST;
   if (!configOk) return;
 
   const params = new URLSearchParams(location.search);
@@ -84,7 +84,8 @@
     if (!b) return;
     lang = b.dataset.lang;
     ls.set('st-lang', lang);
-    renderLang(); renderState(); renderTicket(); renderDiet(); renderMenu(); renderButtons(); renderRate(); renderPay();
+    renderLang(); renderState(); renderTicket(); renderDiet(); renderMenu(); renderButtons(); renderRate(); renderPay(); renderDealsBtn();
+    if (sheetMode === 'deals') renderDeals();
     if (sheetMode === 'cart') renderCart();
     if (sheetMode === 'orders') renderOrders();
     if (sheetMode === 'item' && current) openItem(current.id);
@@ -108,6 +109,8 @@
   const isHub = () => !!lastScan && lastScan.table.kind === 'hub';
   const ticket = () => lastScan && lastScan.ticket;
   const canOrder = () => (state === 'open' && !!token) || (state === 'takeaway' && !staffMode);
+  // โหมด "ลูกค้าเปิดโต๊ะ ร้านยืนยัน": ใส่ตะกร้าได้ แต่ส่งได้หลังร้านยืนยัน
+  const waitConfirm = () => !staffMode && state === 'open' && !!token && !!lastScan && lastScan.confirm === 'pending';
   const remaining = (it) => it.stock_left == null ? Infinity
     : it.stock_left - cart.filter(l => l.item_id === it.id).reduce((s, l) => s + l.qty, 0);
   const maxQty = (it) => Math.max(1, Math.min(20, remaining(it)));
@@ -183,8 +186,12 @@
     // โหมด "ลูกค้าเปิดโต๊ะเอง ร้านยืนยัน" (st-14)
     if (!staffMode) {
       if (data.confirm === 'pending' && newToken && newToken !== token) showMsg(t('cf_opened'), 'ok');
-      else if (wasPending && newToken && newToken === token && data.confirm === 'confirmed') showMsg(t('cf_confirmed'), 'ok');
+      else if (wasPending && newToken && newToken === token && data.confirm === 'confirmed') {
+        hideMsg(); toast(t('cf_confirmed'));
+        setTimeout(() => { if (sheetMode === 'cart') renderCart(); }, 0);
+      }
       else if (wasPending && !newToken) showMsg(t('cf_rejected'));
+      if (data.table && data.table.kind !== 'hub') ls.set('st-last-table', JSON.stringify({ qr, shop: data.shop.id, at: Date.now() }));
     }
     if (newToken !== token) {
       token = newToken;
@@ -206,6 +213,7 @@
     renderTicket();
     renderCartBar();
     if (token) refreshGuest(); else { renderButtons(); renderRate(); renderPay(); }
+    loadDeals().then(applyPendingCoupon);
     return data;
   }
 
@@ -222,7 +230,7 @@
     const cls = { open: 'ok', waiting: 'wait', billing: 'wait', shop_closed: 'off', ended: 'off', takeaway: 'ok', takeaway_off: 'off' }[state];
     $('#g-state').className = 'st-state st-state--' + cls;
     if (state === 'open' && data.confirm === 'pending' && token) {
-      $('#g-state').className = 'st-state st-state--ok';
+      $('#g-state').className = 'st-state st-state--wait';
       $('#g-state').innerHTML = `<b>${esc(t('cf_pending_t'))}</b><span><i class="st-dot-inline"></i>${esc(t('cf_pending'))}</span>`;
     } else
     $('#g-state').innerHTML = `<b>${esc(t('st_' + state + '_t'))}</b><span>${esc(t('st_' + state))}</span>`;
@@ -560,7 +568,8 @@
     return cart.map(l => {
           const it = menu.items.find(x => x.id === l.item_id);
           return `
-          <div class="st-line" data-k="${esc(l.key)}">
+          <div class="st-line st-line--img" data-k="${esc(l.key)}">
+            <div class="st-line-img">${it && it.image_path ? `<img src="${esc(imgUrl(it.image_path))}" alt="" loading="lazy">` : '<span>🍽</span>'}</div>
             <div class="st-line-main">
               <b>${esc(it ? iname(it) : l.name)}</b>
               ${l.labels.length ? `<small>${esc(l.labels.map(s => oname(it, s)).join(' · '))}</small>` : ''}
@@ -596,10 +605,10 @@
         </label>
         <div class="st-sum"><span>${esc(t('food_total'))}</span><b>${baht(cartTotal())}</b></div>
         <p class="st-sub" style="margin-top:4px">${esc(t('fees_later'))}${promos.length ? ' · ' + esc(t('promo_note')) : ''}</p>
-        <button class="st-btn" type="submit" id="btn-send">${esc(sendLabel())}</button>
+        <button class="st-btn" type="submit" id="btn-send"${waitConfirm() ? ' disabled' : ''}>${esc(sendLabel())}</button>
       </form>`;
   }
-  const sendLabel = () => t(state === 'takeaway' ? 'ta_send' : sharedOn() ? 'send_all' : 'send', { n: cartCount() });
+  const sendLabel = () => waitConfirm() ? t('cf_wait_btn') : t(state === 'takeaway' ? 'ta_send' : sharedOn() ? 'send_all' : 'send', { n: cartCount() });
   // อัปเดตเฉพาะรายการ + ยอด (ไม่ล้างช่องที่กำลังพิมพ์)
   function updateCartSheet() {
     if (sheetMode !== 'cart') return;
@@ -608,7 +617,7 @@
     const sum = $('#sheet-body .st-sum b');
     if (sum) sum.textContent = baht(cartTotal());
     const btn = $('#btn-send');
-    if (btn && !btn.disabled) btn.textContent = sendLabel();
+    if (btn && (!btn.disabled || waitConfirm())) btn.textContent = sendLabel();
   }
   $('#btn-cart').addEventListener('click', () => {
     openSheet('cart', sharedOn() ? t('table_cart') : t('my_cart'));
@@ -641,6 +650,7 @@
     if (e.target.id !== 'form-send') return;
     e.preventDefault();
     if (!canOrder()) return sheetMsg(t('st_' + state + '_t') || t('cant_order'));
+    if (waitConfirm()) return sheetMsg(t('cf_wait_btn'));
     const f = e.target;
     if (state === 'takeaway') return sendTakeaway(f);
     const guestName = f.guest_name.value.trim().slice(0, 30);
@@ -667,7 +677,7 @@
       if (code.startsWith('st_')) pendingRef = null;            // ร้านปฏิเสธ = ยังไม่ได้สร้างออร์เดอร์
       if (isShared) pullCart();
       if (['st_item_sold_out', 'st_item_gone', 'st_options_changed', 'st_options_required', 'st_out_of_stock'].includes(code)) loadMenu();
-      if (['st_session_invalid', 'st_session_billing', 'st_shop_closed', 'st_table_not_open'].includes(code)) scan(false);
+      if (['st_session_invalid', 'st_session_billing', 'st_shop_closed', 'st_table_not_open', 'st_wait_confirm'].includes(code)) scan(false);
       return sheetMsg(gErr(error));
     }
     if (isShared) { ping('sent'); await pullCart(); } else { cart = []; saveCart(); }
@@ -840,6 +850,222 @@
     pullTick++;
     if (sheetMode === 'cart' || pullTick % 3 === 0) pullCart();
   }, 5000);
+
+  // ---------- โปรโมชันและคูปอง (st-15) ----------
+  const KEY_COUPON = 'st-coupon-pending';
+  let deals = null;
+  if (params.get('coupon') && !staffMode) {
+    ls.set(KEY_COUPON, JSON.stringify({ code: params.get('coupon'), shop: params.get('s') || null, at: Date.now() }));
+    try { const u = new URL(location.href); u.searchParams.delete('coupon'); u.searchParams.delete('s'); history.replaceState(null, '', u); } catch { /* ไม่เป็นไร */ }
+  }
+  async function loadDeals() {
+    if (staffMode || !lastScan || isHub() || ticket()) { $('#g-deals').hidden = true; return; }
+    const { data, error } = await sb.rpc('st_guest_deals', { p_qr: qr, p_session_token: token || null });
+    if (error || !data) return;
+    deals = data;
+    renderDealsBtn();
+    if (sheetMode === 'deals') renderDeals();
+  }
+  function renderDealsBtn() {
+    const n = deals ? deals.coupons.length + deals.promos.length : 0;
+    const mine = deals ? deals.applied.filter(a => a.status === 'pending').length : 0;
+    $('#g-deals').hidden = !deals || (!n && !token);
+    $('#deals-label').textContent = t('deals');
+    $('#deals-n').textContent = mine ? '🎟 ' + mine : n ? t('deals_n', { n }) : '';
+  }
+  const locale = () => lang === 'th' ? 'th-TH' : lang === 'zh' ? 'zh-CN' : 'en-GB';
+  const fmtDay = (d) => new Date(d + 'T00:00:00').toLocaleDateString(locale(), { day: 'numeric', month: 'short' });
+  const couponOff = (c) => c.kind === 'percent' ? Number(c.value) + '%' : baht(c.value);
+  function couponMeta(c) {
+    const parts = [];
+    if (Number(c.min_subtotal)) parts.push(t('deal_min', { x: baht(c.min_subtotal) }));
+    if (c.kind === 'percent' && c.max_discount) parts.push(t('deal_max', { x: baht(c.max_discount) }));
+    if (c.ends_on) parts.push(t('deal_until', { d: fmtDay(c.ends_on) }));
+    if (c.stack_promo === false) parts.push(t('deal_nostack'));
+    return parts.join(' · ');
+  }
+  function promoWhen(p) {
+    const D = t('days').split(',');
+    return (p.days.length === 7 ? t('deal_everyday') : [...p.days].sort((a, b) => a - b).map(d => D[d]).join(' ')) + ' · ' + p.start_time + '–' + p.end_time;
+  }
+  function promoScope(p) {
+    if (!p.item_ids.length && !p.category_ids.length) return t('deal_all');
+    const names = [...menu.categories.filter(c => p.category_ids.includes(c.id)).map(cname),
+                   ...menu.items.filter(i => p.item_ids.includes(i.id)).map(iname)];
+    return names.length ? names.slice(0, 5).join(', ') + (names.length > 5 ? ' …' : '') : t('deal_some');
+  }
+  function renderDeals() {
+    const d = deals || { coupons: [], promos: [], applied: [], limit: 1, call_pending: false };
+    const canAdd = !!token && state !== 'ended';
+    const mine = new Set(d.applied.map(a => a.code));
+    $('#sheet-body').innerHTML = `
+      ${canAdd ? `
+      <section class="st-deal-mine">
+        <h4>${esc(t('deal_mine'))} <small>${esc(t('deal_limit', { n: d.limit }))}</small></h4>
+        ${d.applied.map(a => `
+          <div class="st-deal-applied">
+            <span>🎟 <b>${esc(a.title || a.code)}</b> · ${esc(t('deal_off', { x: couponOff(a) }))}<small>${esc(a.status === 'used' ? t('deal_used') : t('deal_wait'))}</small></span>
+            ${a.status === 'pending' ? `<button type="button" class="st-chip" data-deal-remove="${esc(a.id)}">${esc(t('deal_remove'))}</button>` : ''}
+          </div>`).join('')}
+        <form id="form-coupon" class="st-deal-form" novalidate>
+          <input name="code" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="${esc(t('deal_code_ph'))}" aria-label="${esc(t('deal_code_ph'))}">
+          <button class="st-btn" type="submit">${esc(t('deal_use'))}</button>
+        </form>
+        <button type="button" class="st-btn st-btn--ghost" data-deal-scan>${esc(t('deal_scan'))}</button>
+      </section>` : ''}
+      ${d.coupons.length ? `<h4 class="st-deal-h">${esc(t('deal_coupons'))}</h4>` + d.coupons.map(c => `
+        <div class="st-deal st-deal--coupon">
+          <div class="st-deal-badge">${esc(couponOff(c))}</div>
+          <div class="st-deal-main"><b>${esc(c.title || t('deal_off', { x: couponOff(c) }))}</b>
+            ${couponMeta(c) ? `<small>${esc(couponMeta(c))}</small>` : ''}
+            ${c.note ? `<p>${esc(c.note)}</p>` : ''}
+            ${c.mode === 'call' ? `<small class="st-deal-hint">${esc(t('deal_call_hint'))}</small>` : ''}
+            ${!canAdd ? '' : c.mode === 'show'
+              ? (mine.has(c.code) ? `<em class="st-deal-ok">✓ ${esc(t('deal_wait'))}</em>` : `<button type="button" class="st-chip st-chip--accent" data-deal-code="${esc(c.code)}">${esc(t('deal_tap'))}</button>`)
+              : (d.call_pending ? `<em class="st-deal-ok">${esc(t('deal_called'))}</em>` : `<button type="button" class="st-chip" data-deal-call="${esc(c.id)}">${esc(t('deal_call'))}</button>`)}
+          </div>
+        </div>`).join('') : ''}
+      ${d.promos.length ? `<h4 class="st-deal-h">${esc(t('deal_promos'))}</h4>` + d.promos.map(p => `
+        <div class="st-deal${p.active ? ' st-deal--on' : ''}">
+          <div class="st-deal-badge">−${Number(p.percent)}%</div>
+          <div class="st-deal-main"><b>${esc(p.name)}</b>
+            <small>${esc(promoWhen(p))}</small><small>${esc(promoScope(p))}</small>
+            ${p.note ? `<p>${esc(p.note)}</p>` : ''}
+            <em class="${p.active ? 'st-deal-ok' : 'st-deal-later'}">${esc(p.active ? t('deal_now') : t('deal_later'))}</em>
+          </div>
+        </div>`).join('') : ''}
+      ${!d.coupons.length && !d.promos.length ? `<p class="st-sub">${esc(t('deal_none'))}</p>` : ''}`;
+  }
+  $('#g-deals').addEventListener('click', () => { openSheet('deals', t('deals')); renderDeals(); loadDeals(); });
+  async function addCoupon(code, quiet) {
+    code = String(code || '').toUpperCase().replace(/\s/g, '');
+    if (!code) return false;
+    if (!token) { (sheetMode === 'deals' ? sheetMsg : showMsg)(t('scan_need_table')); return false; }
+    const { data, error } = await sb.rpc('st_guest_coupon_add', { p_qr: qr, p_session_token: token, p_code: code });
+    if (error) {
+      if (!quiet || error.message !== 'st_coupon_already') (sheetMode === 'deals' ? sheetMsg : showMsg)(gErr(error));
+      return error.message === 'st_coupon_already';
+    }
+    deals = data; renderDealsBtn();
+    if (sheetMode === 'deals') { renderDeals(); sheetMsg(t('deal_added', { c: code }), 'ok'); } else toast(t('deal_added', { c: code }));
+    return true;
+  }
+  // คูปองจากลิงก์/QR (coupon.html หรือ ?coupon=) ใส่ให้อัตโนมัติเมื่อมีรอบโต๊ะ
+  async function applyPendingCoupon() {
+    if (staffMode || !token || isHub() || ticket()) return;
+    let p = null;
+    try { p = JSON.parse(ls.get(KEY_COUPON) || 'null'); } catch { p = null; }
+    if (!p || !p.code) return;
+    ls.set(KEY_COUPON, null);
+    if (Date.now() - (p.at || 0) > 86400000 || (p.shop && lastScan && p.shop !== lastScan.shop.id)) return;
+    await addCoupon(p.code, true);
+  }
+  $('#sheet-body').addEventListener('submit', (e) => {
+    if (e.target.id !== 'form-coupon') return;
+    e.preventDefault();
+    const btn = e.target.querySelector('button');
+    btn.disabled = true;
+    addCoupon(e.target.code.value).then(ok => { btn.disabled = false; if (ok) e.target.code.value = ''; });
+  });
+  $('#sheet-body').addEventListener('click', async (e) => {
+    if (sheetMode !== 'deals') return;
+    const add = e.target.closest('[data-deal-code]'), call = e.target.closest('[data-deal-call]'),
+          rm = e.target.closest('[data-deal-remove]'), sc = e.target.closest('[data-deal-scan]');
+    if (sc) return openScanner();
+    if (add) { add.disabled = true; await addCoupon(add.dataset.dealCode); add.disabled = false; return; }
+    if (!call && !rm) return;
+    (call || rm).disabled = true;
+    const { data, error } = call
+      ? await sb.rpc('st_guest_coupon_call', { p_qr: qr, p_session_token: token, p_coupon: call.dataset.dealCall })
+      : await sb.rpc('st_guest_coupon_remove', { p_qr: qr, p_session_token: token, p_id: rm.dataset.dealRemove });
+    if (error) { (call || rm).disabled = false; return sheetMsg(gErr(error)); }
+    deals = data; renderDealsBtn(); renderDeals();
+    if (call) sheetMsg(t('deal_called'), 'ok');
+  });
+
+  // ----- สแกน QR คูปองด้วยกล้อง (BarcodeDetector ถ้ามี ไม่งั้นโหลด jsQR) -----
+  let scanStream = null, scanTimer = 0, detector = null;
+  const loadJsQR = () => window.jsQR ? Promise.resolve() : new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+    sc.onload = res; sc.onerror = rej;
+    document.head.appendChild(sc);
+  });
+  async function decodeQR(src, w, h) {
+    if (detector) { try { const r = await detector.detect(src); if (r && r[0]) return r[0].rawValue; } catch { /* ใช้ jsQR ต่อ */ } }
+    if (!window.jsQR || !w || !h) return null;
+    const k = Math.min(1, 720 / Math.max(w, h));
+    const cw = Math.round(w * k), ch = Math.round(h * k);
+    const cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+    const cx = cv.getContext('2d', { willReadFrequently: true });
+    cx.drawImage(src, 0, 0, cw, ch);
+    const r = window.jsQR(cx.getImageData(0, 0, cw, ch).data, cw, ch, { inversionAttempts: 'attemptBoth' });
+    return r ? r.data : null;
+  }
+  function parseCouponQR(text) {
+    try {
+      const u = new URL(text);
+      if (/table\.html$/.test(u.pathname) && u.searchParams.get('t')) return { table: true };
+      const c = u.searchParams.get('c') || u.searchParams.get('coupon');
+      if (c) return { code: c };
+    } catch { /* ไม่ใช่ลิงก์ */ }
+    const v = String(text || '').trim().toUpperCase();
+    return /^[A-Z0-9_-]{3,20}$/.test(v) ? { code: v } : null;
+  }
+  async function gotQR(text) {
+    closeScanner();
+    const r = parseCouponQR(text);
+    if (!r) return sheetMsg(t('scan_notfound'));
+    if (r.table) return sheetMsg(t('scan_table'));
+    const f = $('#form-coupon');
+    if (f) f.code.value = r.code;
+    await addCoupon(r.code);
+  }
+  async function openScanner() {
+    $('#scan-title').textContent = t('scan_title');
+    $('#scan-hint').textContent = t('scan_hint');
+    $('#scan-photo').textContent = t('scan_photo');
+    $('#scanner').hidden = false;
+    try { if ('BarcodeDetector' in window) detector = new window.BarcodeDetector({ formats: ['qr_code'] }); } catch { detector = null; }
+    if (!detector) loadJsQR().catch(() => {});
+    const video = $('#scan-video');
+    try {
+      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      video.srcObject = scanStream;
+      await video.play();
+    } catch {
+      $('#scan-hint').textContent = t('scan_nocam');
+      return;
+    }
+    const tick = async () => {
+      if (!scanStream) return;
+      if (video.readyState >= 2) {
+        const v = await decodeQR(video, video.videoWidth, video.videoHeight).catch(() => null);
+        if (v && scanStream) return gotQR(v);
+      }
+      scanTimer = setTimeout(tick, 250);
+    };
+    tick();
+  }
+  function closeScanner() {
+    clearTimeout(scanTimer);
+    if (scanStream) { scanStream.getTracks().forEach(tr => tr.stop()); scanStream = null; }
+    $('#scan-video').srcObject = null;
+    $('#scanner').hidden = true;
+  }
+  $('#scan-close').addEventListener('click', closeScanner);
+  $('#scan-file').addEventListener('change', async (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    await loadJsQR().catch(() => {});
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
+    try { await img.decode(); } catch { return; }
+    const v = await decodeQR(img, img.naturalWidth, img.naturalHeight).catch(() => null);
+    URL.revokeObjectURL(img.src);
+    if (v) gotQR(v); else $('#scan-hint').textContent = t('scan_notfound');
+  });
 
   // ---------- สั่งกลับบ้าน ----------
   const lhhmm = (d) => new Date(d).toLocaleTimeString(lang === 'th' ? 'th-TH' : lang === 'zh' ? 'zh-CN' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -1137,7 +1363,7 @@
   let lastPoll = Date.now(), lastPromo = Date.now();
   setInterval(async () => {
     if (document.hidden) return;
-    if (Date.now() - lastPoll >= (busy() ? 8000 : 20000)) { lastPoll = Date.now(); scan(false); }
+    if (Date.now() - lastPoll >= (waitConfirm() ? 4000 : busy() ? 8000 : 20000)) { lastPoll = Date.now(); scan(false); }
     if (Date.now() - lastPromo >= 300000) { lastPromo = Date.now(); await loadPromos(); renderMenu(); }
   }, 2000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) scan(false); });

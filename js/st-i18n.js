@@ -2,7 +2,7 @@
 // ชื่อเมนูและคำอธิบาย ร้านใส่คำแปลเองในหน้าเมนู (ถ้าไม่ใส่จะแสดงภาษาไทย)
 window.ST_I18N = {
   th: {
-    cf_opened: 'เปิดโต๊ะแล้ว ✓ สั่งอาหารได้เลย ร้านจะยืนยันโต๊ะให้เอง', cf_pending_t: 'เปิดโต๊ะแล้ว ✓ สั่งได้เลย', cf_pending: 'ร้านกำลังยืนยันโต๊ะ ไม่ต้องรอ เลือกเมนูได้เลย', cf_confirmed: 'ร้านยืนยันโต๊ะแล้ว ✓', cf_rejected: 'ร้านไม่ได้ยืนยันการเปิดโต๊ะนี้ กรุณาเรียกพนักงาน',
+    cf_opened: 'เปิดโต๊ะแล้ว ✓ รอร้านยืนยันสักครู่ ระหว่างนี้ดูเมนูและใส่ตะกร้าไว้ได้เลย', cf_pending_t: 'เปิดโต๊ะแล้ว · รอร้านยืนยัน', cf_pending: 'ดูเมนูและใส่ตะกร้ารอได้เลย พอร้านยืนยันแล้วกดส่งรายการได้ทันที', cf_confirmed: 'ร้านยืนยันโต๊ะแล้ว ✓ สั่งอาหารได้เลย', cf_rejected: 'ร้านไม่ได้ยืนยันการเปิดโต๊ะนี้ กรุณาเรียกพนักงาน', cf_wait_btn: 'รอร้านยืนยันโต๊ะก่อน…', deals: '🎁 โปรโมชันและคูปอง', deals_n: '{n} รายการ', deal_code_ph: 'ใส่โค้ดคูปอง', deal_use: 'ใช้คูปอง', deal_scan: '📷 สแกน QR คูปอง', deal_mine: 'คูปองของโต๊ะนี้', deal_wait: 'รอใช้ตอนเช็กบิล', deal_used: 'ใช้แล้ว', deal_remove: 'เอาออก', deal_coupons: 'คูปอง', deal_promos: 'โปรลดราคาตามเวลา', deal_none: 'ตอนนี้ยังไม่มีโปรหรือคูปอง', deal_tap: 'ใช้คูปองนี้', deal_call: '🙋 เรียกพนักงานเพื่อใช้', deal_called: 'เรียกพนักงานแล้ว รอสักครู่', deal_call_hint: 'ต้องให้พนักงานตรวจสิทธิ์ก่อน (เช่น ดูบัตร) แล้วพนักงานจะบอกโค้ดหรือใส่ให้ตอนเช็กบิล', deal_added: 'ใส่คูปอง {c} แล้ว ✓ ส่วนลดจะคิดตอนเช็กบิล', deal_limit: 'โต๊ะละ {n} คูปอง', deal_min: 'ขั้นต่ำ {x}', deal_max: 'ลดสูงสุด {x}', deal_until: 'ถึง {d}', deal_nostack: 'ใช้ร่วมกับโปรตามเวลาไม่ได้', deal_off: 'ลด {x}', deal_now: 'กำลังลดตอนนี้', deal_later: 'ยังไม่ถึงเวลา', deal_all: 'ทั้งเมนู', deal_some: 'บางเมนู', deal_everyday: 'ทุกวัน', days: 'อา,จ,อ,พ,พฤ,ศ,ส', scan_title: 'สแกน QR คูปอง', scan_hint: 'หันกล้องไปที่ QR คูปองของร้าน', scan_photo: 'ถ่ายรูป QR แทน', scan_nocam: 'เปิดกล้องไม่ได้ ลองกด "ถ่ายรูป QR แทน" หรือพิมพ์โค้ดเอง', scan_notfound: 'ไม่เจอ QR ในรูป ลองใหม่อีกครั้ง', scan_table: 'นี่คือ QR โต๊ะ ไม่ใช่คูปอง', scan_need_table: 'เปิดโต๊ะก่อน แล้วค่อยใส่คูปอง',
     loading: 'กำลังโหลด…', table: 'โต๊ะ', search: 'ค้นหาเมนู', other: 'อื่น ๆ', menu: 'เมนู',
     st_open_t: 'โต๊ะพร้อมสั่งอาหาร', st_open: 'แตะเมนูเพื่อใส่ตะกร้า แล้วกด "ดูตะกร้า" เพื่อส่งเข้าร้าน',
     st_waiting_t: 'รอพนักงานเปิดโต๊ะ', st_waiting: 'ดูเมนูได้ก่อน สั่งได้เมื่อพนักงานเปิดโต๊ะให้ (หน้านี้จะอัปเดตเอง)',
@@ -58,7 +58,7 @@ window.ST_I18N = {
     cart_sent_other: 'มีคนในโต๊ะส่งรายการแล้ว'
   },
   en: {
-    cf_opened: 'Table opened ✓ Order right away — staff will confirm your table', cf_pending_t: 'Table opened ✓ Order now', cf_pending: 'Staff are confirming your table — no need to wait', cf_confirmed: 'Your table is confirmed ✓', cf_rejected: 'The restaurant did not confirm this table. Please ask a staff member',
+    cf_opened: 'Table opened ✓ Please wait for staff to confirm — browse and fill your cart meanwhile', cf_pending_t: 'Table opened · waiting for confirmation', cf_pending: 'Browse and add to cart now — you can send the order as soon as staff confirm', cf_confirmed: 'Your table is confirmed ✓ Order now', cf_rejected: 'The restaurant did not confirm this table. Please ask a staff member', cf_wait_btn: 'Waiting for the restaurant to confirm…', deals: '🎁 Promotions & coupons', deals_n: '{n} offers', deal_code_ph: 'Coupon code', deal_use: 'Apply', deal_scan: '📷 Scan coupon QR', deal_mine: 'Coupons on this table', deal_wait: 'Applied at checkout', deal_used: 'Used', deal_remove: 'Remove', deal_coupons: 'Coupons', deal_promos: 'Time-based discounts', deal_none: 'No promotions or coupons right now', deal_tap: 'Use this coupon', deal_call: '🙋 Call staff to use', deal_called: 'Staff called — please wait', deal_call_hint: 'Staff need to check eligibility first (e.g. an ID), then give you the code or apply it at checkout', deal_added: 'Coupon {c} added ✓ The discount is applied at checkout', deal_limit: '{n} coupon(s) per table', deal_min: 'Min. {x}', deal_max: 'Up to {x} off', deal_until: 'Until {d}', deal_nostack: 'Cannot be combined with time-based discounts', deal_off: '{x} off', deal_now: 'On now', deal_later: 'Not active right now', deal_all: 'Whole menu', deal_some: 'Selected items', deal_everyday: 'Every day', days: 'Sun,Mon,Tue,Wed,Thu,Fri,Sat', scan_title: 'Scan coupon QR', scan_hint: 'Point the camera at the coupon QR', scan_photo: 'Take a photo instead', scan_nocam: 'Cannot open the camera. Try "Take a photo instead" or type the code', scan_notfound: 'No QR found in the photo. Please try again', scan_table: 'This is a table QR, not a coupon', scan_need_table: 'Open the table first, then add a coupon',
     loading: 'Loading…', table: 'Table', search: 'Search menu', other: 'Others', menu: 'Menu',
     st_open_t: 'Ready to order', st_open: 'Tap a dish to add it, then tap "View cart" to send your order',
     st_waiting_t: 'Waiting for staff', st_waiting: 'Browse the menu — you can order once staff opens your table (this page updates itself)',
@@ -114,7 +114,7 @@ window.ST_I18N = {
     cart_sent_other: 'Someone at your table sent the order'
   },
   zh: {
-    cf_opened: '已开台 ✓ 可以直接点餐，店员会为您确认', cf_pending_t: '已开台 ✓ 可以点餐', cf_pending: '店员正在确认餐桌，无需等待，直接点餐即可', cf_confirmed: '餐桌已确认 ✓', cf_rejected: '餐厅未确认此餐桌，请联系店员',
+    cf_opened: '已开台 ✓ 请稍候店员确认，现在可以先浏览菜单并加入购物车', cf_pending_t: '已开台 · 等待确认', cf_pending: '可以先加入购物车，店员确认后即可下单', cf_confirmed: '餐桌已确认 ✓ 可以点餐了', cf_rejected: '餐厅未确认此餐桌，请联系店员', cf_wait_btn: '等待餐厅确认…', deals: '🎁 优惠与优惠券', deals_n: '{n} 项', deal_code_ph: '输入优惠码', deal_use: '使用', deal_scan: '📷 扫描优惠券二维码', deal_mine: '本桌优惠券', deal_wait: '结账时使用', deal_used: '已使用', deal_remove: '移除', deal_coupons: '优惠券', deal_promos: '限时折扣', deal_none: '目前没有优惠', deal_tap: '使用此优惠券', deal_call: '🙋 呼叫店员使用', deal_called: '已呼叫店员，请稍候', deal_call_hint: '需由店员先核实资格（如查看证件），再告知优惠码或结账时使用', deal_added: '已添加优惠券 {c} ✓ 结账时扣减', deal_limit: '每桌 {n} 张', deal_min: '满 {x}', deal_max: '最多减 {x}', deal_until: '至 {d}', deal_nostack: '不可与限时折扣同时使用', deal_off: '减 {x}', deal_now: '进行中', deal_later: '未到时间', deal_all: '全部菜单', deal_some: '部分菜品', deal_everyday: '每天', days: '日,一,二,三,四,五,六', scan_title: '扫描优惠券二维码', scan_hint: '将摄像头对准优惠券二维码', scan_photo: '改为拍照', scan_nocam: '无法打开摄像头，请尝试"改为拍照"或手动输入', scan_notfound: '照片中未找到二维码，请重试', scan_table: '这是餐桌二维码，不是优惠券', scan_need_table: '请先开台再添加优惠券',
     loading: '加载中…', table: '桌号', search: '搜索菜品', other: '其他', menu: '菜单',
     st_open_t: '可以点餐了', st_open: '点击菜品加入购物车，然后点"查看购物车"提交订单',
     st_waiting_t: '等待服务员开台', st_waiting: '可以先浏览菜单，服务员开台后即可点餐（页面会自动更新）',
@@ -173,6 +173,7 @@ window.ST_I18N = {
 // ข้อความผิดพลาดที่ลูกค้าเจอบ่อย (ภาษาอื่นนอกจากไทย)
 window.ST_I18N_ERR = {
   en: {
+    st_wait_confirm: 'The restaurant has not confirmed your table yet. Please wait a moment and try again.', st_coupon_invalid: 'Coupon not found or no longer active.', st_coupon_expired: 'This coupon is not valid today.', st_coupon_used_up: 'This coupon has been fully redeemed.', st_coupon_already: 'This coupon is already added.', st_coupon_limit: 'Your table has reached the coupon limit.', st_coupon_no_promo: 'This coupon cannot be combined with time-based discounts.', st_coupon_need_staff: 'You have a coupon — please tap "Request bill" so staff can apply it.',
     st_session_invalid: 'This table session has ended or moved. Please scan the QR at your table again.',
     st_session_billing: 'The bill has been requested — please ask staff to add more.',
     st_shop_closed: 'The restaurant is not taking orders right now.',
@@ -197,6 +198,7 @@ window.ST_I18N_ERR = {
     st_cart_full: 'The table cart is full (60 lines) — please send it first.'
   },
   zh: {
+    st_wait_confirm: '餐厅尚未确认您的餐桌，请稍后再试。', st_coupon_invalid: '优惠券无效或已停用。', st_coupon_expired: '优惠券今天不可用。', st_coupon_used_up: '优惠券已被领完。', st_coupon_already: '已添加此优惠券。', st_coupon_limit: '本桌优惠券已达上限。', st_coupon_no_promo: '此优惠券不可与限时折扣同时使用。', st_coupon_need_staff: '您已添加优惠券，请点"请求结账"由店员扣减。',
     st_session_invalid: '本桌用餐已结束或已换桌，请重新扫描桌上的二维码。',
     st_session_billing: '已请求结账，如需加菜请联系服务员。',
     st_shop_closed: '餐厅暂不接单。',
