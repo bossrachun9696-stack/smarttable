@@ -30,7 +30,11 @@
   <div id="st-msg" class="st-msg" role="status" hidden></div>
 
   <div id="shop-body" hidden>
-    <nav class="st-list" style="margin-bottom:14px">
+    <div class="st-row-between st-links-head">
+      <span></span>
+      <a id="link-layout" class="st-chip st-chip--sm" href="settings.html">🎨 เปลี่ยนรูปแบบ / ธีม</a>
+    </div>
+    <nav id="shop-links" class="st-list" style="margin-bottom:14px">
       <a id="link-orders" class="st-item" href="#">
         <div class="st-logo">🔔</div>
         <div class="st-item-main"><b>ออร์เดอร์ / จอครัว</b><small>ออร์เดอร์เด้งทันทีพร้อมเสียง กดรับ · เสิร์ฟแล้ว</small></div>
@@ -42,7 +46,7 @@
         <span class="st-arrow" aria-hidden="true">›</span>
       </a>
       <a id="link-menu" class="st-item" href="#">
-        <div class="st-logo">เม</div>
+        <div class="st-logo">📖</div>
         <div class="st-item-main"><b>เมนูอาหาร</b><small>หมวดหมู่ เมนู รูป ตัวเลือกเพิ่ม และกด "หมด"</small></div>
         <span class="st-arrow" aria-hidden="true">›</span>
       </a>
@@ -67,7 +71,7 @@
         <span class="st-arrow" aria-hidden="true">›</span>
       </a>
       <a id="link-tables" class="st-item" href="#">
-        <div class="st-logo">โต๊ะ</div>
+        <div class="st-logo">🪑</div>
         <div class="st-item-main"><b>โต๊ะและ QR</b><small>ผังโต๊ะ เปิด/ปิดโต๊ะ พิมพ์ QR</small></div>
         <span class="st-arrow" aria-hidden="true">›</span>
       </a>
@@ -86,6 +90,11 @@
           <input type="radio" name="order_mode" value="staff_open">
           <div><b>รอพนักงานเปิดโต๊ะก่อน</b>
             <small>ลูกค้าดูเมนูได้ แต่สั่งได้หลังพนักงานกดเปิดโต๊ะ กันคนถ่ายรูป QR ไปสั่งจากที่อื่น</small></div>
+        </label>
+        <label class="st-choice">
+          <input type="radio" name="order_mode" value="confirm">
+          <div><b>ลูกค้าเปิดโต๊ะเอง ร้านยืนยัน</b>
+            <small>ลูกค้าสแกนแล้วสั่งได้ทันที ไม่ต้องรอ · ร้านได้แจ้งเตือน "ลูกค้าเปิดโต๊ะเอง" แล้วกดยืนยัน (หรือปฏิเสธ ถ้าไม่มีลูกค้าอยู่ที่โต๊ะจริง)</small></div>
         </label>
       </form>
     </section>
@@ -175,10 +184,26 @@
 
       <div id="invite-box" hidden>
         <h4>เชิญพนักงาน</h4>
-        <form id="form-invite" novalidate>
+        <div id="invite-by" class="st-seg st-seg--2" role="tablist" style="margin-bottom:12px">
+          <button type="button" data-by="id" aria-selected="true">🆔 ด้วยไอดี</button>
+          <button type="button" data-by="email" aria-selected="false">✉️ ด้วยอีเมล</button>
+        </div>
+        <form id="form-invite-id" novalidate>
+          <label class="st-field"><span>ไอดีของพนักงาน</span>
+            <div class="st-idrow"><b>@</b><input name="public_id" type="text" maxlength="21" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="เช่น u7k3p9qa"></div>
+            <small>พนักงานดูไอดีของตัวเองได้ที่ ⚙️ ตั้งค่า (หน้าร้านของฉัน) · ร้านจะไม่เห็นอีเมลของพนักงาน</small>
+          </label>
+          <div id="id-found" class="st-found" hidden></div>
+          <label class="st-field"><span>ตำแหน่ง</span>
+            <select name="role"></select>
+          </label>
+          <button class="st-btn st-btn--ghost" type="submit">ส่งคำเชิญ</button>
+          <p class="st-sub" style="margin:8px 0 0">คำเชิญจะขึ้นที่หน้า "ร้านของฉัน" ของพนักงานคนนั้น ให้เขากด "รับ"</p>
+        </form>
+        <form id="form-invite" novalidate hidden>
           <label class="st-field"><span>อีเมลของพนักงาน</span>
             <input name="email" type="email" inputmode="email" autocomplete="off" required placeholder="staff@example.com">
-            <small>พนักงานต้องสมัคร/เข้าสู่ระบบด้วยอีเมลนี้</small>
+            <small>พนักงานต้องสมัคร/เข้าสู่ระบบด้วยอีเมลนี้ · คำเชิญขึ้นที่หน้า "ร้านของฉัน" ของเขาด้วย</small>
           </label>
           <label class="st-field"><span>ตำแหน่ง</span>
             <select name="role"></select>
@@ -200,6 +225,14 @@
       </div>
 
       <button id="btn-leave" class="st-btn st-btn--ghost st-danger" type="button" hidden>ออกจากร้านนี้</button>
+    </section>
+
+    <!-- ลบร้าน (เจ้าของ) -->
+    <section id="danger-card" class="st-card st-card--danger" hidden>
+      <h3>ลบร้าน</h3>
+      <p class="st-sub">ลบร้านนี้และ<b>ทุกอย่าง</b>ของร้านถาวร: เมนู รูป โต๊ะ QR ออร์เดอร์ ใบเสร็จ รายงาน ประวัติ คิว พนักงาน · <b>กู้คืนไม่ได้</b>
+        · ถ้าต้องเก็บยอดขายไว้ทำบัญชี/ภาษี ให้ดาวน์โหลด CSV ที่หน้ารายงานยอดขายก่อน</p>
+      <button id="btn-delete-shop" class="st-btn st-btn--ghost st-danger" type="button">ลบร้านนี้…</button>
     </section>
   </div>
 </main>

@@ -1,6 +1,6 @@
 // ===== หน้า จัดการร้าน =====
 (async function () {
-  const { sb, configOk, $, esc, ROLE_TH, thaiError, pageUrl, showMsg, setBusy, requireUser, copyText, shrinkImage } = ST;
+  const { sb, configOk, $, esc, ROLE_TH, thaiError, pageUrl, showMsg, setBusy, requireUser, copyText, shrinkImage, getPrefs, avatarUrl } = ST;
   if (!configOk) return;
 
   const user = await requireUser();
@@ -40,7 +40,31 @@
   $('#link-promos').href = 'promos.html?id=' + encodeURIComponent(shopId);
   $('#link-receipts').href = 'receipts.html?id=' + encodeURIComponent(shopId);
   $('#link-tables').href = 'tables.html?id=' + encodeURIComponent(shopId);
+  $('#link-layout').href = 'settings.html?back=' + encodeURIComponent('shop.html?id=' + shopId);
+  applyLayout(getPrefs().layout);
   $('#shop-body').hidden = false;
+
+  // ---------- รูปแบบหน้า (ตั้งที่ ⚙️ ตั้งค่า): รายการ / ช่องใหญ่ / ไอคอน / แบ่งหมวด ----------
+  function applyLayout(layout) {
+    const nav = $('#shop-links');
+    const links = [...nav.querySelectorAll('a.st-item')];
+    nav.className = 'st-list st-links st-links--' + (['tiles', 'icons', 'groups'].includes(layout) ? layout : 'list');
+    nav.querySelectorAll('.st-links-group').forEach(g => g.remove());
+    if (layout !== 'groups') { links.forEach(a => nav.appendChild(a)); return; }
+    const GROUPS = [
+      ['งานหน้าร้าน', ['link-orders', 'link-tables', 'link-queue', 'link-receipts']],
+      ['จัดการร้าน', ['link-menu', 'link-promos']],
+      ['ตัวเลข', ['link-reports', 'link-audit']]
+    ];
+    for (const [title, ids] of GROUPS) {
+      const box = document.createElement('div');
+      box.className = 'st-links-group';
+      box.innerHTML = `<h4>${title}</h4><div class="st-links-grid"></div>`;
+      ids.forEach(id => { const a = document.getElementById(id); if (a) box.lastChild.appendChild(a); });
+      if ([...box.querySelectorAll('a.st-item')].some(a => !a.hidden)) nav.appendChild(box);
+      else links.filter(a => ids.includes(a.id)).forEach(a => nav.appendChild(a));
+    }
+  }
 
   // ---------- รูปแบบการสั่งอาหาร (บันทึกทันทีเมื่อเลือก) ----------
   const fm = $('#form-mode');
@@ -55,7 +79,7 @@
         return showMsg(thaiError(error));
       }
       current = data;
-      showMsg('บันทึกรูปแบบการสั่งอาหารแล้ว', 'ok');
+      showMsg(r.value === 'confirm' ? 'บันทึกแล้ว — ลูกค้าสั่งได้ทันที ร้านจะได้แจ้งเตือนให้ยืนยันโต๊ะที่ผังโต๊ะ / จอออร์เดอร์' : 'บันทึกรูปแบบการสั่งอาหารแล้ว', 'ok');
     });
   });
 
@@ -193,8 +217,12 @@
   const assignable = isOwner ? ['manager', 'cashier', 'kitchen', 'waiter'] : ['cashier', 'kitchen', 'waiter'];
 
   async function loadMembers() {
-    const { data, error } = await sb.rpc('st_list_members', { p_shop: shopId });
+    const [{ data, error }, extra] = await Promise.all([
+      sb.rpc('st_list_members', { p_shop: shopId }),
+      sb.rpc('st_member_profiles', { p_shop: shopId })        // รูป + ไอดี (st-14)
+    ]);
     if (error) return showMsg(thaiError(error));
+    const xp = (extra && extra.data) || {};
     $('#member-list').innerHTML = data.map(m => {
       const self = m.user_id === user.id;
       const editable = !self && m.role !== 'owner' && (isOwner || (role === 'manager' && m.role !== 'manager'));
@@ -202,8 +230,10 @@
       const name = m.display_name || 'ไม่มีชื่อ';
       return `
         <div class="st-item" data-user="${esc(m.user_id)}" data-name="${esc(name)}">
-          <div class="st-logo">${esc((m.display_name || m.email).charAt(0).toUpperCase())}</div>
-          <div class="st-item-main"><b>${esc(name)}${self ? ' (คุณ)' : ''}</b><small>${esc(m.email)}</small></div>
+          <div class="st-logo st-logo--round">${xp[m.user_id] && xp[m.user_id].avatar_path
+            ? `<img src="${esc(avatarUrl(xp[m.user_id].avatar_path))}" alt="">`
+            : esc((m.display_name || m.email).charAt(0).toUpperCase())}</div>
+          <div class="st-item-main"><b>${esc(name)}${self ? ' (คุณ)' : ''}</b><small>${xp[m.user_id] && xp[m.user_id].public_id ? '@' + esc(xp[m.user_id].public_id) + ' · ' : ''}${esc(m.email)}</small></div>
           ${editable
             ? `<select data-act="role" aria-label="ตำแหน่ง">${opts}</select>
                <button type="button" class="st-icon-btn" data-act="remove" aria-label="นำออกจากร้าน">✕</button>`
@@ -240,12 +270,13 @@
 
   async function shareInvite(inv) {
     const url = inviteUrl(inv.token);
-    const text = `เชิญคุณเป็น${ROLE_TH[inv.role]}ที่ร้าน ${current.name} บน SmartTable`;
+    // ใส่ลิงก์ไว้ในข้อความเลย (ไม่แยกเป็น url) ไม่งั้นบางแอป/ปุ่ม "คัดลอก" บน iPhone จะได้แต่ข้อความ ไม่มีลิงก์
+    const text = `เชิญคุณเป็น${ROLE_TH[inv.role]}ที่ร้าน ${current.name} บน SmartTable\n${url}`;
     if (navigator.share) {
-      try { await navigator.share({ title: 'คำเชิญเข้าร้าน ' + current.name, text, url }); return; }
+      try { await navigator.share({ title: 'คำเชิญเข้าร้าน ' + current.name, text }); return; }
       catch (err) { if (err && err.name === 'AbortError') return; }
     }
-    if (await copyText(url)) showMsg('คัดลอกลิงก์แล้ว ส่งให้พนักงานทาง LINE ได้เลย', 'ok');
+    if (await copyText(text)) showMsg('คัดลอกข้อความเชิญพร้อมลิงก์แล้ว วางส่งให้พนักงานทาง DarkChat หรือ LINE ได้เลย', 'ok');
     else showMsg('คัดลอกไม่ได้ กรุณากดค้างที่ลิงก์แล้วคัดลอกเอง');
   }
 
@@ -260,7 +291,7 @@
     if (!data.length) { box.innerHTML = '<p class="st-sub">ไม่มีคำเชิญค้าง</p>'; return; }
     box.innerHTML = data.map(i => `
       <div class="st-item" data-id="${esc(i.id)}" data-token="${esc(i.token)}" data-role="${esc(i.role)}">
-        <div class="st-item-main"><b>${esc(i.email)}</b>
+        <div class="st-item-main"><b>${esc(i.email)}${i.email.startsWith('@') ? ' <small class="st-badge st-badge--muted">ไอดี</small>' : ''}</b>
           <small>${esc(ROLE_TH[i.role])} · หมดอายุ ${new Date(i.expires_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}</small></div>
         <button type="button" class="st-chip" data-act="share">ส่งลิงก์</button>
         <button type="button" class="st-icon-btn" data-act="revoke" aria-label="ยกเลิกคำเชิญ">✕</button>
@@ -272,6 +303,54 @@
     fi.role.innerHTML = assignable.map(r => `<option value="${r}">${ROLE_TH[r]}</option>`).join('');
     fi.role.value = 'waiter';
     $('#invite-box').hidden = false;
+
+    // ----- เชิญด้วยไอดี / อีเมล -----
+    const fid = $('#form-invite-id');
+    fid.role.innerHTML = fi.role.innerHTML;
+    fid.role.value = 'waiter';
+    $('#invite-by').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-by]');
+      if (!b) return;
+      document.querySelectorAll('#invite-by button').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+      fid.hidden = b.dataset.by !== 'id';
+      fi.hidden = b.dataset.by !== 'email';
+      $('#invite-result').hidden = true;
+    });
+    let found = null, ft;
+    fid.public_id.addEventListener('input', () => {
+      const v = fid.public_id.value.toLowerCase().replace(/^@/, '').replace(/[^a-z0-9_.]/g, '');
+      if (v !== fid.public_id.value) fid.public_id.value = v;
+      found = null;
+      clearTimeout(ft);
+      const box = $('#id-found');
+      if (v.length < 4) { box.hidden = true; return; }
+      ft = setTimeout(async () => {
+        const { data } = await sb.rpc('st_find_user', { p_public_id: v });
+        if (fid.public_id.value !== v) return;
+        found = data;
+        box.hidden = false;
+        box.className = 'st-found' + (data ? '' : ' st-found--none');
+        box.innerHTML = data
+          ? `<span class="st-avatar st-avatar--sm">${data.avatar_path ? `<img src="${esc(avatarUrl(data.avatar_path))}" alt="">` : esc((data.display_name || data.public_id).charAt(0).toUpperCase())}</span>
+             <span><b>${esc(data.display_name || 'ไม่มีชื่อ')}</b><small>@${esc(data.public_id)} · พบผู้ใช้นี้ ✓</small></span>`
+          : '<span>ไม่พบไอดีนี้ ตรวจตัวสะกดอีกครั้ง</span>';
+      }, 350);
+    });
+    fid.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const v = fid.public_id.value.trim().toLowerCase();
+      if (!/^[a-z0-9][a-z0-9_.]{3,19}$/.test(v)) return showMsg(thaiError({ message: 'st_bad_public_id' }));
+      setBusy(fid, true, 'กำลังส่งคำเชิญ…');
+      const { data, error } = await sb.rpc('st_invite_staff_by_id', { p_shop: shopId, p_public_id: v, p_role: fid.role.value });
+      setBusy(fid, false);
+      if (error) return showMsg(thaiError(error));
+      lastInvite = data;
+      $('#invite-url').value = inviteUrl(data.token);
+      $('#invite-result').hidden = false;
+      showMsg(`ส่งคำเชิญถึง @${v}${found && found.display_name ? ' (' + found.display_name + ')' : ''} แล้ว — ขึ้นที่หน้า "ร้านของฉัน" ของเขา หรือส่งลิงก์ด้านล่างให้ก็ได้`, 'ok');
+      fid.public_id.value = ''; $('#id-found').hidden = true; found = null;
+      loadInvites();
+    });
 
     fi.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -309,6 +388,47 @@
     });
 
     await loadInvites();
+  }
+
+  // ---------- ลบร้าน (เจ้าของ) ----------
+  // ลบไฟล์ใน Storage ก่อน (รูปเมนู โลโก้ สลิป) แล้วค่อยลบข้อมูลในฐานข้อมูล
+  async function listAll(bucket, prefix) {
+    const out = [];
+    const walk = async (dir, depth) => {
+      if (depth > 4) return;
+      for (let offset = 0; offset < 5000; offset += 100) {
+        const { data, error } = await sb.storage.from(bucket).list(dir, { limit: 100, offset });
+        if (error || !data || !data.length) return;
+        for (const f of data) {
+          const path = dir + '/' + f.name;
+          if (f.id) out.push(path); else await walk(path, depth + 1);
+        }
+        if (data.length < 100) return;
+      }
+    };
+    await walk(prefix, 0);
+    return out;
+  }
+  if (isOwner) {
+    $('#danger-card').hidden = false;
+    $('#btn-delete-shop').addEventListener('click', async () => {
+      const typed = prompt(`ลบร้าน "${current.name}" ถาวร กู้คืนไม่ได้\nพิมพ์ชื่อร้านให้ตรงเพื่อยืนยัน:`);
+      if (typed === null) return;
+      if (typed.trim() !== current.name.trim()) return showMsg(thaiError({ message: 'st_confirm_name' }));
+      const btn = $('#btn-delete-shop');
+      btn.disabled = true; btn.textContent = 'กำลังลบรูปและไฟล์…';
+      try {
+        for (const bucket of ['st-images', 'st-slips']) {
+          const files = await listAll(bucket, 'shops/' + shopId);
+          for (let i = 0; i < files.length; i += 100) await sb.storage.from(bucket).remove(files.slice(i, i + 100));
+        }
+      } catch { /* ลบไฟล์ไม่ครบไม่เป็นไร ลบข้อมูลต่อ */ }
+      btn.textContent = 'กำลังลบข้อมูลร้าน…';
+      const { error } = await sb.rpc('st_delete_shop', { p_shop: shopId, p_confirm_name: typed.trim() });
+      if (error) { btn.disabled = false; btn.textContent = 'ลบร้านนี้…'; return showMsg(thaiError(error)); }
+      alert(`ลบร้าน "${current.name}" แล้ว`);
+      location.replace('home.html');
+    });
   }
 
   // ---------- ออกจากร้าน (ไม่ใช่เจ้าของ) ----------

@@ -28,6 +28,8 @@
 
   $('#mode-banner').innerHTML = (shop.order_mode === 'instant'
     ? '<b>สั่งได้ทันทีเมื่อสแกน</b> · โต๊ะจะเปิดเองเมื่อลูกค้าสแกน QR พนักงานกด "ปิดโต๊ะ" เมื่อลูกค้ากลับ'
+    : shop.order_mode === 'confirm'
+    ? '<b>ลูกค้าเปิดโต๊ะเอง ร้านยืนยัน</b> · ลูกค้าสแกนแล้วสั่งได้เลย จะมีแจ้งเตือน 🆕 ด้านบนให้กด ✓ ยืนยัน หรือ ✗ ปฏิเสธ (ปฏิเสธ = ยกเลิกออร์เดอร์และปิดโต๊ะ)'
     : '<b>รอพนักงานเปิดโต๊ะ</b> · ลูกค้าสแกนแล้วดูเมนูได้ แต่สั่งได้หลังพนักงานกด "เปิดโต๊ะ"')
     + (shop.is_open ? '' : '<br><b class="st-bad">ร้านปิดอยู่</b> ลูกค้าจะสั่งไม่ได้ (เปิดได้ที่หน้าข้อมูลร้าน)');
 
@@ -36,9 +38,15 @@
   const staffOrderUrl = (t) => `table.html?t=${encodeURIComponent(t.qr_token)}&staff=1`;
   const baht = (n) => '฿' + Number(n).toLocaleString('th-TH', { maximumFractionDigits: 2 });
   const ORDER_TH = { new: 'ใหม่', accepted: 'รับแล้ว', cooking: 'กำลังทำ', served: 'เสิร์ฟแล้ว', cancelled: 'ยกเลิก' };
-  const CALL_TH = { call: '🙋 เรียกพนักงาน', bill: '🧾 ขอเช็กบิล', slip: '💸 แนบสลิปรอตรวจ' };
+  const CALL_TH = { call: '🙋 เรียกพนักงาน', bill: '🧾 ขอเช็กบิล', slip: '💸 แนบสลิปรอตรวจ', open: '🆕 ลูกค้าเปิดโต๊ะเอง' };
   // สลิปรอตรวจ: ไปหน้าเช็กบิลเพื่อยืนยัน / ปฏิเสธ (กด รับทราบ ไม่ได้)
-  const callBtn = (c) => c.kind === 'slip'
+  // ลูกค้าเปิดโต๊ะเอง (โหมด "ร้านยืนยัน"): ยืนยัน / ปฏิเสธ
+  const CAN_CONFIRM = ['owner', 'manager', 'cashier', 'waiter'].includes(role);
+  const callBtn = (c) => c.kind === 'open'
+    ? (CAN_CONFIRM
+        ? `<span class="st-confirm-actions"><button type="button" class="st-chip st-chip--accent" data-act="tbl-ok" data-table="${esc(c.table_id || (typeof openId !== "undefined" ? openId : ""))}">✓ ยืนยัน</button><button type="button" class="st-chip" data-act="tbl-no" data-table="${esc(c.table_id || (typeof openId !== "undefined" ? openId : ""))}">✗ ปฏิเสธ</button></span>`
+        : '<small>รอพนักงานยืนยัน</small>')
+    : c.kind === 'slip'
     ? `<a class="st-chip st-chip--accent" href="bill.html?id=${encodeURIComponent(shopId)}&table=${encodeURIComponent(c.table_id || (typeof openId !== "undefined" ? openId : ""))}">ตรวจสลิป</a>`
     : '<button type="button" class="st-chip" data-act="call-done">รับทราบ</button>';
   const canCancel = role !== 'kitchen';
@@ -85,7 +93,21 @@
         ${callBtn(c)}
       </div>`).join('');
   }
+
+  // ยืนยัน / ปฏิเสธโต๊ะที่ลูกค้าเปิดเอง · คืน true ถ้าทำแล้ว
+  async function confirmTable(btn, onErr) {
+    const ok = btn.dataset.act === 'tbl-ok';
+    const label = (btn.closest('[data-call]') || btn).querySelector('b');
+    if (!ok && !confirm(`ปฏิเสธการเปิดโต๊ะ${label ? ' ' + label.textContent : ''}?\nออร์เดอร์ที่ลูกค้าสั่งไว้จะถูกยกเลิก และโต๊ะจะว่าง`)) return false;
+    btn.disabled = true;
+    const { error } = await sb.rpc('st_confirm_table', { p_table: btn.dataset.table, p_ok: ok });
+    if (error) { btn.disabled = false; (onErr || showMsg)(thaiError(error)); return false; }
+    showMsg(ok ? 'ยืนยันโต๊ะแล้ว ✓' : 'ปฏิเสธแล้ว ยกเลิกออร์เดอร์และปิดโต๊ะให้', 'ok');
+    return true;
+  }
   $('#calls').addEventListener('click', async (e) => {
+    const cb = e.target.closest('[data-act="tbl-ok"], [data-act="tbl-no"]');
+    if (cb) { if (await confirmTable(cb)) load(); return; }
     const b = e.target.closest('[data-act="call-done"]');
     if (!b) return;
     b.disabled = true;
@@ -111,8 +133,8 @@
           const fs = sessBy[t.id];
           const calls = callsBy[t.id] || [];
           return `<button type="button" class="st-tile st-tile--${s}${calls.length ? ' st-tile--alert' : ''}" data-id="${esc(t.id)}">
-              <b>${esc(t.label)}${calls.map(k => `<i>${k === 'bill' ? '🧾' : k === 'slip' ? '💸' : '🙋'}</i>`).join('')}</b>
-              <span>${esc(STATE_TH[s])}${fs && fs.new_orders ? ` · ใหม่ ${fs.new_orders}` : ''}</span>
+              <b>${esc(t.label)}${calls.map(k => `<i>${k === 'bill' ? '🧾' : k === 'slip' ? '💸' : k === 'open' ? '🆕' : '🙋'}</i>`).join('')}</b>
+              <span>${t.session && t.session.confirm_status === 'pending' ? '<em class="st-badge st-badge--wait">รอยืนยัน</em> ' : ''}${esc(STATE_TH[s])}${fs && fs.new_orders ? ` · ใหม่ ${fs.new_orders}` : ''}</span>
               <small>${esc(info)}${fs && Number(fs.subtotal) ? ' · ' + baht(fs.subtotal) : ''}</small>
             </button>`;
         }).join('')}
@@ -325,6 +347,11 @@
       return load();
     }
     if (act === 'back') { sheetMode = 'actions'; renderSheet(); return loadDetail(); }
+    if (act === 'tbl-ok' || act === 'tbl-no') {
+      if (!(await confirmTable(btn, sheetMsg))) return;
+      if (act === 'tbl-no') closeSheet();
+      return load();
+    }
     if (act === 'call-done') {
       btn.disabled = true;
       const { error: e1 } = await sb.rpc('st_handle_call', { p_call: btn.closest('[data-call]').dataset.call });

@@ -177,8 +177,15 @@
       showMsg(gErr(error));
       return null;
     }
+    const wasPending = !!(lastScan && lastScan.confirm === 'pending' && token);
     lastScan = data;
     const newToken = data.session_token || null;
+    // โหมด "ลูกค้าเปิดโต๊ะเอง ร้านยืนยัน" (st-14)
+    if (!staffMode) {
+      if (data.confirm === 'pending' && newToken && newToken !== token) showMsg(t('cf_opened'), 'ok');
+      else if (wasPending && newToken && newToken === token && data.confirm === 'confirmed') showMsg(t('cf_confirmed'), 'ok');
+      else if (wasPending && !newToken) showMsg(t('cf_rejected'));
+    }
     if (newToken !== token) {
       token = newToken;
       if (!staffMode) ls.set(KEY_SESSION, token);
@@ -214,6 +221,10 @@
     document.title = data.shop.name + ' · ' + place;
     const cls = { open: 'ok', waiting: 'wait', billing: 'wait', shop_closed: 'off', ended: 'off', takeaway: 'ok', takeaway_off: 'off' }[state];
     $('#g-state').className = 'st-state st-state--' + cls;
+    if (state === 'open' && data.confirm === 'pending' && token) {
+      $('#g-state').className = 'st-state st-state--ok';
+      $('#g-state').innerHTML = `<b>${esc(t('cf_pending_t'))}</b><span><i class="st-dot-inline"></i>${esc(t('cf_pending'))}</span>`;
+    } else
     $('#g-state').innerHTML = `<b>${esc(t('st_' + state + '_t'))}</b><span>${esc(t('st_' + state))}</span>`;
     $('#g-state').hidden = !!ticket();                // บัตรคิวมีการ์ดบอกสถานะแทน
     $('#g-actions').hidden = !token;
@@ -390,21 +401,53 @@
     const b = $('#sheet-msg'); b.textContent = text; b.className = 'st-msg st-msg--' + type; b.hidden = false;
     b.scrollIntoView({ block: 'nearest' });
   };
+  let sheetHist = false;              // เปิดแผ่นแล้วดัน history 1 ขั้น -> ปุ่มย้อนกลับ / ปัดย้อนกลับ = ปิดแผ่น
   function openSheet(mode, title) {
+    if (sheet.hidden && !sheetHist) {
+      try { history.pushState({ stSheet: 1 }, ''); sheetHist = true; } catch { /* ไม่เป็นไร */ }
+    }
     sheetMode = mode;
     $('#toast').hidden = true;
     $('#sheet-title').textContent = title;
     $('#sheet-msg').hidden = true;
     sheet.hidden = false;
     document.body.classList.add('st-noscroll');
-    sheet.querySelector('.st-sheet-panel').scrollTop = 0;
+    sheet.querySelector('.st-sheet-scroll').scrollTop = 0;
   }
-  function closeSheet() {
+  function hideSheet() {
     sheet.hidden = true; sheetMode = null; current = null;
+    panel.style.transform = '';
     document.body.classList.remove('st-noscroll');
   }
+  function closeSheet() {
+    if (sheet.hidden) return;
+    hideSheet();
+    if (sheetHist) { sheetHist = false; try { history.back(); } catch { /* ไม่เป็นไร */ } }
+  }
+  window.addEventListener('popstate', () => { if (sheetHist) { sheetHist = false; hideSheet(); } });
+  const panel = sheet.querySelector('.st-sheet-panel');
   $('#sheet-close').addEventListener('click', closeSheet);
   sheet.addEventListener('click', (e) => { if (e.target === sheet) closeSheet(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+  // ปัดหัวแผ่นลงเพื่อปิด
+  (function () {
+    const head = sheet.querySelector('.st-sheet-head');
+    let y0 = null, dy = 0;
+    head.addEventListener('touchstart', (e) => {
+      if (e.target.closest('button')) return;
+      y0 = e.touches[0].clientY; dy = 0; panel.style.transition = 'none';
+    }, { passive: true });
+    head.addEventListener('touchmove', (e) => {
+      if (y0 === null) return;
+      dy = Math.max(0, e.touches[0].clientY - y0);
+      panel.style.transform = `translateY(${dy}px)`;
+    }, { passive: true });
+    head.addEventListener('touchend', () => {
+      if (y0 === null) return;
+      y0 = null; panel.style.transition = 'transform .18s ease-out';
+      if (dy > 90) closeSheet(); else panel.style.transform = '';
+    });
+  })();
 
   // ----- เลือกเมนู -----
   const ruleText = (g) => g.max_select === 1
@@ -418,7 +461,7 @@
     const blocked = !it.is_available ? t('item_sold_out') : !canOrder() ? (t('st_' + state + '_t') || t('cant_order')) : '';
     const p = promoFor(it);
     $('#sheet-body').innerHTML = `
-      ${it.image_path ? `<div class="st-hero"><img src="${esc(imgUrl(it.image_path))}" alt=""></div>` : ''}
+      ${it.image_path ? `<div class="st-hero"><img src="${esc(imgUrl(it.image_path))}" alt="" decoding="async"></div>` : ''}
       <h2 class="st-hero-name">${esc(iname(it))}</h2>
       ${lang !== 'th' && iname(it) !== it.name ? `<p class="st-sub" style="margin:-2px 0 4px">${esc(it.name)}</p>` : ''}
       ${idesc(it) ? `<p class="st-sub">${esc(idesc(it))}</p>` : ''}

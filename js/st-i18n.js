@@ -2,6 +2,7 @@
 // ชื่อเมนูและคำอธิบาย ร้านใส่คำแปลเองในหน้าเมนู (ถ้าไม่ใส่จะแสดงภาษาไทย)
 window.ST_I18N = {
   th: {
+    cf_opened: 'เปิดโต๊ะแล้ว ✓ สั่งอาหารได้เลย ร้านจะยืนยันโต๊ะให้เอง', cf_pending_t: 'เปิดโต๊ะแล้ว ✓ สั่งได้เลย', cf_pending: 'ร้านกำลังยืนยันโต๊ะ ไม่ต้องรอ เลือกเมนูได้เลย', cf_confirmed: 'ร้านยืนยันโต๊ะแล้ว ✓', cf_rejected: 'ร้านไม่ได้ยืนยันการเปิดโต๊ะนี้ กรุณาเรียกพนักงาน',
     loading: 'กำลังโหลด…', table: 'โต๊ะ', search: 'ค้นหาเมนู', other: 'อื่น ๆ', menu: 'เมนู',
     st_open_t: 'โต๊ะพร้อมสั่งอาหาร', st_open: 'แตะเมนูเพื่อใส่ตะกร้า แล้วกด "ดูตะกร้า" เพื่อส่งเข้าร้าน',
     st_waiting_t: 'รอพนักงานเปิดโต๊ะ', st_waiting: 'ดูเมนูได้ก่อน สั่งได้เมื่อพนักงานเปิดโต๊ะให้ (หน้านี้จะอัปเดตเอง)',
@@ -57,6 +58,7 @@ window.ST_I18N = {
     cart_sent_other: 'มีคนในโต๊ะส่งรายการแล้ว'
   },
   en: {
+    cf_opened: 'Table opened ✓ Order right away — staff will confirm your table', cf_pending_t: 'Table opened ✓ Order now', cf_pending: 'Staff are confirming your table — no need to wait', cf_confirmed: 'Your table is confirmed ✓', cf_rejected: 'The restaurant did not confirm this table. Please ask a staff member',
     loading: 'Loading…', table: 'Table', search: 'Search menu', other: 'Others', menu: 'Menu',
     st_open_t: 'Ready to order', st_open: 'Tap a dish to add it, then tap "View cart" to send your order',
     st_waiting_t: 'Waiting for staff', st_waiting: 'Browse the menu — you can order once staff opens your table (this page updates itself)',
@@ -112,6 +114,7 @@ window.ST_I18N = {
     cart_sent_other: 'Someone at your table sent the order'
   },
   zh: {
+    cf_opened: '已开台 ✓ 可以直接点餐，店员会为您确认', cf_pending_t: '已开台 ✓ 可以点餐', cf_pending: '店员正在确认餐桌，无需等待，直接点餐即可', cf_confirmed: '餐桌已确认 ✓', cf_rejected: '餐厅未确认此餐桌，请联系店员',
     loading: '加载中…', table: '桌号', search: '搜索菜品', other: '其他', menu: '菜单',
     st_open_t: '可以点餐了', st_open: '点击菜品加入购物车，然后点"查看购物车"提交订单',
     st_waiting_t: '等待服务员开台', st_waiting: '可以先浏览菜单，服务员开台后即可点餐（页面会自动更新）',

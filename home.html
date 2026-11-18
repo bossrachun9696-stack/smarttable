@@ -30,7 +30,7 @@
       </svg>
       <h1>SmartTable</h1>
     </div>
-    <button id="btn-logout" class="st-chip" type="button">ออกจากระบบ</button>
+    <a id="btn-settings" class="st-chip" href="settings.html">⚙️ ตั้งค่า</a>
   </div>
 
   <div id="st-msg" class="st-msg" role="status" hidden></div>
@@ -52,15 +52,12 @@
     <div class="st-me">
       <div id="avatar" class="st-avatar">·</div>
       <div style="flex:1;min-width:0"><h2 id="hello">กำลังโหลด…</h2><p id="email"></p></div>
-      <button id="btn-edit-name" class="st-chip" type="button" hidden>แก้ชื่อ</button>
+      <a class="st-chip" href="settings.html">แก้โปรไฟล์</a>
     </div>
-    <form id="form-name" hidden novalidate>
-      <label class="st-field"><span>ชื่อที่แสดง</span>
-        <input name="display_name" type="text" maxlength="60" placeholder="ชื่อของคุณ">
-      </label>
-      <button class="st-btn st-btn--ghost" type="submit">บันทึกชื่อ</button>
-    </form>
   </section>
+
+  <!-- คำเชิญเข้าร้านที่ส่งถึงฉัน (ด้วยไอดี หรืออีเมล) -->
+  <section id="my-invites" class="st-card st-card--alert" hidden></section>
 
   <div id="home-body" hidden>
     <h2 class="st-h">ร้านของฉัน</h2>

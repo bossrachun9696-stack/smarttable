@@ -53,7 +53,7 @@
     st_invite_revoked: 'คำเชิญนี้ถูกยกเลิกแล้ว ขอให้ร้านส่งลิงก์ใหม่',
     st_invite_used: 'คำเชิญนี้ถูกใช้ไปแล้ว',
     st_invite_expired: 'คำเชิญหมดอายุแล้ว (ใช้ได้ 7 วัน) ขอให้ร้านส่งลิงก์ใหม่',
-    st_email_mismatch: 'คำเชิญนี้ส่งถึงอีเมลอื่น กรุณาเข้าสู่ระบบด้วยอีเมลที่ร้านเชิญ',
+    st_email_mismatch: 'คำเชิญนี้ส่งถึงบัญชีอื่น กรุณาเข้าสู่ระบบด้วยบัญชี (อีเมล/ไอดี) ที่ร้านเชิญ',
     st_owner_locked: 'เปลี่ยนตำแหน่งหรือนำเจ้าของร้านออกไม่ได้',
     st_not_member: 'ไม่พบพนักงานคนนี้ในร้าน',
     st_not_found: 'ไม่พบรายการนี้ อาจถูกลบไปแล้ว',
@@ -122,7 +122,13 @@
     st_not_paid: 'คิวนี้ยังจ่ายเงินไม่ครบ',
     // รอบ E: ตะกร้าร่วม
     st_cart_empty: 'ตะกร้าว่าง (อาจมีคนในโต๊ะส่งไปแล้ว)',
-    st_cart_full: 'ตะกร้าของโต๊ะเต็ม (60 รายการ) ส่งรายการก่อน'
+    st_cart_full: 'ตะกร้าของโต๊ะเต็ม (60 รายการ) ส่งรายการก่อน',
+    // รอบ F: โปรไฟล์ / เชิญด้วยไอดี / ลบร้าน / ยืนยันโต๊ะ
+    st_bad_public_id: 'ไอดีต้องมี 4–20 ตัว ใช้ได้เฉพาะ a–z 0–9 จุด และขีดล่าง (ขึ้นต้นด้วยตัวอักษรหรือตัวเลข)',
+    st_public_id_taken: 'มีคนใช้ไอดีนี้แล้ว ลองชื่ออื่น',
+    st_user_not_found: 'ไม่พบผู้ใช้ไอดีนี้ ให้พนักงานเปิดหน้า ตั้งค่า แล้วคัดลอกไอดีมาให้',
+    st_confirm_name: 'ชื่อร้านที่พิมพ์ไม่ตรง พิมพ์ให้ตรงทุกตัวอักษร',
+    st_not_authenticated: 'กรุณาเข้าสู่ระบบใหม่'
   };
   // ป้ายข้อมูลอาหาร (ต้องตรงกับ st_menu_items_tags_check)
   const TAGS = {
@@ -239,11 +245,61 @@
     setTimeout(() => showMsg('ยังไม่ได้ใส่ Project URL และ key ในไฟล์ js/st-config.js', 'error'), 0);
   }
 
-  window.ST = { sb, configOk, $, esc, ROLE_TH, thaiError, pageUrl, nextUrl, showMsg, hideMsg, setBusy,
-                ensureProfile, requireUser, copyText, TAGS, applyTheme, shrinkImage };
+
+  // ---------- ธีม (สว่าง / มืด / ตามเครื่อง) + รูปแบบหน้าร้าน — เก็บในเครื่อง + โปรไฟล์ ----------
+  // หน้าลูกค้า ใบเสร็จ และหน้าพิมพ์ ใช้ธีมสว่างเสมอ
+  const NO_THEME = /\/(table|queue-tv|receipt|print|offline)\.html$/.test(location.pathname);
+  const PREF_KEY = 'st-prefs';
+  function getPrefs() {
+    try { return Object.assign({ theme: 'auto', layout: 'list' }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); }
+    catch { return { theme: 'auto', layout: 'list' }; }
+  }
+  function setPrefs(p) {
+    const v = Object.assign(getPrefs(), p || {});
+    try { localStorage.setItem(PREF_KEY, JSON.stringify(v)); } catch { /* ไม่เป็นไร */ }
+    applyMode();
+    return v;
+  }
+  const darkMq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  function applyMode() {
+    if (NO_THEME) return;
+    const t = getPrefs().theme;
+    const dark = t === 'dark' || (t === 'auto' && darkMq && darkMq.matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = dark ? '#16130F' : '#FBF6EE';
+  }
+  applyMode();
+  if (darkMq && darkMq.addEventListener) darkMq.addEventListener('change', applyMode);
+  const avatarUrl = (path) => path ? sb.storage.from('st-images').getPublicUrl(path).data.publicUrl : null;
+
+  // ---------- ล็อกหน้าข้างหลังตอนเปิดแผ่นเลื่อนขึ้น (iPhone ไม่สนใจ overflow:hidden) ----------
+  // ทุกหน้าใช้ class st-noscroll บน body อยู่แล้ว -> จับการเปลี่ยน class แล้วตรึงตำแหน่งให้เอง
+  (function () {
+    let locked = false, y = 0;
+    const apply = () => {
+      const want = document.body.classList.contains('st-noscroll');
+      if (want === locked) return;
+      locked = want;
+      const b = document.body.style;
+      if (want) {
+        y = window.scrollY;
+        b.position = 'fixed'; b.top = (-y) + 'px'; b.left = '0'; b.right = '0'; b.width = '100%';
+      } else {
+        b.position = ''; b.top = ''; b.left = ''; b.right = ''; b.width = '';
+        window.scrollTo(0, y);
+      }
+    };
+    const start = () => new MutationObserver(apply).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+    if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+  })();
 
   // ---------- แอปบนมือถือ (PWA): ติดตั้งได้ + เปิดได้ตอนเน็ตหลุดชั่วคราว ----------
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => null); });
   }
+
+  window.ST = { sb, configOk, $, esc, ROLE_TH, thaiError, pageUrl, nextUrl, showMsg, hideMsg, setBusy,
+                ensureProfile, requireUser, copyText, TAGS, applyTheme, shrinkImage,
+                getPrefs, setPrefs, applyMode, avatarUrl };
 })();

@@ -8,7 +8,6 @@
   history.replaceState(null, '', location.pathname);
 
   sb.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') location.replace('index.html'); });
-  $('#btn-logout').addEventListener('click', () => sb.auth.signOut());
 
   // ---------- โปรไฟล์ ----------
   let profile;
@@ -21,26 +20,51 @@
   }
   const renderMe = () => {
     $('#hello').textContent = 'สวัสดี ' + (profile.display_name || 'คุณ');
-    $('#email').textContent = profile.email;
-    $('#avatar').textContent = (profile.display_name || profile.email).trim().charAt(0).toUpperCase();
-    $('#form-name').display_name.value = profile.display_name || '';
+    $('#email').textContent = (profile.public_id ? '@' + profile.public_id + ' · ' : '') + profile.email;
+    const url = ST.avatarUrl(profile.avatar_path);
+    $('#avatar').innerHTML = url ? `<img src="${esc(url)}" alt="">` : esc((profile.display_name || profile.email).trim().charAt(0).toUpperCase());
   };
   renderMe();
-  $('#btn-edit-name').hidden = false;
-  $('#btn-edit-name').addEventListener('click', () => { $('#form-name').hidden = !$('#form-name').hidden; });
-
-  $('#form-name').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const f = e.currentTarget;
-    setBusy(f, true, 'กำลังบันทึก…');
-    const { data, error } = await sb.from('st_profiles')
-      .update({ display_name: f.display_name.value.trim().slice(0, 60) || null })
-      .eq('user_id', user.id).select().single();
-    setBusy(f, false);
-    if (error) return showMsg(thaiError(error));
-    profile = data; renderMe(); f.hidden = true;
-    showMsg('บันทึกชื่อแล้ว', 'ok');
+  // ไอดี / รูป / ธีม จากบัญชี (ไฟล์ st-14) — ถ้ายังไม่ได้รัน st-14 ก็ข้ามไป
+  sb.rpc('st_my_profile').then(({ data }) => {
+    if (!data) return;
+    profile = Object.assign(profile, data);
+    if (data.prefs && (data.prefs.theme || data.prefs.layout)) ST.setPrefs(data.prefs);
+    renderMe();
   });
+
+  // ---------- คำเชิญถึงฉัน ----------
+  async function loadInvites() {
+    const { data, error } = await sb.rpc('st_my_invites');
+    const box = $('#my-invites');
+    if (error || !data || !data.length) { box.hidden = true; return; }
+    box.innerHTML = `<h3>📩 คำเชิญเข้าร้าน</h3>` + data.map(i => `
+      <div class="st-item st-item--flat" data-invite="${esc(i.id)}" data-token="${esc(i.token)}">
+        <div class="st-logo">${i.shop_logo ? `<img src="${esc(ST.avatarUrl(i.shop_logo))}" alt="">` : esc(i.shop_name.charAt(0))}</div>
+        <div class="st-item-main"><b>${esc(i.shop_name)}</b>
+          <small>เป็น${esc(ROLE_TH[i.role] || i.role)}${i.invited_by ? ' · เชิญโดย ' + esc(i.invited_by) : ''} · หมดอายุ ${new Date(i.expires_at).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}</small></div>
+        <button type="button" class="st-btn st-btn--sm" data-act="accept">รับ</button>
+        <button type="button" class="st-chip" data-act="decline">ไม่รับ</button>
+      </div>`).join('');
+    box.hidden = false;
+  }
+  $('#my-invites').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-act]');
+    if (!b) return;
+    const row = b.closest('[data-invite]');
+    b.disabled = true;
+    if (b.dataset.act === 'accept') {
+      const { data, error } = await sb.rpc('st_accept_invite', { p_token: row.dataset.token });
+      if (error) { b.disabled = false; return showMsg(thaiError(error)); }
+      return location.href = 'shop.html?id=' + encodeURIComponent(data);
+    }
+    if (!confirm('ไม่รับคำเชิญนี้?')) { b.disabled = false; return; }
+    const { error } = await sb.rpc('st_decline_invite', { p_invite: row.dataset.invite });
+    if (error) { b.disabled = false; return showMsg(thaiError(error)); }
+    showMsg('ปฏิเสธคำเชิญแล้ว', 'ok');
+    loadInvites();
+  });
+  loadInvites();
 
   // ---------- รายการร้าน ----------
   async function loadShops() {
@@ -54,7 +78,7 @@
     }
     list.innerHTML = data.map(s => `
       <a class="st-item" href="shop.html?id=${encodeURIComponent(s.id)}">
-        <div class="st-logo">${esc(s.name.charAt(0))}</div>
+        <div class="st-logo">${s.logo_path ? `<img src="${esc(ST.avatarUrl(s.logo_path))}" alt="" loading="lazy">` : esc(s.name.charAt(0))}</div>
         <div class="st-item-main">
           <b>${esc(s.name)}</b>
           <small>${esc(ROLE_TH[s.role] || s.role)} · ${s.is_open ? 'เปิดอยู่' : 'ปิดร้าน'}${s.status === 'suspended' ? ' · ถูกระงับ' : ''}</small>

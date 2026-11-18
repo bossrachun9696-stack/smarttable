@@ -311,7 +311,7 @@
     setPreview();
     sheet.hidden = false;
     document.body.classList.add('st-noscroll');
-    sheet.querySelector('.st-sheet-panel').scrollTop = 0;
+    sheet.querySelector('.st-sheet-scroll').scrollTop = 0;
   }
   function closeSheet() {
     sheet.hidden = true;

@@ -29,9 +29,15 @@
   };
   const baht = (n) => '฿' + Number(n).toLocaleString('th-TH', { maximumFractionDigits: 2 });
   const COL = { new: 'new', accepted: 'cooking', cooking: 'cooking', served: 'served', cancelled: 'served' };
-  const CALL_TH = { call: '🙋 เรียกพนักงาน', bill: '🧾 ขอเช็กบิล', slip: '💸 แนบสลิปรอตรวจ' };
+  const CALL_TH = { call: '🙋 เรียกพนักงาน', bill: '🧾 ขอเช็กบิล', slip: '💸 แนบสลิปรอตรวจ', open: '🆕 ลูกค้าเปิดโต๊ะเอง' };
   // สลิปรอตรวจ: ไปหน้าเช็กบิลเพื่อยืนยัน / ปฏิเสธ (กด รับทราบ ไม่ได้)
-  const callBtn = (c) => c.kind === 'slip'
+  // ลูกค้าเปิดโต๊ะเอง (โหมด "ร้านยืนยัน"): ยืนยัน / ปฏิเสธ
+  const CAN_CONFIRM = ['owner', 'manager', 'cashier', 'waiter'].includes(role);
+  const callBtn = (c) => c.kind === 'open'
+    ? (CAN_CONFIRM
+        ? `<span class="st-confirm-actions"><button type="button" class="st-chip st-chip--accent" data-act="tbl-ok" data-table="${esc(c.table_id)}">✓ ยืนยัน</button><button type="button" class="st-chip" data-act="tbl-no" data-table="${esc(c.table_id)}">✗ ปฏิเสธ</button></span>`
+        : '<small>รอพนักงานยืนยัน</small>')
+    : c.kind === 'slip'
     ? `<a class="st-chip st-chip--accent" href="bill.html?id=${encodeURIComponent(shopId)}&table=${encodeURIComponent(c.table_id)}">ตรวจสลิป</a>`
     : '<button type="button" class="st-chip" data-act="call-done">รับทราบ</button>';
 
@@ -195,7 +201,7 @@
           <span class="st-ocard-no">#${o.order_no}</span>
           <time>${o.status === 'cancelled' ? 'ยกเลิก' : col !== 'served' ? ageText(m) : 'เสร็จแล้ว'}</time>
         </header>
-        <div class="st-ocard-meta">${hhmm(o.created_at)}${isTicket(o) ? ' · กลับบ้าน' + (o.contact_name ? ' · ' + esc(o.contact_name) : '') : ''}${o.guest_name && !isTicket(o) ? ' · ' + esc(o.guest_name) : ''}${o.zone ? ' · ' + esc(o.zone) : ''}${o.source === 'staff' ? ' · พนักงานสั่ง' : ''} ${pickSoon}</div>
+        <div class="st-ocard-meta">${hhmm(o.created_at)}${isTicket(o) ? ' · กลับบ้าน' + (o.contact_name ? ' · ' + esc(o.contact_name) : '') : ''}${o.guest_name && !isTicket(o) ? ' · ' + esc(o.guest_name) : ''}${o.zone ? ' · ' + esc(o.zone) : ''}${o.source === 'staff' ? ' · พนักงานสั่ง' : ''} ${pickSoon}${o.confirm_pending && o.status !== 'cancelled' ? ' <em class="st-badge st-badge--wait">⚠ โต๊ะยังไม่ยืนยัน</em>' : ''}</div>
         <ul class="st-ocard-items">
           ${its.map(i => `
             <li class="${i.done ? 'done' : ''}">
@@ -306,7 +312,21 @@
     schedule();
   });
 
+
+  // ยืนยัน / ปฏิเสธโต๊ะที่ลูกค้าเปิดเอง · คืน true ถ้าทำแล้ว
+  async function confirmTable(btn, onErr) {
+    const ok = btn.dataset.act === 'tbl-ok';
+    const label = (btn.closest('[data-call]') || btn).querySelector('b');
+    if (!ok && !confirm(`ปฏิเสธการเปิดโต๊ะ${label ? ' ' + label.textContent : ''}?\nออร์เดอร์ที่ลูกค้าสั่งไว้จะถูกยกเลิก และโต๊ะจะว่าง`)) return false;
+    btn.disabled = true;
+    const { error } = await sb.rpc('st_confirm_table', { p_table: btn.dataset.table, p_ok: ok });
+    if (error) { btn.disabled = false; (onErr || showMsg)(thaiError(error)); return false; }
+    showMsg(ok ? 'ยืนยันโต๊ะแล้ว ✓' : 'ปฏิเสธแล้ว ยกเลิกออร์เดอร์และปิดโต๊ะให้', 'ok');
+    return true;
+  }
   $('#calls').addEventListener('click', async (e) => {
+    const cb = e.target.closest('[data-act="tbl-ok"], [data-act="tbl-no"]');
+    if (cb) { if (await confirmTable(cb)) load(); return; }
     const b = e.target.closest('[data-act="call-done"]');
     if (!b) return;
     b.disabled = true;

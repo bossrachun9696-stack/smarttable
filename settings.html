@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FBF6EE">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="SmartTable">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>ตั้งค่า · SmartTable</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/st-style.css">
+</head>
+<body>
+<main class="st-page">
+  <div class="st-top">
+    <a id="back" href="home.html" class="st-chip">‹ ร้านของฉัน</a>
+  </div>
+  <h1 class="st-title">ตั้งค่า</h1>
+
+  <div id="st-msg" class="st-msg" role="status" hidden></div>
+
+  <div id="set-body" hidden>
+    <!-- โปรไฟล์ -->
+    <section class="st-card">
+      <h3>โปรไฟล์</h3>
+      <div class="st-prof">
+        <div id="av-box" class="st-avatar st-avatar--xl">·</div>
+        <div class="st-prof-actions">
+          <label class="st-chip">📷 เปลี่ยนรูป<input id="av-input" type="file" accept="image/*" hidden></label>
+          <button id="av-del" class="st-chip" type="button" hidden>ลบรูป</button>
+          <small>รูปนี้ร้านและเพื่อนร่วมงานจะเห็น</small>
+        </div>
+      </div>
+
+      <form id="form-prof" novalidate>
+        <label class="st-field"><span>ชื่อที่แสดง</span>
+          <input name="display_name" type="text" maxlength="60" placeholder="ชื่อของคุณ">
+        </label>
+        <label class="st-field"><span>ไอดีของฉัน</span>
+          <div class="st-idrow">
+            <b>@</b><input name="public_id" type="text" maxlength="20" autocapitalize="none" autocomplete="off" spellcheck="false">
+          </div>
+          <small>ให้ร้านใช้ไอดีนี้เพิ่มคุณเป็นพนักงานได้ (ไม่ต้องบอกอีเมล) · 4–20 ตัว a–z 0–9 . _</small>
+        </label>
+        <div class="st-grid2" style="margin-bottom:14px">
+          <button id="id-copy" class="st-btn st-btn--ghost" type="button">คัดลอกไอดี</button>
+          <button id="id-share" class="st-btn st-btn--ghost" type="button">ส่งไอดีให้ร้าน…</button>
+        </div>
+        <label class="st-field"><span>อีเมล (ใช้เข้าสู่ระบบ)</span>
+          <input id="me-email" type="text" readonly>
+        </label>
+        <button class="st-btn" type="submit">บันทึกโปรไฟล์</button>
+      </form>
+    </section>
+
+    <!-- ธีม -->
+    <section class="st-card">
+      <h3>ธีม</h3>
+      <div id="theme-opts" class="st-optcards st-optcards--3" role="radiogroup" aria-label="ธีม">
+        <button type="button" data-theme="auto" role="radio">
+          <span class="st-themeprev st-themeprev--auto"><i></i><i></i></span><b>ตามเครื่อง</b><small>สว่างกลางวัน มืดตามมือถือ</small>
+        </button>
+        <button type="button" data-theme="light" role="radio">
+          <span class="st-themeprev st-themeprev--light"><i></i><i></i></span><b>สว่าง</b><small>ครีม อ่านง่าย</small>
+        </button>
+        <button type="button" data-theme="dark" role="radio">
+          <span class="st-themeprev st-themeprev--dark"><i></i><i></i></span><b>มืด</b><small>ถนอมสายตา ร้านกลางคืน</small>
+        </button>
+      </div>
+      <p class="st-sub" style="margin:10px 0 0">ใช้กับหน้าพนักงานบนเครื่องนี้และทุกเครื่องที่คุณล็อกอิน · หน้าลูกค้าและใบเสร็จเป็นแบบสว่างเสมอ</p>
+    </section>
+
+    <!-- รูปแบบหน้าร้าน -->
+    <section class="st-card">
+      <h3>รูปแบบหน้าจัดการร้าน</h3>
+      <div id="layout-opts" class="st-optcards st-optcards--2" role="radiogroup" aria-label="รูปแบบหน้าจัดการร้าน">
+        <button type="button" data-layout="list" role="radio">
+          <span class="st-lprev st-lprev--list"><i></i><i></i><i></i><i></i></span><b>รายการ</b><small>มีคำอธิบายครบ (แบบเดิม)</small>
+        </button>
+        <button type="button" data-layout="tiles" role="radio">
+          <span class="st-lprev st-lprev--tiles"><i></i><i></i><i></i><i></i></span><b>ช่องใหญ่</b><small>ปุ่มสี่เหลี่ยมใหญ่ 2 คอลัมน์ กดง่าย</small>
+        </button>
+        <button type="button" data-layout="icons" role="radio">
+          <span class="st-lprev st-lprev--icons"><i></i><i></i><i></i><i></i><i></i><i></i></span><b>ไอคอน</b><small>3 คอลัมน์ เหมือนหน้าจอมือถือ เห็นครบในจอเดียว</small>
+        </button>
+        <button type="button" data-layout="groups" role="radio">
+          <span class="st-lprev st-lprev--groups"><i></i><i></i><i></i><i></i></span><b>แบ่งหมวด</b><small>งานหน้าร้าน · จัดการร้าน · ตัวเลข ปุ่มใหญ่สำหรับงานประจำ</small>
+        </button>
+      </div>
+    </section>
+
+    <!-- บัญชี -->
+    <section class="st-card">
+      <h3>บัญชี</h3>
+      <a class="st-btn st-btn--ghost st-btn-link" href="reset.html">เปลี่ยนรหัสผ่าน</a>
+      <button id="btn-logout" class="st-btn st-btn--ghost st-danger" type="button" style="margin-top:10px">ออกจากระบบ</button>
+    </section>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/st-config.js"></script>
+<script src="js/st-auth.js"></script>
+<script src="js/st-settings.js"></script>
+</body>
+</html>

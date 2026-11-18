@@ -17,6 +17,7 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
+html { background: var(--st-bg); }
 body {
   font-family: var(--st-font);
   background: var(--st-bg);
@@ -70,7 +71,7 @@ body {
 .st-field input {
   width: 100%; font: inherit; font-size: 16px; /* 16px กัน iPhone ซูมหน้าเอง */
   padding: 12px 14px; border: 1.5px solid var(--st-line); border-radius: 12px;
-  background: #fff; color: var(--st-ink); outline: none; transition: border-color .15s, box-shadow .15s;
+  background: var(--st-card); color: var(--st-ink); outline: none; transition: border-color .15s, box-shadow .15s;
 }
 .st-field input:focus { border-color: var(--st-accent); box-shadow: 0 0 0 4px var(--st-accent-soft); }
 .st-input input { padding-right: 64px; }
@@ -170,7 +171,7 @@ a.st-item:hover { border-color: var(--st-accent); }
 .st-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
 select, .st-field select {
-  font: inherit; font-size: 16px; color: var(--st-ink); background: #fff;
+  font: inherit; font-size: 16px; color: var(--st-ink); background: var(--st-card);
   border: 1.5px solid var(--st-line); border-radius: 10px; padding: 8px 10px; max-width: 150px;
 }
 .st-field select { width: 100%; max-width: none; padding: 12px 14px; border-radius: 12px; }
@@ -183,7 +184,7 @@ select, .st-field select {
 .st-linkbox p { margin: 0 0 8px; font-size: 14px; color: var(--st-ok); }
 .st-linkbox input {
   width: 100%; font: inherit; font-size: 14px; padding: 10px; margin-bottom: 10px;
-  border: 1px solid var(--st-line); border-radius: 10px; background: #fff; color: var(--st-ink);
+  border: 1px solid var(--st-line); border-radius: 10px; background: var(--st-card); color: var(--st-ink);
 }
 .st-good { color: var(--st-ok) !important; font-weight: 600; }
 .st-bad { color: var(--st-err) !important; font-weight: 600; }
@@ -193,7 +194,7 @@ select, .st-field select {
 /* ===== ขั้นที่ 3: เมนู ===== */
 .st-field textarea {
   width: 100%; font: inherit; font-size: 16px; padding: 12px 14px; resize: vertical;
-  border: 1.5px solid var(--st-line); border-radius: 12px; background: #fff; color: var(--st-ink); outline: none;
+  border: 1.5px solid var(--st-line); border-radius: 12px; background: var(--st-card); color: var(--st-ink); outline: none;
 }
 .st-field textarea:focus { border-color: var(--st-accent); box-shadow: 0 0 0 4px var(--st-accent-soft); }
 .st-inline { display: flex; gap: 8px; margin-top: 12px; }
@@ -212,7 +213,7 @@ select, .st-field select {
 .st-updown { display: flex; flex-direction: column; gap: 2px; flex: none; }
 .st-updown button {
   font: inherit; font-size: 12px; line-height: 1; width: 30px; height: 22px; cursor: pointer;
-  border: 1px solid var(--st-line); border-radius: 6px; background: #fff; color: var(--st-muted);
+  border: 1px solid var(--st-line); border-radius: 6px; background: var(--st-card); color: var(--st-muted);
 }
 .st-updown button:disabled { opacity: .3; cursor: default; }
 
@@ -234,7 +235,7 @@ select, .st-field select {
 }
 .st-switch span::after {
   content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%;
-  background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .15s;
+  background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: transform .15s;
 }
 .st-switch input:checked + span { background: var(--st-ok); }
 .st-switch input:checked + span::after { transform: translateX(18px); }
@@ -258,17 +259,17 @@ body.st-noscroll { overflow: hidden; }
 .st-photo { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; }
 .st-photo-box {
   width: 112px; height: 112px; border-radius: 16px; overflow: hidden; flex: none;
-  display: grid; place-items: center; background: #fff; border: 1.5px dashed var(--st-line);
+  display: grid; place-items: center; background: var(--st-card); border: 1.5px dashed var(--st-line);
   color: var(--st-muted); font-size: 13px; text-align: center;
 }
 .st-photo-box img { width: 100%; height: 100%; object-fit: cover; }
 .st-photo-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .st-photo-actions small { color: var(--st-muted); font-size: 12.5px; }
 
-.st-og { background: #fff; border: 1px solid var(--st-line); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+.st-og { background: var(--st-card); border: 1px solid var(--st-line); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
 .st-og-head { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
 .st-og input, .st-og select {
-  font: inherit; font-size: 16px; color: var(--st-ink); background: #fff;
+  font: inherit; font-size: 16px; color: var(--st-ink); background: var(--st-card);
   border: 1.5px solid var(--st-line); border-radius: 10px; padding: 9px 10px; min-width: 0; outline: none;
 }
 .st-og input:focus, .st-og select:focus { border-color: var(--st-accent); }
@@ -283,14 +284,14 @@ body.st-noscroll { overflow: hidden; }
 .st-banner b { color: var(--st-ink); }
 .st-legend { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin: 16px 2px 6px; font-size: 13px; color: var(--st-muted); }
 .st-legend .st-chip { margin-left: auto; }
-.st-dot { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -1px; background: #fff; border: 1.5px solid var(--st-line); }
+.st-dot { display: inline-block; width: 12px; height: 12px; border-radius: 4px; margin-right: 6px; vertical-align: -1px; background: var(--st-card); border: 1.5px solid var(--st-line); }
 .st-dot--open { background: var(--st-ok-soft); border-color: #9cc9b2; }
 .st-dot--billing { background: #FDF0D5; border-color: #E8C27A; }
 .st-zone { font-size: 15px; margin: 16px 2px 8px; color: var(--st-muted); }
 .st-board { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
 .st-tile {
   font: inherit; text-align: left; cursor: pointer; min-height: 92px; display: flex; flex-direction: column; justify-content: space-between;
-  background: #fff; border: 1.5px solid var(--st-line); border-radius: 14px; padding: 10px 12px; color: var(--st-ink);
+  background: var(--st-card); border: 1.5px solid var(--st-line); border-radius: 14px; padding: 10px 12px; color: var(--st-ink);
 }
 .st-tile b { font-size: 22px; line-height: 1.1; }
 .st-tile span { font-size: 13px; font-weight: 600; color: var(--st-muted); }
@@ -305,12 +306,12 @@ body.st-noscroll { overflow: hidden; }
 .st-sheet--bottom { align-items: flex-end; }
 .st-sheet--bottom .st-sheet-panel { height: auto; max-height: 88vh; border-radius: 20px 20px 0 0; }
 .st-sheet-actions { display: grid; gap: 10px; margin-top: 12px; }
-.st-sheet-info { margin: 0; border-radius: 12px; padding: 12px 14px; font-size: 14px; border: 1px solid var(--st-line); background: #fff; }
-.st-stepper { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--st-line); border-radius: 12px; padding: 8px 12px; }
+.st-sheet-info { margin: 0; border-radius: 12px; padding: 12px 14px; font-size: 14px; border: 1px solid var(--st-line); background: var(--st-card); }
+.st-stepper { display: flex; align-items: center; gap: 12px; background: var(--st-card); border: 1px solid var(--st-line); border-radius: 12px; padding: 8px 12px; }
 .st-stepper span { flex: 1; font-weight: 600; }
 .st-stepper button { font: inherit; font-size: 22px; width: 44px; height: 44px; border-radius: 12px; border: 1.5px solid var(--st-line); background: var(--st-bg); cursor: pointer; }
 .st-stepper b { font-size: 22px; min-width: 32px; text-align: center; }
-.st-qr-big { width: min(300px, 80vw); margin: 4px auto 8px; background: #fff; padding: 8px; border-radius: 12px; border: 1px solid var(--st-line); }
+.st-qr-big { width: min(300px, 80vw); margin: 4px auto 8px; background: var(--st-card); padding: 8px; border-radius: 12px; border: 1px solid var(--st-line); }
 .st-qr-big svg { display: block; width: 100%; height: auto; }
 
 /* ===== หน้าลูกค้า (table.html) ===== */
@@ -326,19 +327,19 @@ body.st-noscroll { overflow: hidden; }
 .st-guest-tools { position: sticky; top: 0; z-index: 3; background: var(--st-bg); padding: 8px 0 10px; margin: 0 -2px; }
 .st-guest-tools input {
   width: 100%; font: inherit; font-size: 16px; padding: 10px 14px; border: 1.5px solid var(--st-line);
-  border-radius: 12px; background: #fff; outline: none; -webkit-appearance: none;
+  border-radius: 12px; background: var(--st-card); outline: none; -webkit-appearance: none;
 }
 .st-guest-tools input:focus { border-color: var(--st-accent); }
 .st-cats { display: flex; gap: 8px; overflow-x: auto; padding-top: 10px; scrollbar-width: none; }
 .st-cats::-webkit-scrollbar { display: none; }
 .st-cats button {
   font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer;
-  border: 1px solid var(--st-line); background: #fff; color: var(--st-ink); border-radius: 999px; padding: 6px 14px;
+  border: 1px solid var(--st-line); background: var(--st-card); color: var(--st-ink); border-radius: 999px; padding: 6px 14px;
 }
 .st-cats button.on { background: var(--st-ink); color: #fff; border-color: var(--st-ink); }
 .st-gsec { scroll-margin-top: 110px; }
 .st-gsec h2 { font-size: 18px; margin: 18px 2px 8px; }
-.st-gitem { display: flex; gap: 12px; background: #fff; border: 1px solid var(--st-line); border-radius: 16px; padding: 10px; margin-bottom: 10px; }
+.st-gitem { display: flex; gap: 12px; background: var(--st-card); border: 1px solid var(--st-line); border-radius: 16px; padding: 10px; margin-bottom: 10px; }
 .st-gimg { width: 92px; height: 92px; border-radius: 12px; overflow: hidden; flex: none; background: var(--st-bg); }
 .st-gimg:empty { display: none; }
 .st-gimg img { width: 100%; height: 100%; object-fit: cover; }
@@ -369,7 +370,7 @@ body.st-noscroll { overflow: hidden; }
 .st-tile--alert { border-color: var(--st-accent); box-shadow: 0 0 0 3px var(--st-accent-soft); }
 
 /* ออร์เดอร์ (ใช้ทั้งพนักงานและลูกค้า) */
-.st-order { background: #fff; border: 1px solid var(--st-line); border-radius: 14px; padding: 10px 12px; margin-top: 10px; }
+.st-order { background: var(--st-card); border: 1px solid var(--st-line); border-radius: 14px; padding: 10px 12px; margin-top: 10px; }
 .st-order--cancelled { opacity: .55; }
 .st-order--cancelled .st-oline span:first-child { text-decoration: line-through; }
 .st-order-head { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--st-muted); margin-bottom: 4px; }
@@ -382,7 +383,7 @@ body.st-noscroll { overflow: hidden; }
 .st-oline { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; padding: 3px 0; }
 .st-oline small { display: block; color: var(--st-muted); font-size: 12.5px; }
 .st-order-act { display: flex; justify-content: flex-end; margin-top: 6px; }
-.st-bill { background: #fff; border: 1px solid var(--st-line); border-radius: 14px; padding: 10px 14px; margin-top: 12px; font-size: 14px; }
+.st-bill { background: var(--st-card); border: 1px solid var(--st-line); border-radius: 14px; padding: 10px 14px; margin-top: 12px; font-size: 14px; }
 .st-bill > div { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; color: var(--st-muted); }
 .st-bill small { color: var(--st-muted); }
 .st-bill .st-bill-total { color: var(--st-ink); border-top: 1px dashed var(--st-line); margin-top: 6px; padding-top: 8px; font-size: 16px; }
@@ -393,7 +394,7 @@ body.st-noscroll { overflow: hidden; }
 .st-guest-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 6px; }
 .st-guest-actions button {
   font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; line-height: 1.3;
-  background: #fff; border: 1px solid var(--st-line); border-radius: 12px; padding: 10px 6px; color: var(--st-ink);
+  background: var(--st-card); border: 1px solid var(--st-line); border-radius: 12px; padding: 10px 6px; color: var(--st-ink);
 }
 .st-guest-actions button:disabled { color: var(--st-muted); background: var(--st-bg); cursor: default; }
 .st-gitem { cursor: pointer; }
@@ -408,7 +409,7 @@ body.st-noscroll { overflow: hidden; }
   border: 0; border-radius: 16px; padding: 14px 16px; box-shadow: 0 8px 24px -10px rgba(228, 87, 46, .6);
 }
 .st-cart-bar button b { margin-left: auto; }
-.st-cart-n { background: #fff; color: var(--st-accent-dark); border-radius: 999px; min-width: 28px; height: 28px; display: grid; place-items: center; font-size: 14px; padding: 0 6px; }
+.st-cart-n { background: var(--st-card); color: var(--st-accent-dark); border-radius: 999px; min-width: 28px; height: 28px; display: grid; place-items: center; font-size: 14px; padding: 0 6px; }
 .st-toast {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom)); z-index: 60;
   background: var(--st-ink); color: #fff; font-size: 14px; border-radius: 999px; padding: 10px 18px; max-width: 90vw; text-align: center;
@@ -419,7 +420,7 @@ body.st-noscroll { overflow: hidden; }
 .st-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .st-hero-name { font-size: 20px; margin: 0 0 2px; }
 .st-hero-price { font-size: 18px; font-weight: 700; color: var(--st-accent-dark); margin: 0 0 12px; }
-.st-optg { border: 1px solid var(--st-line); background: #fff; border-radius: 14px; padding: 6px 12px 8px; margin: 0 0 12px; }
+.st-optg { border: 1px solid var(--st-line); background: var(--st-card); border-radius: 14px; padding: 6px 12px 8px; margin: 0 0 12px; }
 .st-optg legend { font-weight: 700; padding: 0 4px; }
 .st-optg legend small { font-weight: 600; font-size: 12px; color: var(--st-muted); margin-left: 6px; }
 .st-optg legend small.req { color: var(--st-accent-dark); }
@@ -431,14 +432,14 @@ body.st-noscroll { overflow: hidden; }
 .st-optc:has(input:disabled) { opacity: .45; }
 .st-add-row { display: flex; gap: 10px; align-items: center; position: sticky; bottom: 0; background: var(--st-bg); padding: 10px 0 2px; }
 .st-add-row .st-btn { flex: 1; }
-.st-qty { display: flex; align-items: center; gap: 4px; background: #fff; border: 1px solid var(--st-line); border-radius: 12px; padding: 4px; flex: none; }
+.st-qty { display: flex; align-items: center; gap: 4px; background: var(--st-card); border: 1px solid var(--st-line); border-radius: 12px; padding: 4px; flex: none; }
 .st-qty button { font: inherit; font-size: 20px; width: 40px; height: 40px; border: 0; border-radius: 10px; background: var(--st-bg); cursor: pointer; }
 .st-qty b { min-width: 28px; text-align: center; font-size: 17px; }
 .st-qty--sm button { width: 34px; height: 34px; font-size: 16px; }
 
 /* ลูกค้า: ตะกร้า */
 .st-lines { display: grid; gap: 8px; margin-bottom: 14px; }
-.st-line { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--st-line); border-radius: 14px; padding: 10px 12px; }
+.st-line { display: flex; align-items: center; gap: 10px; background: var(--st-card); border: 1px solid var(--st-line); border-radius: 14px; padding: 10px 12px; }
 .st-line-main { flex: 1; min-width: 0; }
 .st-line-main b, .st-line-main small { display: block; }
 .st-line-main small { color: var(--st-muted); font-size: 12.5px; }
@@ -467,7 +468,7 @@ body.st-noscroll { overflow: hidden; }
 .st-col-list { display: grid; gap: 10px; }
 .st-col-empty { color: var(--st-muted); font-size: 14px; text-align: center; padding: 20px 0; margin: 0; }
 
-.st-ocard { background: #fff; border-radius: 14px; padding: 12px; border: 2px solid transparent; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.st-ocard { background: var(--st-card); border-radius: 14px; padding: 12px; border: 2px solid transparent; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
 .st-ocard--new { border-color: var(--st-accent); }
 .st-ocard.st-ocard--slow time { background: #FDF0D5; color: #8A5A06; }
 .st-ocard--late { border-color: var(--st-err); }
@@ -501,7 +502,7 @@ body.st-noscroll { overflow: hidden; }
   .st-col-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; background: #EDE5D8; border-radius: 12px; padding: 4px; margin-top: 12px; position: sticky; top: 0; z-index: 4; }
   .st-col-tabs button { font: inherit; font-weight: 600; font-size: 15px; border: 0; border-radius: 9px; padding: 9px 4px; background: transparent; color: var(--st-muted); cursor: pointer; }
   .st-col-tabs button b { background: var(--st-line); color: var(--st-ink); border-radius: 999px; padding: 0 7px; font-size: 12px; margin-left: 2px; }
-  .st-col-tabs button[aria-selected="true"] { background: #fff; color: var(--st-ink); }
+  .st-col-tabs button[aria-selected="true"] { background: var(--st-card); color: var(--st-ink); }
   .st-col-tabs button[data-tab="new"] b { background: var(--st-accent); color: #fff; }
   .st-cols { grid-template-columns: 1fr; margin-top: 10px; }
   .st-col { display: none; background: transparent; padding: 0; }
@@ -515,7 +516,7 @@ body.st-noscroll { overflow: hidden; }
 .st-bill--flat { border: 0; padding: 0; margin: 0; background: none; }
 .st-seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; background: var(--st-bg); border-radius: 12px; padding: 4px; margin-bottom: 14px; }
 .st-seg button { font: inherit; font-size: 13.5px; font-weight: 600; border: 0; border-radius: 9px; padding: 10px 2px; background: transparent; color: var(--st-muted); cursor: pointer; }
-.st-seg button[aria-selected="true"] { background: #fff; color: var(--st-ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.st-seg button[aria-selected="true"] { background: var(--st-card); color: var(--st-ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 .st-quick { display: flex; flex-wrap: wrap; gap: 6px; margin: -4px 0 12px; }
 .st-quick .st-chip { cursor: pointer; }
 .st-change { display: flex; justify-content: space-between; align-items: baseline; background: var(--st-ok-soft); color: var(--st-ok); border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; }
@@ -534,14 +535,14 @@ body.st-noscroll { overflow: hidden; }
 .st-presets::-webkit-scrollbar { display: none; }
 .st-presets button {
   font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer;
-  border: 1px solid var(--st-line); background: #fff; color: var(--st-ink); border-radius: 999px; padding: 6px 13px;
+  border: 1px solid var(--st-line); background: var(--st-card); color: var(--st-ink); border-radius: 999px; padding: 6px 13px;
 }
 .st-presets button[aria-pressed="true"] { background: var(--st-ink); border-color: var(--st-ink); color: #fff; }
 .st-range { display: flex; gap: 6px; align-items: center; font-size: 14px; color: var(--st-muted); }
-.st-range input { font: inherit; font-size: 15px; padding: 6px 8px; border: 1px solid var(--st-line); border-radius: 10px; background: #fff; color: var(--st-ink); }
+.st-range input { font: inherit; font-size: 15px; padding: 6px 8px; border: 1px solid var(--st-line); border-radius: 10px; background: var(--st-card); color: var(--st-ink); }
 
 .st-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-.st-kpi { background: #fff; border: 1px solid var(--st-line); border-radius: 14px; padding: 12px 14px; min-width: 0; }
+.st-kpi { background: var(--st-card); border: 1px solid var(--st-line); border-radius: 14px; padding: 12px 14px; min-width: 0; }
 .st-kpi span { display: block; font-size: 13px; color: var(--st-muted); }
 .st-kpi b { display: block; font-size: 22px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-kpi--hero b { color: var(--st-accent-dark); }
@@ -585,13 +586,13 @@ body.st-noscroll { overflow: hidden; }
 /* ===== รอบ A: ป้ายอาหาร จำนวนเหลือ แบรนด์ร้าน ประวัติ ===== */
 .st-stock {
   font: inherit; font-size: 12px; font-weight: 700; flex: none; cursor: pointer; white-space: nowrap;
-  border: 1px solid var(--st-line); background: #fff; color: var(--st-muted); border-radius: 999px; padding: 4px 9px;
+  border: 1px solid var(--st-line); background: var(--st-card); color: var(--st-muted); border-radius: 999px; padding: 4px 9px;
 }
 .st-stock.low { background: #FDF0D5; color: #8A5A06; border-color: #E8C27A; }
 .st-tagpick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
 .st-tagchip { cursor: pointer; }
 .st-tagchip input { position: absolute; opacity: 0; pointer-events: none; }
-.st-tagchip span { display: inline-block; font-size: 14px; border: 1.5px solid var(--st-line); background: #fff; border-radius: 999px; padding: 6px 12px; }
+.st-tagchip span { display: inline-block; font-size: 14px; border: 1.5px solid var(--st-line); background: var(--st-card); border-radius: 999px; padding: 6px 12px; }
 .st-tagchip input:checked + span { border-color: var(--st-accent); background: var(--st-accent-soft); color: var(--st-accent-dark); font-weight: 600; }
 .st-tagchip input:focus-visible + span { outline: 3px solid var(--st-accent-soft); }
 .st-tag--allergen { background: #FFF4E5; color: #8A5A06; }
@@ -603,7 +604,7 @@ body.st-noscroll { overflow: hidden; }
 .st-diet button[aria-pressed="true"] { background: var(--st-ok); border-color: var(--st-ok); color: #fff; }
 
 .st-cover { height: 150px; margin: calc(-1 * (20px + env(safe-area-inset-top))) -16px 12px; background: var(--st-line) center / cover no-repeat; }
-.st-glogo { width: 56px; height: 56px; border-radius: 16px; object-fit: cover; flex: none; background: #fff; border: 1px solid var(--st-line); }
+.st-glogo { width: 56px; height: 56px; border-radius: 16px; object-fit: cover; flex: none; background: var(--st-card); border: 1px solid var(--st-line); }
 .st-cover:not([hidden]) + .st-guest-head .st-glogo { margin-top: -40px; border: 3px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,.12); width: 72px; height: 72px; }
 .st-guest-head { align-items: flex-end; }
 
@@ -611,7 +612,7 @@ body.st-noscroll { overflow: hidden; }
 .st-brand-edit .st-chip { margin-top: 8px; cursor: pointer; display: inline-block; }
 .st-photo-box--round { width: 88px; height: 88px; border-radius: 20px; }
 .st-cover-box {
-  height: 88px; border-radius: 14px; overflow: hidden; display: grid; place-items: center; background: #fff;
+  height: 88px; border-radius: 14px; overflow: hidden; display: grid; place-items: center; background: var(--st-card);
   border: 1.5px dashed var(--st-line); color: var(--st-muted); font-size: 13px;
 }
 .st-cover-box img { width: 100%; height: 100%; object-fit: cover; }
@@ -636,12 +637,12 @@ body.st-noscroll { overflow: hidden; }
 
 /* ===== รอบ B: หลายภาษา โปร คูปอง คะแนน ===== */
 .st-lang { display: flex; gap: 6px; justify-content: flex-end; margin: -6px 2px 10px; }
-.st-lang button { font: inherit; font-size: 13px; font-weight: 700; border: 1px solid var(--st-line); background: #fff; color: var(--st-muted); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.st-lang button { font: inherit; font-size: 13px; font-weight: 700; border: 1px solid var(--st-line); background: var(--st-card); color: var(--st-muted); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
 .st-lang button[aria-pressed="true"] { background: var(--st-ink); color: #fff; border-color: var(--st-ink); }
 .st-was { color: var(--st-muted); font-size: 13px; font-weight: 400; }
 .st-tag--promo { background: var(--st-accent); color: #fff; }
 .st-promo-line { margin: -6px 0 12px; font-size: 13.5px; font-weight: 600; color: var(--st-accent-dark); }
-.st-rate { background: #fff; border: 1.5px solid var(--st-accent); border-radius: 16px; padding: 14px; margin: 6px 0 12px; display: grid; gap: 10px; text-align: center; }
+.st-rate { background: var(--st-card); border: 1.5px solid var(--st-accent); border-radius: 16px; padding: 14px; margin: 6px 0 12px; display: grid; gap: 10px; text-align: center; }
 .st-rate textarea { font: inherit; font-size: 16px; padding: 10px 12px; border: 1.5px solid var(--st-line); border-radius: 12px; resize: vertical; }
 .st-stars { display: flex; justify-content: center; gap: 6px; }
 .st-stars button { font-size: 34px; line-height: 1; background: none; border: 0; color: #D9D1C5; cursor: pointer; padding: 2px; }
@@ -654,15 +655,15 @@ body.st-noscroll { overflow: hidden; }
 .st-hbar--rate .st-hbar-track i { background: #F2B01E; }
 
 .st-disc-row { display: flex; gap: 8px; align-items: center; }
-.st-disc-row input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 11px 14px; border: 1.5px solid var(--st-line); border-radius: 12px; background: #fff; color: var(--st-ink); }
+.st-disc-row input { flex: 1; min-width: 0; font: inherit; font-size: 16px; padding: 11px 14px; border: 1.5px solid var(--st-line); border-radius: 12px; background: var(--st-card); color: var(--st-ink); }
 .st-disc-row input:disabled { background: var(--st-bg); color: var(--st-muted); }
 .st-unit { display: flex; background: var(--st-bg); border-radius: 10px; padding: 3px; flex: none; }
 .st-unit button { font: inherit; font-weight: 700; border: 0; background: transparent; color: var(--st-muted); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
-.st-unit button[aria-selected="true"] { background: #fff; color: var(--st-ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.st-unit button[aria-selected="true"] { background: var(--st-card); color: var(--st-ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 .st-coupon-on { display: flex; align-items: center; gap: 8px; background: var(--st-ok-soft); color: var(--st-ok); border-radius: 12px; padding: 8px 12px; margin-bottom: 12px; font-size: 14px; }
 .st-coupon-on .st-chip { margin-left: auto; }
 
-.st-i18n { border: 1px solid var(--st-line); border-radius: 14px; padding: 8px 12px 4px; margin: 0 0 10px; background: #fff; }
+.st-i18n { border: 1px solid var(--st-line); border-radius: 14px; padding: 8px 12px 4px; margin: 0 0 10px; background: var(--st-card); }
 .st-i18n legend { font-weight: 700; padding: 0 4px; }
 .st-i18n-opts { display: grid; gap: 6px; margin-bottom: 12px; }
 .st-i18n-opts > small { color: var(--st-muted); font-weight: 600; }
@@ -675,7 +676,7 @@ body.st-noscroll { overflow: hidden; }
 .st-seg--3 label { cursor: pointer; }
 .st-seg--3 input { position: absolute; opacity: 0; pointer-events: none; }
 .st-seg--3 span { display: block; text-align: center; font-size: 14px; font-weight: 600; border-radius: 9px; padding: 9px 4px; color: var(--st-muted); }
-.st-seg--3 input:checked + span { background: #fff; color: var(--st-ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.st-seg--3 input:checked + span { background: var(--st-card); color: var(--st-ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 
 /* ===== รอบ C · แยกบิล / หลายช่องทาง / ลูกค้าจ่ายเอง ===== */
 .st-seg button:disabled { opacity: .4; cursor: not-allowed; }
@@ -695,19 +696,19 @@ body.st-noscroll { overflow: hidden; }
 .st-tenders { display: grid; gap: 8px; margin: 10px 0 14px; }
 .st-tender { display: grid; grid-template-columns: 1fr 1fr auto; gap: 8px; align-items: center; }
 .st-tender select, .st-tender input {
-  font: inherit; font-size: 16px; padding: 10px 12px; border: 1.5px solid var(--st-line); border-radius: 12px; background: #fff; min-width: 0;
+  font: inherit; font-size: 16px; padding: 10px 12px; border: 1.5px solid var(--st-line); border-radius: 12px; background: var(--st-card); min-width: 0;
 }
 .st-tender-auto { text-align: right; padding: 10px 4px; font-size: 17px; }
 .st-req { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: start; padding-top: 4px; }
 .st-req + .st-req { border-top: 1px solid var(--st-line); margin-top: 10px; padding-top: 14px; }
-.st-req-slip { display: grid; place-items: center; width: 110px; height: 160px; border-radius: 12px; background: #fff; overflow: hidden; color: var(--st-muted); font-size: 12px; text-align: center; border: 1px solid var(--st-line); }
+.st-req-slip { display: grid; place-items: center; width: 110px; height: 160px; border-radius: 12px; background: var(--st-card); overflow: hidden; color: var(--st-muted); font-size: 12px; text-align: center; border: 1px solid var(--st-line); }
 .st-req-slip img { width: 100%; height: 100%; object-fit: cover; }
 .st-req-main b { font-size: 24px; display: block; }
 .st-req-main small { display: block; color: var(--st-muted); font-size: 12.5px; margin-bottom: 10px; }
 .st-req-actions { display: grid; gap: 8px; }
 
 /* ลูกค้า: การ์ดจ่ายเอง */
-.st-paycard { background: #fff; border: 1.5px solid var(--st-line); border-radius: 16px; padding: 14px; margin: 6px 0 12px; display: grid; gap: 8px; }
+.st-paycard { background: var(--st-card); border: 1.5px solid var(--st-line); border-radius: 16px; padding: 14px; margin: 6px 0 12px; display: grid; gap: 8px; }
 .st-paycard > span { color: var(--st-muted); font-size: 14px; }
 .st-paycard--wait { border-color: #E0B44C; background: #FFF8E6; }
 .st-paycard--ok { border-color: var(--st-ok); background: var(--st-ok-soft); text-align: center; }
@@ -739,7 +740,7 @@ body.st-noscroll { overflow: hidden; }
 .st-ocard-items li { align-items: flex-start; }
 .st-dish {
   flex: 0 0 auto; width: 26px; height: 26px; margin-top: -1px; border-radius: 8px; border: 2px solid var(--st-line);
-  background: #fff; color: #fff; font: 700 15px/1 inherit; display: grid; place-items: center; cursor: pointer; padding: 0;
+  background: var(--st-card); color: #fff; font: 700 15px/1 inherit; display: grid; place-items: center; cursor: pointer; padding: 0;
 }
 .st-dish[aria-pressed="true"] { background: var(--st-ok); border-color: var(--st-ok); }
 .st-dish:disabled { opacity: .4; }
@@ -748,7 +749,7 @@ body.st-noscroll { overflow: hidden; }
 .st-ocard-other { margin: 6px 0 0; font-size: 12.5px; color: var(--st-muted); }
 .st-ocard--ta { border-left: 5px solid #7A5AF8; }
 .st-pickup { display: inline-block; background: #EFEAFE; color: #4B2FC2; font-weight: 700; border-radius: 999px; padding: 1px 8px; font-size: 12.5px; }
-.st-cat-station { font: inherit; font-size: 14px; padding: 6px 8px; border: 1.5px solid var(--st-line); border-radius: 10px; background: #fff; max-width: 120px; }
+.st-cat-station { font: inherit; font-size: 14px; padding: 6px 8px; border: 1.5px solid var(--st-line); border-radius: 10px; background: var(--st-card); max-width: 120px; }
 
 /* คิวกลับบ้าน (queue.html) */
 .st-badge--ok { background: var(--st-ok-soft); color: var(--st-ok); }
@@ -756,12 +757,12 @@ body.st-noscroll { overflow: hidden; }
 .st-btn--sm { width: auto; padding: 8px 14px; font-size: 14px; min-height: 0; }
 .st-ok-text { color: var(--st-ok); }
 .st-hub { display: grid; grid-template-columns: 120px 1fr; gap: 14px; align-items: start; margin-top: 4px; }
-.st-hub-qr svg { width: 120px; height: 120px; display: block; border: 1px solid var(--st-line); border-radius: 10px; background: #fff; }
+.st-hub-qr svg { width: 120px; height: 120px; display: block; border: 1px solid var(--st-line); border-radius: 10px; background: var(--st-card); }
 .st-hub-main small { color: var(--st-muted); font-size: 12.5px; }
 .st-hub-main code { display: block; font-size: 12px; word-break: break-all; background: var(--st-bg); padding: 6px 8px; border-radius: 8px; margin: 4px 0 8px; }
 .st-hub-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .st-hub-actions a { text-decoration: none; }
-.st-qcard { display: grid; grid-template-columns: 64px 1fr; gap: 12px; background: #fff; border: 1.5px solid var(--st-line); border-radius: 16px; padding: 12px; margin-bottom: 10px; }
+.st-qcard { display: grid; grid-template-columns: 64px 1fr; gap: 12px; background: var(--st-card); border: 1.5px solid var(--st-line); border-radius: 16px; padding: 12px; margin-bottom: 10px; }
 .st-qcard--ready { border-color: var(--st-ok); background: var(--st-ok-soft); }
 .st-qcard--late { border-color: var(--st-err); }
 .st-qcard--done { opacity: .6; }
@@ -791,7 +792,7 @@ body.st-tv { background: #14213D; color: #fff; min-height: 100vh; margin: 0; }
 .st-tv-head img { width: 56px; height: 56px; border-radius: 14px; object-fit: cover; }
 .st-tv-head h1 { margin: 0; font-size: clamp(22px, 3vw, 40px); flex: 1; }
 #tv-clock { font-size: clamp(20px, 2.4vw, 34px); font-weight: 700; opacity: .85; }
-#tv-sound { font: inherit; border: 0; border-radius: 999px; padding: 8px 14px; background: #fff; color: #14213D; font-weight: 700; cursor: pointer; }
+#tv-sound { font: inherit; border: 0; border-radius: 999px; padding: 8px 14px; background: var(--st-card); color: #14213D; font-weight: 700; cursor: pointer; }
 .st-tv-cols { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; padding: 24px 28px; }
 @media (max-width: 700px) { .st-tv-cols { grid-template-columns: 1fr; } }
 .st-tv-col { background: rgba(255,255,255,.07); border-radius: 22px; padding: 18px 22px; min-height: 60vh; }
@@ -799,14 +800,14 @@ body.st-tv { background: #14213D; color: #fff; min-height: 100vh; margin: 0; }
 .st-tv-col--ready { background: rgba(47,125,91,.35); }
 .st-tv-nums { display: flex; flex-wrap: wrap; gap: 14px; }
 .st-tv-nums b { display: grid; place-items: center; min-width: 2.2em; padding: 6px 14px; border-radius: 18px; background: rgba(255,255,255,.12); font-size: clamp(40px, 6vw, 96px); line-height: 1.1; }
-.st-tv-col--ready .st-tv-nums b { background: #fff; color: #1F5E43; }
+.st-tv-col--ready .st-tv-nums b { background: var(--st-card); color: #1F5E43; }
 .st-tv-nums b.new { animation: st-tv-blink 1s ease-in-out infinite; }
 .st-tv-nums p { opacity: .5; font-size: 28px; margin: 0; }
 @keyframes st-tv-blink { 50% { background: #FFD43B; color: #14213D; transform: scale(1.06); } }
 
 /* ลูกค้า: บัตรคิวกลับบ้าน */
 .st-mine { display: block; background: #EFEAFE; color: #4B2FC2; font-weight: 700; text-decoration: none; border-radius: 14px; padding: 12px 14px; margin: 6px 0 10px; }
-.st-ticket { display: grid; grid-template-columns: 84px 1fr; gap: 14px; align-items: center; border-radius: 18px; padding: 14px; margin: 6px 0 12px; background: #fff; border: 2px solid #CFC3FB; }
+.st-ticket { display: grid; grid-template-columns: 84px 1fr; gap: 14px; align-items: center; border-radius: 18px; padding: 14px; margin: 6px 0 12px; background: var(--st-card); border: 2px solid #CFC3FB; }
 .st-ticket-no { display: grid; place-items: center; align-content: center; background: #EFEAFE; color: #4B2FC2; border-radius: 14px; min-height: 84px; }
 .st-ticket-no small { font-size: 12px; line-height: 1; }
 .st-ticket-no b { font-size: 40px; line-height: 1.05; }
@@ -834,3 +835,149 @@ body.st-tv { background: #14213D; color: #fff; min-height: 100vh; margin: 0; }
 .st-pwa-actions { display: flex; gap: 8px; align-items: center; }
 /* เปิดจากแอปที่ติดตั้ง: เว้นขอบบนให้แถบสถานะ iPhone */
 @media (display-mode: standalone) { .st-page { padding-top: max(16px, env(safe-area-inset-top)); } }
+
+/* ===== รอบ F · แผ่นเลื่อนขึ้น: หัว + ปุ่มปิดติดอยู่เสมอ · ใช้ความสูงจอที่มองเห็นจริง (iPhone) ===== */
+.st-sheet { overscroll-behavior: contain; }
+.st-sheet-panel.st-split { display: flex; flex-direction: column; overflow: hidden; padding: 0; height: 100%; height: 100dvh; }
+.st-split > .st-sheet-head { position: relative; flex: none; margin: 0; padding: calc(10px + env(safe-area-inset-top)) 16px 10px; }
+.st-sheet-scroll {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+  padding: 14px 16px calc(24px + env(safe-area-inset-bottom));
+}
+.st-sheet--bottom .st-sheet-panel.st-split { height: auto; max-height: 88vh; max-height: 88dvh; animation: st-sheet-up .22s ease-out; will-change: transform; }
+.st-sheet--bottom .st-split > .st-sheet-head { padding-top: 18px; cursor: grab; }
+.st-sheet--bottom .st-split > .st-sheet-head::before {
+  content: ""; position: absolute; top: 7px; left: 50%; width: 40px; height: 5px; margin-left: -20px;
+  border-radius: 3px; background: var(--st-line);
+}
+.st-sheet--bottom .st-split > .st-sheet-head #sheet-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 10px; }
+.st-sheet--bottom .st-split > .st-sheet-head #sheet-close { flex: none; min-width: 64px; }
+.st-sheet-scroll .st-hero { margin-top: -14px; }
+.st-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@keyframes st-sheet-up { from { transform: translateY(40px); opacity: .6; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .st-sheet--bottom .st-sheet-panel.st-split { animation: none; } }
+
+
+/* ===== รอบ F · ธีมมืด (หน้าพนักงาน) — html[data-theme="dark"] ตั้งจาก st-auth.js ===== */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --st-bg: #16130F;
+  --st-card: #221E19;
+  --st-ink: #F1EAE1;
+  --st-muted: #A99F93;
+  --st-line: #3A332B;
+  --st-accent: #F06A43;
+  --st-accent-dark: #FF8A66;
+  --st-accent-soft: #3B2219;
+  --st-ok: #5BC293;
+  --st-ok-soft: #173126;
+  --st-err: #F07468;
+  --st-err-soft: #3A1B18;
+}
+html[data-theme="dark"] .st-card, html[data-theme="dark"] .st-item { box-shadow: none; }
+html[data-theme="dark"] .st-sheet { background: rgba(0, 0, 0, .6); }
+html[data-theme="dark"] .st-switch span { background: #4A4239; }
+html[data-theme="dark"] .st-tile--open { border-color: #2F6B50; }
+html[data-theme="dark"] .st-tile--billing,
+html[data-theme="dark"] .st-dot--billing { background: #3A2E14; border-color: #6B5320; }
+html[data-theme="dark"] .st-tile--billing span { color: #F2C66B; }
+html[data-theme="dark"] .st-col { background: #1D1914; }
+html[data-theme="dark"] .st-col[data-col="new"] { background: #2A1B15; }
+html[data-theme="dark"] .st-col-tabs { background: #2A241D; }
+html[data-theme="dark"] .st-paycard--wait { background: #33290F; border-color: #6B5320; }
+html[data-theme="dark"] .st-shared-hint { background: #16263A; color: #9CC7F5; }
+html[data-theme="dark"] .st-qno, html[data-theme="dark"] .st-mine,
+html[data-theme="dark"] .st-ticket-no, html[data-theme="dark"] .st-pickup { background: #2B2347; color: #C9BBFF; }
+html[data-theme="dark"] .st-state--wait, html[data-theme="dark"] .st-tag--rec, html[data-theme="dark"] .st-call--bill,
+html[data-theme="dark"] .st-ostat--accepted, html[data-theme="dark"] .st-ostat--cooking,
+html[data-theme="dark"] .st-ocard.st-ocard--slow time, html[data-theme="dark"] .st-stock.low,
+html[data-theme="dark"] .st-tag--allergen, html[data-theme="dark"] .st-badge--warn { background: #3A2E14; color: #F2C66B; }
+html[data-theme="dark"] .st-call--slip { background: #173126; color: #8FDDB7; }
+html[data-theme="dark"] img { opacity: .95; }
+@keyframes st-flash-dark { 0% { background: #5A2A1C; } 100% { background: var(--st-bg); } }
+html[data-theme="dark"] .st-flash { animation-name: st-flash-dark; }
+
+/* ===================== รอบ F: โปรไฟล์ / ตั้งค่า / รูปแบบหน้าร้าน / เปิดโต๊ะเอง ===================== */
+.st-avatar, .st-logo { overflow: hidden; }
+.st-avatar img, .st-logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.st-avatar--xl { width: 96px; height: 96px; font-size: 38px; }
+.st-avatar--sm { width: 36px; height: 36px; font-size: 15px; flex: none; }
+.st-logo--round { border-radius: 50%; }
+.st-prof { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
+.st-prof-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.st-prof-actions label { cursor: pointer; }
+.st-idrow { display: flex; align-items: center; gap: 0; border: 1.5px solid var(--st-line); border-radius: 12px; background: var(--st-card); overflow: hidden; }
+.st-idrow > b { padding: 0 4px 0 12px; color: var(--st-muted); font-size: 17px; }
+.st-idrow input { border: 0 !important; box-shadow: none !important; flex: 1; min-width: 0; padding-left: 2px !important; background: transparent; }
+.st-idrow .st-chip { margin-right: 6px; flex: none; }
+.st-chip--sm { font-size: 12.5px; padding: 5px 10px; }
+.st-seg--2 { grid-template-columns: 1fr 1fr; }
+.st-found { display: flex; align-items: center; gap: 10px; background: var(--st-ok-soft); color: var(--st-ok); border-radius: 12px; padding: 10px 12px; margin: -4px 0 12px; font-size: 14px; }
+.st-found b, .st-found small { display: block; }
+.st-found b { color: var(--st-ink); }
+.st-found--none { background: var(--st-accent-soft); color: var(--st-accent-dark); }
+.st-item--flat { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.st-card--danger { border: 1.5px solid #E7B3AA; }
+.st-card--danger h3 { color: #B3261E; }
+.st-btn--danger { background: #B3261E; border-color: #B3261E; color: #fff; }
+
+/* ตัวเลือกแบบการ์ด (ธีม / รูปแบบ) */
+.st-optcards { display: grid; gap: 10px; }
+.st-optcards--2 { grid-template-columns: 1fr 1fr; }
+.st-optcards--3 { grid-template-columns: repeat(3, 1fr); }
+.st-optcards button { font: inherit; text-align: left; cursor: pointer; color: var(--st-ink); background: var(--st-card); border: 1.5px solid var(--st-line); border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
+.st-optcards button b { font-size: 14.5px; }
+.st-optcards button small { color: var(--st-muted); font-size: 12px; line-height: 1.35; }
+.st-optcards button[aria-checked="true"] { border-color: var(--st-accent); background: var(--st-accent-soft); box-shadow: 0 0 0 1px var(--st-accent) inset; }
+.st-themeprev { height: 54px; border-radius: 10px; display: grid; grid-template-rows: 1fr 1fr; gap: 5px; padding: 7px; margin-bottom: 4px; border: 1px solid var(--st-line); }
+.st-themeprev i { border-radius: 5px; }
+.st-themeprev--light { background: #FBF7F2; } .st-themeprev--light i { background: #fff; border: 1px solid #EADFD3; }
+.st-themeprev--dark { background: #16130F; } .st-themeprev--dark i { background: #2A251F; }
+.st-themeprev--auto { background: linear-gradient(135deg, #FBF7F2 50%, #16130F 50%); }
+.st-themeprev--auto i { background: linear-gradient(135deg, #fff 50%, #2A251F 50%); }
+.st-lprev { height: 54px; border-radius: 10px; background: var(--st-bg); padding: 6px; display: grid; gap: 4px; margin-bottom: 4px; }
+.st-lprev i { background: var(--st-accent-soft); border-radius: 4px; }
+.st-lprev--list { grid-template-rows: repeat(4, 1fr); }
+.st-lprev--tiles { grid-template-columns: 1fr 1fr; }
+.st-lprev--icons { grid-template-columns: repeat(3, 1fr); }
+.st-lprev--groups { grid-template-columns: 1fr 1fr; grid-template-rows: 6px 1fr 6px 1fr; }
+.st-lprev--groups i:nth-child(1), .st-lprev--groups i:nth-child(3) { grid-column: 1 / -1; background: var(--st-line); width: 40%; }
+
+/* หน้าจัดการร้าน: หัวข้อ + 4 รูปแบบ */
+.st-links-head { display: flex; justify-content: flex-end; margin: -4px 0 8px; }
+.st-links--tiles, .st-links--icons, .st-links-grid { display: grid; gap: 10px; }
+.st-links--tiles, .st-links-grid { grid-template-columns: 1fr 1fr; }
+.st-links--icons { grid-template-columns: repeat(3, 1fr); }
+.st-links--tiles > a.st-item, .st-links--icons > a.st-item, .st-links-grid > a.st-item {
+  flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 10px; min-height: 120px; padding: 14px; border-radius: 18px;
+}
+.st-links--tiles .st-logo, .st-links-grid .st-logo { width: 48px; height: 48px; font-size: 24px; border-radius: 14px; }
+.st-links--tiles .st-item-main b, .st-links-grid .st-item-main b { white-space: normal; font-size: 15.5px; line-height: 1.3; }
+.st-links--tiles .st-item-main small, .st-links-grid .st-item-main small { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; font-size: 12.5px; }
+.st-links--tiles .st-arrow, .st-links--icons .st-arrow, .st-links-grid .st-arrow { display: none; }
+.st-links--icons > a.st-item { align-items: center; text-align: center; min-height: 96px; justify-content: center; padding: 12px 6px; }
+.st-links--icons .st-logo { width: 52px; height: 52px; font-size: 26px; border-radius: 16px; }
+.st-links--icons .st-item-main { flex: none; width: 100%; }
+.st-links--icons .st-item-main b { font-size: 13px; white-space: normal; line-height: 1.25; }
+.st-links--icons .st-item-main small { display: none; }
+.st-links--groups { gap: 16px; }
+.st-links-group h4 { margin: 0 0 8px; font-size: 13px; color: var(--st-muted); text-transform: uppercase; letter-spacing: .04em; }
+.st-links-group:first-child .st-links-grid > a.st-item { min-height: 136px; background: var(--st-accent-soft); border-color: transparent; }
+.st-links-group:first-child .st-logo { background: var(--st-card); }
+.st-links a.st-item[hidden] { display: none !important; }
+
+/* แจ้ง "ลูกค้าเปิดโต๊ะเอง" ฝั่งร้าน + แบนเนอร์ฝั่งลูกค้า */
+.st-badge--wait { background: #FFF1C9; color: #8A5A00; }
+.st-call--open { border-color: var(--st-accent) !important; background: var(--st-accent-soft) !important; }
+.st-confirm-actions { display: flex; gap: 8px; margin-top: 8px; }
+.st-confirm-actions .st-btn { flex: 1; }
+.st-confirm-banner { display: flex; align-items: center; gap: 10px; background: var(--st-ok-soft); color: var(--st-ok); border-radius: 14px; padding: 10px 14px; margin: 0 0 12px; font-size: 14px; }
+.st-confirm-banner b { display: block; color: var(--st-ink); }
+.st-confirm-banner--wait { background: #FFF6DD; color: #8A5A00; }
+.st-confirm-banner .st-dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; flex: none; animation: st-pulse 1.4s ease-in-out infinite; }
+@keyframes st-pulse { 50% { opacity: .3; } }
+html[data-theme="dark"] .st-badge--wait, html[data-theme="dark"] .st-confirm-banner--wait { background: #3A3020; color: #F2C66B; }
+html[data-theme="dark"] .st-card--danger { border-color: #6B2B24; }
+html[data-theme="dark"] .st-card--danger h3 { color: #FF8A7E; }
+@media (max-width: 360px) { .st-optcards--3 { grid-template-columns: 1fr; } }
+.st-dot-inline { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #E0A100; margin-right: 6px; vertical-align: middle; animation: st-pulse 1.4s ease-in-out infinite; }
