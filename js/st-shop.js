@@ -23,6 +23,19 @@
   $('#link-reports').hidden = !canManage;
   $('#link-audit').hidden = !canManage;
   $('#link-promos').hidden = !canManage;
+  $('#link-buffet').hidden = !(canManage && shop.shop_type === 'buffet');
+  $('#link-easy').href = 'easy.html?id=' + encodeURIComponent(shopId);
+  applyType(shop.shop_type || 'restaurant');
+  // ประเภทร้านเปลี่ยนสิ่งที่เห็นในหน้านี้ (ไม่ลบข้อมูล)
+  function applyType(type) {
+    $('#link-buffet').hidden = !(canManage && type === 'buffet');
+    $('#link-easy').hidden = type !== 'small';
+    $('#link-audit').dataset.typeHidden = type === 'small' ? '1' : '';
+    if (type === 'small') $('#link-audit').hidden = true;
+    else $('#link-audit').hidden = !canManage;
+    const staff = document.getElementById('staff-card');
+    if (staff) staff.hidden = type === 'small';
+  }
 
   $('#my-role').textContent = 'คุณ: ' + (ROLE_TH[role] || '-');
   const renderHead = () => {
@@ -40,6 +53,7 @@
   $('#link-promos').href = 'promos.html?id=' + encodeURIComponent(shopId);
   $('#link-receipts').href = 'receipts.html?id=' + encodeURIComponent(shopId);
   $('#link-tables').href = 'tables.html?id=' + encodeURIComponent(shopId);
+  $('#link-buffet').href = 'buffet.html?id=' + encodeURIComponent(shopId);
   $('#link-layout').href = 'settings.html?back=' + encodeURIComponent('shop.html?id=' + shopId);
   applyLayout(getPrefs().layout);
   $('#shop-body').hidden = false;
@@ -48,7 +62,10 @@
   // ลำดับปุ่ม (ตั้งเองได้ด้วยปุ่ม "จัดลำดับ" · จำไว้ในบัญชี)
   // (ใช้ function เพื่อให้เรียกได้ก่อนบรรทัดนี้ — applyLayout ถูกเรียกตั้งแต่ด้านบน)
   function linkOrder() {
-    const def = ['orders', 'tables', 'queue', 'receipts', 'menu', 'promos', 'reports', 'audit'];
+    const type = (current && current.shop_type) || 'restaurant';
+    const def = type === 'queue' ? ['queue', 'orders', 'receipts', 'menu', 'promos', 'reports', 'tables', 'easy', 'buffet', 'audit']
+      : type === 'small' ? ['easy', 'menu', 'tables', 'receipts', 'reports', 'orders', 'queue', 'promos', 'buffet', 'audit']
+      : ['orders', 'tables', 'buffet', 'queue', 'receipts', 'menu', 'promos', 'reports', 'audit', 'easy'];
     const saved = (getPrefs().order || []).filter(k => def.includes(k));
     return [...saved, ...def.filter(k => !saved.includes(k))];
   }
@@ -60,8 +77,8 @@
     nav.querySelectorAll('.st-links-group').forEach(g => g.remove());
     if (layout !== 'groups') { links.forEach(a => nav.appendChild(a)); return; }
     const GROUPS = [
-      ['งานหน้าร้าน', ['link-orders', 'link-tables', 'link-queue', 'link-receipts']],
-      ['จัดการร้าน', ['link-menu', 'link-promos']],
+      ['งานหน้าร้าน', ['link-easy', 'link-orders', 'link-tables', 'link-queue', 'link-receipts']],
+      ['จัดการร้าน', ['link-menu', 'link-buffet', 'link-promos']],
       ['ตัวเลข', ['link-reports', 'link-audit']]
     ];
     for (const [title, ids] of GROUPS) {
@@ -171,6 +188,42 @@
   document.addEventListener('visibilitychange', () => { if (!document.hidden) loadAlerts(); });
   window.addEventListener('pageshow', (e) => { if (e.persisted) loadAlerts(); });
   loadAlerts();
+
+  // ---------- ประเภทร้าน (เจ้าของ / ผู้จัดการ) ----------
+  if (canManage && 'shop_type' in shop) {
+    $('#type-card').hidden = false;
+    const ft = $('#form-type');
+    ft.querySelectorAll('[name=shop_type]').forEach(r => { r.checked = r.value === (current.shop_type || 'restaurant'); });
+    ft.addEventListener('change', async (e) => {
+      const r = e.target;
+      if (r.name !== 'shop_type') return;
+      const prev = current.shop_type || 'restaurant';
+      const ASK = {
+        buffet: 'เปลี่ยนเป็นร้านบุฟเฟ่ต์?\nลูกค้าจะสั่งได้หลังพนักงาน "เริ่มบุฟเฟ่ต์" ที่โต๊ะ (เลือกแพ็กเกจ + นับคน)\nอย่าลืมตั้งแพ็กเกจก่อน',
+        queue: 'เปลี่ยนเป็นร้านน้ำ / สั่งแล้วรอคิว?\nระบบจะเปิด "สั่งกลับบ้าน / คิว" ให้ · พิมพ์ QR หน้าร้านได้ที่หน้า "สั่งกลับบ้าน / คิว"',
+        small: 'เปลี่ยนเป็นร้านเล็ก 2 คน (โหมดง่าย)?\nซ่อนเรื่องพนักงาน และให้ลูกค้าสแกนแล้วสั่งได้ทันที (ไม่ต้องรอเปิดโต๊ะ)\nพนักงานเดิมยังอยู่ ไม่ถูกลบ'
+      };
+      if (ASK[r.value] && !confirm(ASK[r.value])) { ft.querySelector(`[value="${prev}"]`).checked = true; return; }
+      const { data, error } = await sb.from('st_shops').update({ shop_type: r.value }).eq('id', shopId).select().single();
+      if (error) { ft.querySelector(`[value="${prev}"]`).checked = true; return showMsg(thaiError(error)); }
+      current = data;
+      // ร้านคิว: เปิดสั่งกลับบ้าน/คิว + สร้าง QR หน้าร้าน · ร้านเล็ก: ลูกค้าสแกนแล้วสั่งได้ทันที
+      if (current.shop_type === 'queue' && !current.takeaway_enabled) {
+        const tk = await sb.rpc('st_takeaway_settings', { p_shop: shopId, p_enabled: true, p_preorder: !!current.preorder_enabled });
+        if (!tk.error) current.takeaway_enabled = true;
+      }
+      if (current.shop_type === 'small' && current.order_mode !== 'instant') {
+        const om = await sb.from('st_shops').update({ order_mode: 'instant' }).eq('id', shopId).select().single();
+        if (!om.error) { current = om.data; const rr = document.querySelector(`#form-mode [value="instant"]`); if (rr) rr.checked = true; }
+      }
+      applyType(current.shop_type);
+      applyLayout(getPrefs().layout);
+      showMsg({ buffet: 'ตั้งเป็นร้านบุฟเฟ่ต์แล้ว → กด "แพ็กเกจบุฟเฟ่ต์" เพื่อตั้งราคาและเวลา',
+                queue: 'ตั้งเป็นร้านคิวแล้ว → กด "สั่งกลับบ้าน / คิว" เพื่อพิมพ์ QR หน้าร้าน',
+                small: 'ตั้งเป็นร้านเล็กแล้ว → กด "⚡ หน้าร้านรวม" ทำทุกอย่างในหน้าเดียว',
+                restaurant: 'ตั้งเป็นร้านอาหารแล้ว' }[current.shop_type] || 'บันทึกแล้ว', 'ok');
+    });
+  }
 
   // ---------- รูปแบบการสั่งอาหาร (บันทึกทันทีเมื่อเลือก) ----------
   const fm = $('#form-mode');

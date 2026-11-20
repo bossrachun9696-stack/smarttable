@@ -14,7 +14,7 @@
   $('#btn-print').href = 'print.html?id=' + encodeURIComponent(shopId);
 
   const [{ data: shop }, { data: me }] = await Promise.all([
-    sb.from('st_shops').select('id, name, order_mode, is_open').eq('id', shopId).maybeSingle(),
+    sb.from('st_shops').select('id, name, order_mode, is_open, shop_type').eq('id', shopId).maybeSingle(),
     sb.from('st_shop_members').select('role').eq('shop_id', shopId).eq('user_id', user.id).maybeSingle()
   ]);
   if (!shop || !me) { $('#shop-sub').textContent = ''; return showMsg('ไม่พบร้านนี้ หรือคุณไม่ได้เป็นพนักงานของร้าน'); }
@@ -52,6 +52,28 @@
   const canCancel = role !== 'kitchen';
   let tables = [];
   let floor = { calls: [], sessions: [] };
+  // ---------- บุฟเฟ่ต์ (st-17) ----------
+  const isBuffet = shop.shop_type === 'buffet';
+  let bboard = { packages: [], tables: {} };
+  let bSkew = 0, bPkg = null, bAdults = 2, bChildren = 0;
+  let bAdds = {};                                  // รีฟิลที่เลือก { addon_id: จำนวนคน }
+  const ALA = '__alacarte';
+  const bNow = () => Date.now() + bSkew;
+  function bLeft(b) {                       // นาทีที่เหลือจนหมดเวลา (ติดลบ = เกิน) · null = ไม่จำกัด
+    if (!b || b.mode !== 'package' || !b.ends_at) return null;
+    return (Date.parse(b.ends_at) - bNow()) / 60000;
+  }
+  const fmtMin = (m) => { const a = Math.abs(Math.round(m)); return a >= 60 ? Math.floor(a / 60) + ' ชม. ' + (a % 60) + ' น.' : a + ' นาที'; };
+  function bTileHtml(t) {
+    if (!isBuffet || !t.session) return '';
+    const b = bboard.tables[t.id];
+    if (!b) return '<small class="st-bf-tile st-bf-tile--wait">🍖 รอเริ่มบุฟเฟ่ต์</small>';
+    if (b.mode !== 'package') return '<small class="st-bf-tile">สั่งตามเมนู</small>';
+    const left = bLeft(b), heads = (b.adults || 0) + (b.children || 0);
+    if (left == null) return `<small class="st-bf-tile">🍖 ${heads} คน · ไม่จำกัดเวลา</small>`;
+    if (left <= 0) return `<small class="st-bf-tile st-bf-tile--over">⏰ เกิน ${fmtMin(left)} · ${heads} คน</small>`;
+    return `<small class="st-bf-tile${left <= 15 ? ' st-bf-tile--warn' : ''}">⏱ เหลือ ${fmtMin(left)} · ${heads} คน</small>`;
+  }
   let detail = null;        // รายละเอียดรอบของโต๊ะที่เปิดแผ่นอยู่
 
   // ---------- เวลา ----------
@@ -67,8 +89,9 @@
   async function load() {
     const [{ data, error }, fl] = await Promise.all([
       sb.rpc('st_tables_board', { p_shop: shopId }),
-      sb.rpc('st_floor_status', { p_shop: shopId })
-    ]);
+      sb.rpc('st_floor_status', { p_shop: shopId }),
+      isBuffet ? sb.rpc('st_buffet_board', { p_shop: shopId }) : Promise.resolve({ data: null })
+    ]).then(r => { const bb = r[2]; if (bb && bb.data) { bboard = bb.data; if (bb.data.now) bSkew = Date.parse(bb.data.now) - Date.now(); } return r; });
     if (error) return showMsg(thaiError(error));
     tables = data;
     if (!fl.error) floor = fl.data;
@@ -132,10 +155,12 @@
             : (t.session.guest_count ? t.session.guest_count + ' คน · ' : '') + since(t.session.opened_at);
           const fs = sessBy[t.id];
           const calls = callsBy[t.id] || [];
-          return `<button type="button" class="st-tile st-tile--${s}${calls.length ? ' st-tile--alert' : ''}" data-id="${esc(t.id)}">
+          const bOver = isBuffet && t.session && bLeft(bboard.tables[t.id]) != null && bLeft(bboard.tables[t.id]) <= 0;
+          return `<button type="button" class="st-tile st-tile--${s}${calls.length || bOver ? ' st-tile--alert' : ''}" data-id="${esc(t.id)}">
               <b>${esc(t.label)}${calls.map(k => `<i>${k === 'bill' ? '🧾' : k === 'slip' ? '💸' : k === 'open' ? '🆕' : k === 'coupon' ? '🎟' : '🙋'}</i>`).join('')}</b>
               <span>${t.session && t.session.confirm_status === 'pending' ? '<em class="st-badge st-badge--wait">รอยืนยัน</em> ' : ''}${esc(STATE_TH[s])}${fs && fs.new_orders ? ` · ใหม่ ${fs.new_orders}` : ''}</span>
               <small>${esc(info)}${fs && Number(fs.subtotal) ? ' · ' + baht(fs.subtotal) : ''}</small>
+              ${bTileHtml(t)}
             </button>`;
         }).join('')}
       </div>`).join('')
@@ -228,6 +253,49 @@
       return;
     }
 
+    if (sheetMode === 'buffet') {
+      const cur = bboard.tables[t.id];
+      const pk = bboard.packages.filter(p => (p.kind || 'package') === 'package');
+      const adds = bboard.packages.filter(p => p.kind === 'addon');
+      if (!bPkg) bPkg = cur && cur.mode === 'alacarte' ? ALA : (cur && cur.package_id && pk.some(p => p.id === cur.package_id)) ? cur.package_id : (pk[0] ? pk[0].id : ALA);
+      const sel = pk.find(p => p.id === bPkg);
+      const heads = bAdults + bChildren;
+      const headTotal = sel ? Number(sel.price_adult) * bAdults + Number(sel.price_child ?? sel.price_adult) * bChildren : 0;
+      const addTotal = adds.reduce((sum, a) => sum + (bAdds[a.id] ? Number(a.price_adult) * (a.per_head ? bAdds[a.id] : 1) : 0), 0);
+      const isEdit = cur && (cur.mode === 'package' || cur.mode === 'alacarte');
+      body.innerHTML = `
+        <h4 style="margin:0 0 8px">เลือกแพ็กเกจ</h4>
+        <div class="st-bf-pkgs">${pk.map(p => `
+          <button type="button" class="st-bf-pkg" data-act="bf-pkg" data-pkg="${esc(p.id)}" aria-checked="${p.id === bPkg}">
+            <b>${esc(p.name)}</b>
+            <span>ผู้ใหญ่ ${baht(p.price_adult)}${p.price_child != null ? ' · เด็ก ' + baht(p.price_child) : ''}</span>
+            <small>${p.time_limit_min ? '⏱ ' + p.time_limit_min + ' นาที' : 'ไม่จำกัดเวลา'}${p.round_limit ? ' · รอบละ ' + p.round_limit + ' จาน/คน' : ''}</small>
+          </button>`).join('')}
+          <button type="button" class="st-bf-pkg" data-act="bf-pkg" data-pkg="${ALA}" aria-checked="${bPkg === ALA}">
+            <b>🍽 สั่งตามเมนู (ไม่ใช่บุฟเฟ่ต์)</b><small>คิดเงินตามจาน · ยังเลือกรีฟิลได้</small>
+          </button>
+        </div>
+        ${!pk.length ? `<p class="st-sub">ยังไม่มีแพ็กเกจที่เปิดใช้ ${canManage ? '— ตั้งได้ที่หน้าร้าน → แพ็กเกจบุฟเฟ่ต์' : ''}</p>` : ''}
+        <div class="st-stepper"><span>ผู้ใหญ่</span>
+          <button type="button" data-act="bf-a" data-d="-1" aria-label="ลด">−</button><b>${bAdults}</b><button type="button" data-act="bf-a" data-d="1" aria-label="เพิ่ม">+</button></div>
+        <div class="st-stepper"><span>เด็ก${sel && sel.child_note ? ` <small>(${esc(sel.child_note)})</small>` : ''}</span>
+          <button type="button" data-act="bf-c" data-d="-1" aria-label="ลด">−</button><b>${bChildren}</b><button type="button" data-act="bf-c" data-d="1" aria-label="เพิ่ม">+</button></div>
+        ${sel && sel.price_child == null && bChildren ? '<p class="st-sub">แพ็กเกจนี้ไม่ได้ตั้งราคาเด็ก — เด็กคิดราคาผู้ใหญ่</p>' : ''}
+        ${adds.length ? `<h4 style="margin:14px 0 8px">🥤 รีฟิล / ตัวเลือกเสริม</h4>` + adds.map(a => `
+          <div class="st-bf-add${bAdds[a.id] ? ' st-bf-add--on' : ''}">
+            <label class="st-check"><input type="checkbox" data-act="bf-add" data-add="${esc(a.id)}"${bAdds[a.id] ? ' checked' : ''}>
+              <span><b>${esc(a.name)}</b> ${baht(a.price_adult)} ${a.per_head ? '/คน' : '/โต๊ะ'}</span></label>
+            ${a.per_head && bAdds[a.id] ? `<div class="st-stepper st-stepper--sm"><span>กี่คน</span>
+              <button type="button" data-act="bf-addq" data-add="${esc(a.id)}" data-d="-1" aria-label="ลด">−</button><b>${bAdds[a.id]}</b>
+              <button type="button" data-act="bf-addq" data-add="${esc(a.id)}" data-d="1" aria-label="เพิ่ม">+</button></div>` : ''}
+          </div>`).join('') : ''}
+        <div class="st-bf-sum"><span>${sel ? 'ค่าบุฟเฟ่ต์ ' + baht(headTotal) : 'สั่งตามเมนู'}${addTotal ? ' + รีฟิล ' + baht(addTotal) : ''}</span><b>${baht(headTotal + addTotal)}</b></div>
+        ${cur && cur.mode === 'package' ? '<p class="st-sub" style="margin-top:-6px">เวลาเริ่มเดิมไม่เปลี่ยน</p>' : ''}
+        <button class="st-btn" type="button" data-act="bf-start"${(sel && heads > 0) || bPkg === ALA ? '' : ' disabled'}>${isEdit ? 'บันทึกการแก้ไข' : bPkg === ALA ? 'เริ่ม (สั่งตามเมนู)' : '🍖 เริ่มบุฟเฟ่ต์'}</button>
+        <button class="st-btn st-btn--ghost" type="button" data-act="back">‹ กลับ</button>`;
+      return;
+    }
+
     if (sheetMode === 'qr') {
       const url = tableUrl(t.qr_token);
       body.innerHTML = `
@@ -273,6 +341,7 @@
     }
     body.innerHTML = `
       <p class="st-sheet-info st-tile--${s}">${info}</p>
+      ${isBuffet && s !== 'free' ? bPanelHtml(t) : ''}
       ${s === 'free' ? '' : detailHtml()}
       <div class="st-sheet-actions">${actions}
         ${s !== 'free' && canOperate && t.is_active ? `<div class="st-grid2">
@@ -281,6 +350,30 @@
         </div>` : ''}
         <button class="st-btn st-btn--ghost" type="button" data-act="show-qr">แสดง QR ให้ลูกค้าสแกน</button>
       </div>`;
+  }
+
+  // แผงบุฟเฟ่ต์ในแผ่นโต๊ะ
+  function bPanelHtml(t) {
+    const b = bboard.tables[t.id];
+    if (!canOperate) return '';
+    if (!b) return `<div class="st-bf-panel st-bf-panel--wait"><b>🍖 ยังไม่ได้เริ่มบุฟเฟ่ต์</b>
+      <span>ลูกค้ายังสั่งไม่ได้ · นับจำนวนคนแล้วเลือกแพ็กเกจ</span>
+      <button class="st-btn" type="button" data-act="bf-form">เริ่มบุฟเฟ่ต์</button></div>`;
+    const addTxt = (b.addons || []).map(a => `🥤 ${esc(a.name)}${a.per_head ? ' · ' + a.qty + ' คน' : ''}`).join(' · ');
+    if (b.mode !== 'package') return `<div class="st-bf-panel"><b>สั่งตามเมนู (ไม่ใช่บุฟเฟ่ต์)</b>${addTxt ? `<span>${addTxt}</span>` : ''}
+      <div class="st-bf-acts"><button class="st-chip" type="button" data-act="bf-form">เปลี่ยนเป็นบุฟเฟ่ต์ / เพิ่มรีฟิล</button></div></div>`;
+    const left = bLeft(b), heads = (b.adults || 0) + (b.children || 0);
+    const ot = left != null && left < 0 && Number(b.overtime_fee) ? Math.ceil(-left / (b.overtime_block_min || 15)) * Number(b.overtime_fee) * heads : 0;
+    return `<div class="st-bf-panel${left != null && left <= 0 ? ' st-bf-panel--over' : ''}">
+      <b>🍖 ${esc(b.name)} · ผู้ใหญ่ ${b.adults}${b.children ? ' · เด็ก ' + b.children : ''}</b>
+      ${addTxt ? `<span>${addTxt}</span>` : ''}
+      <span>${left == null ? 'ไม่จำกัดเวลา' : left > 0 ? `เหลือ ${fmtMin(left)} · หมดเวลา ${new Date(Date.parse(b.ends_at)).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}`
+        : `⏰ เกินเวลา ${fmtMin(left)}`} · เริ่ม ${new Date(Date.parse(b.started_at)).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span>
+      <div class="st-bf-acts">
+        <button class="st-chip" type="button" data-act="bf-form">แก้แพ็กเกจ / จำนวนคน / รีฟิล</button>
+        ${left != null ? `<button class="st-chip" type="button" data-act="bf-ext" data-min="15">+15 นาที</button><button class="st-chip" type="button" data-act="bf-ext" data-min="30">+30 นาที</button>` : ''}
+        ${ot ? `<button class="st-chip st-chip--accent" type="button" data-act="bf-ot">คิดค่าเกินเวลา ${baht(ot)}</button>` : ''}
+      </div></div>`;
   }
 
   // ออร์เดอร์ + ยอดของรอบนี้
@@ -370,6 +463,31 @@
       return (await copyText(tableUrl(t.qr_token))) ? sheetMsg('คัดลอกลิงก์แล้ว', 'ok') : sheetMsg('คัดลอกไม่ได้');
     }
 
+    // ----- บุฟเฟ่ต์ -----
+    if (act === 'bf-form') { const cur = bboard.tables[t.id]; bPkg = cur ? (cur.mode === 'alacarte' ? ALA : cur.package_id || null) : null;
+      bAdds = Object.fromEntries(((cur && cur.addons) || []).map(a => [a.id, a.qty]));
+      bAdults = cur && cur.mode === 'package' ? cur.adults : Math.max(1, t.session?.guest_count || 2); bChildren = cur && cur.mode === 'package' ? cur.children : 0;
+      sheetMode = 'buffet'; return renderSheet(); }
+    if (act === 'bf-pkg') { bPkg = btn.dataset.pkg; return renderSheet(); }
+    if (act === 'bf-a') { bAdults = Math.min(99, Math.max(0, bAdults + Number(btn.dataset.d))); return renderSheet(); }
+    if (act === 'bf-c') { bChildren = Math.min(99, Math.max(0, bChildren + Number(btn.dataset.d))); return renderSheet(); }
+    if (act === 'bf-add') { const id = btn.dataset.add; if (btn.checked) bAdds[id] = Math.max(1, bAdults + bChildren); else delete bAdds[id]; return renderSheet(); }
+    if (act === 'bf-addq') { const id = btn.dataset.add; bAdds[id] = Math.min(99, Math.max(1, (bAdds[id] || 1) + Number(btn.dataset.d))); return renderSheet(); }
+    if (act === 'bf-start' || act === 'bf-alacarte' || act === 'bf-ext' || act === 'bf-ot') {
+      if (act === 'bf-alacarte' && !confirm(`โต๊ะ ${t.label} สั่งตามเมนู ไม่ใช่บุฟเฟ่ต์?`)) return;
+      btn.disabled = true;
+      const r = act === 'bf-ext' ? await sb.rpc('st_buffet_extend', { p_table: t.id, p_minutes: Number(btn.dataset.min) })
+        : act === 'bf-ot' ? await sb.rpc('st_buffet_overtime', { p_table: t.id })
+        : await sb.rpc('st_buffet_start', { p_table: t.id, p_package: act === 'bf-alacarte' || bPkg === ALA ? null : bPkg, p_adults: bAdults, p_children: bChildren,
+                                            p_addons: Object.entries(bAdds).map(([id, qty]) => ({ id, qty })) });
+      btn.disabled = false;
+      if (r.error) return sheetMsg(thaiError(r.error));
+      sheetMode = 'actions';
+      await load(); loadDetail();
+      return showMsg(act === 'bf-ext' ? `ต่อเวลาโต๊ะ ${t.label} +${btn.dataset.min} นาทีแล้ว` : act === 'bf-ot' ? 'เพิ่มค่าเกินเวลาในบิลแล้ว'
+        : act === 'bf-alacarte' || bPkg === ALA ? `โต๊ะ ${t.label} สั่งตามเมนู${Object.keys(bAdds).length ? ' + รีฟิล' : ''} ✓` : `เริ่มบุฟเฟ่ต์โต๊ะ ${t.label} แล้ว ✓ ลูกค้าสั่งได้เลย`, 'ok');
+    }
+
     let error, okText;
     btn.disabled = true;
     if (act === 'open') {
@@ -396,6 +514,12 @@
 
     btn.disabled = false;
     if (error) return sheetMsg(thaiError(error));
+    if (act === 'open' && isBuffet && canOperate) {          // ร้านบุฟเฟ่ต์: เปิดโต๊ะแล้วเลือกแพ็กเกจต่อเลย
+      await load();
+      bPkg = null; bAdults = Math.max(1, guests); bChildren = 0; bAdds = {};
+      sheetMode = 'buffet'; renderSheet();
+      return sheetMsg(okText + ' · เลือกแพ็กเกจและจำนวนคน', 'ok');
+    }
     closeSheet();
     showMsg(okText, 'ok');
     load();

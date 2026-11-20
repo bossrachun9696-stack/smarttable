@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FBF6EE">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="SmartTable">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>แพ็กเกจบุฟเฟ่ต์ · SmartTable</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet"></noscript>
+  <link rel="stylesheet" href="css/st-style.css">
+</head>
+<body>
+<main class="st-page">
+  <div class="st-top"><a id="back" href="home.html" class="st-chip">‹ ร้าน</a></div>
+  <h1 class="st-title">แพ็กเกจบุฟเฟ่ต์</h1>
+  <p class="st-sub" id="shop-sub"></p>
+  <div id="st-msg" class="st-msg" role="status" hidden></div>
+
+  <div id="b-body" hidden>
+    <div id="type-warn" class="st-banner" hidden></div>
+    <section class="st-card">
+      <div class="st-row-between"><h3 style="margin:0">🍖 แพ็กเกจ</h3><button id="add-pkg" class="st-chip st-chip--accent" type="button">+ เพิ่มแพ็กเกจ</button></div>
+      <p class="st-sub" style="margin-top:6px">ราคาต่อหัว ผู้ใหญ่/เด็ก · จำกัดเวลาหรือไม่จำกัดก็ได้ · เมนูในแพ็กเกจ = 0 บาท เมนูนอกแพ็กเกจคิดตามราคา</p>
+      <div id="pkg-list"></div>
+    </section>
+    <section class="st-card">
+      <div class="st-row-between"><h3 style="margin:0">🥤 รีฟิล / ตัวเลือกเสริม</h3><button id="add-addon" class="st-chip st-chip--accent" type="button">+ เพิ่มรีฟิล</button></div>
+      <p class="st-sub" style="margin-top:6px">เช่น "น้ำรีฟิล ฿39/คน" · โต๊ะที่เอา: เมนูในรีฟิลเป็น 0 บาท · โต๊ะที่ไม่เอา: คิดตามราคาเมนูลงบิล · ใช้ได้ทั้งโต๊ะบุฟเฟ่ต์และโต๊ะสั่งตามเมนู</p>
+      <div id="addon-list"></div>
+    </section>
+    <section class="st-card">
+      <h3>วิธีใช้ที่โต๊ะ</h3>
+      <ol class="st-steps">
+        <li>ลูกค้านั่ง → <b>โต๊ะและ QR</b> → กดโต๊ะ → <b>เปิดโต๊ะ</b> → เลือกแพ็กเกจ + นับผู้ใหญ่/เด็ก → <b>เริ่มบุฟเฟ่ต์</b></li>
+        <li>รีฟิล: ติ๊กในแผ่นเดียวกัน (เลือกได้ว่ากี่คนเอา) · ลูกค้ากด "ขอเพิ่มรีฟิล" จากมือถือได้ ร้านจะได้แจ้งเตือน</li>
+        <li>ลูกค้าสแกน QR สั่งได้ทันที · เห็นเวลานับถอยหลัง กติกา และเตือนก่อนหมดเวลาสั่ง</li>
+        <li>เกินเวลา: ช่องโต๊ะกะพริบ · กด <b>คิดค่าเกินเวลา</b> ที่แผ่นโต๊ะหรือหน้าเช็กบิล · ต่อเวลาได้ (+15 / +30 นาที)</li>
+        <li>ค่าบุฟเฟ่ต์ต่อหัวและค่าเกินเวลาขึ้นในบิลเอง (ไม่ขึ้นจอครัว)</li>
+      </ol>
+    </section>
+  </div>
+</main>
+
+<div id="sheet" class="st-sheet st-sheet--bottom" hidden>
+  <div class="st-sheet-panel st-split" role="dialog" aria-modal="true">
+    <div class="st-sheet-head"><b id="sheet-title"></b><button id="sheet-close" class="st-chip" type="button">ปิด</button></div>
+    <div class="st-sheet-scroll">
+    <div id="sheet-msg" class="st-msg" role="status" hidden></div>
+    <div id="sheet-body"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/st-config.js"></script>
+<script src="js/st-auth.js"></script>
+<script src="js/st-buffet.js"></script>
+</body>
+</html>

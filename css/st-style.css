@@ -1129,3 +1129,126 @@ html[data-theme="dark"] .st-money-row--neg b { color: #FF8A7E; }
 .st-radio input { width: auto; flex: none; }
 .st-radio span { flex: 1; }
 .st-item-main small .st-onoff { margin-left: 0; }
+
+/* ===== รอบ H · ความเร็ว: การกะพริบใช้ opacity ของชั้นบาง ๆ (การ์ดจอทำงาน) แทนการวาดเงาใหม่ทุกเฟรม ===== */
+a.st-item.st-blink, .st-tile--alert { animation: none !important; position: relative; }
+a.st-item.st-blink::after, .st-tile--alert::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  border: 3px solid #E5342A; background: rgba(229, 52, 42, .10);
+  opacity: 0; animation: st-blink-op 1.1s ease-in-out infinite; will-change: opacity;
+}
+@keyframes st-blink-op { 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { a.st-item.st-blink::after, .st-tile--alert::after { animation: none; opacity: .8; } }
+.st-dish-img { display: inline-block; overflow: hidden; }
+.st-dish-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* หน้าลูกค้า: หมวดที่อยู่นอกจอยังไม่ต้องวาด (เมนูยาว ๆ เลื่อนลื่นขึ้น) */
+.st-gsec { content-visibility: auto; contain-intrinsic-size: auto 700px; }
+
+/* ===================== รอบ I · บุฟเฟ่ต์ ===================== */
+/* หน้าลูกค้า: แถบบุฟเฟ่ต์ */
+.st-buffet { display: grid; gap: 6px; margin: 0 0 12px; padding: 12px 14px; border-radius: 16px; background: var(--st-card); border: 1.5px solid var(--st-accent); }
+.st-buffet--wait { background: #FFF6DD; border-color: #E8C46A; }
+.st-buffet--wait b { font-size: 15.5px; }
+.st-buffet--wait span { font-size: 13.5px; color: #6B5A2E; }
+html[data-theme="dark"] .st-buffet--wait { background: #3A3020; border-color: #6B5A2E; }
+.st-buffet-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.st-buffet-top b { font-size: 16px; }
+.st-buffet-top span { font-size: 13px; color: var(--st-muted); white-space: nowrap; }
+.st-buffet > small { color: var(--st-muted); font-size: 12.5px; }
+.st-buffet > p { margin: 0; font-size: 13px; background: var(--st-bg); border-radius: 10px; padding: 6px 10px; white-space: pre-line; }
+.st-buffet-clock { display: grid; gap: 4px; }
+.st-buffet-row { display: flex; justify-content: space-between; align-items: baseline; }
+.st-buffet-row span { font-size: 13px; color: var(--st-muted); }
+.st-buffet-row b { font-size: 26px; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.st-buffet-bar { height: 8px; border-radius: 4px; background: var(--st-bg); overflow: hidden; }
+.st-buffet-bar i { display: block; height: 100%; background: var(--st-ok); border-radius: 4px; transition: width 1s linear; }
+.st-buffet-clock small { font-size: 12px; color: var(--st-muted); }
+.st-buffet-clock--warn .st-buffet-row b { color: #B7791F; }
+.st-buffet-clock--warn .st-buffet-bar i { background: #E0A100; }
+.st-buffet-clock--warn5 .st-buffet-row b, .st-buffet-clock--over .st-buffet-row b { color: #C2410C; }
+.st-buffet-clock--warn5 .st-buffet-bar i, .st-buffet-clock--over .st-buffet-bar i { background: #E5342A; }
+.st-buffet-free { font-weight: 700; color: var(--st-ok); }
+.st-bf-in { color: var(--st-ok); font-size: 13px; }
+
+/* ผังโต๊ะ / หน้าเช็กบิล */
+.st-bf-tile { display: block; margin-top: 4px; font-weight: 700; font-size: 12px; color: var(--st-ok); }
+.st-bf-tile--wait { color: #B7791F; }
+.st-bf-tile--warn { color: #B7791F; }
+.st-bf-tile--over { color: #C2410C; }
+.st-bf-panel { display: grid; gap: 6px; padding: 12px; margin: 0 0 12px; border-radius: 14px; background: var(--st-ok-soft); border: 1.5px solid var(--st-ok); }
+.st-bf-panel span { font-size: 13.5px; color: var(--st-muted); }
+.st-bf-panel--wait { background: #FFF6DD; border-color: #E8C46A; }
+.st-bf-panel--over { background: #FFE7E3; border-color: #E5342A; }
+html[data-theme="dark"] .st-bf-panel--wait { background: #3A3020; border-color: #6B5A2E; }
+html[data-theme="dark"] .st-bf-panel--over { background: #3C1E1A; border-color: #6B2B24; }
+.st-bf-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.st-bf-pkgs { display: grid; gap: 8px; margin-bottom: 12px; }
+.st-bf-pkg { font: inherit; text-align: left; color: var(--st-ink); background: var(--st-card); border: 1.5px solid var(--st-line); border-radius: 14px; padding: 10px 12px; display: grid; gap: 2px; cursor: pointer; }
+.st-bf-pkg span { font-size: 14px; }
+.st-bf-pkg small { color: var(--st-muted); font-size: 12.5px; }
+.st-bf-pkg[aria-checked="true"] { border-color: var(--st-accent); background: var(--st-accent-soft); box-shadow: 0 0 0 1px var(--st-accent) inset; }
+.st-bf-sum { display: flex; justify-content: space-between; align-items: baseline; margin: 10px 0; font-size: 15px; }
+.st-bf-sum b { font-size: 20px; color: var(--st-accent-dark); }
+.st-stepper span small { color: var(--st-muted); font-weight: 400; }
+
+/* หน้าร้าน: ประเภทร้าน */
+.st-choice--soon { opacity: .55; }
+.st-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
+/* ปุ่มสลับ 2 ตัวเลือกแบบ label+radio (เหมือน st-seg--3) */
+.st-seg--2 label { cursor: pointer; }
+.st-seg--2 input { position: absolute; opacity: 0; pointer-events: none; }
+.st-seg--2 label span { display: block; text-align: center; font-size: 14px; font-weight: 600; border-radius: 9px; padding: 9px 4px; color: var(--st-muted); }
+.st-seg--2 input:checked + span { background: var(--st-card); color: var(--st-ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+/* รีฟิล (รอบ J) */
+.st-buffet--lite { border-style: dashed; padding: 10px 12px; }
+.st-refills { display: flex; flex-wrap: wrap; gap: 6px; }
+.st-refill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: var(--st-bg); font-size: 13px; border: 1px solid var(--st-line); }
+.st-refill--on { background: var(--st-ok-soft); color: var(--st-ok); border-color: transparent; font-weight: 700; }
+.st-bf-add { border: 1.5px solid var(--st-line); border-radius: 14px; padding: 8px 12px; margin-bottom: 8px; background: var(--st-card); }
+.st-bf-add--on { border-color: var(--st-accent); background: var(--st-accent-soft); }
+.st-bf-add .st-check { margin: 0; }
+.st-stepper--sm { margin: 6px 0 0; padding: 4px 0 0; border: 0; background: none; }
+
+/* ===================== รอบ K · ร้านคิว / ร้านเล็ก ===================== */
+.st-tk-img { width: 100%; max-width: 420px; display: block; margin: 8px auto; border-radius: 14px; box-shadow: 0 2px 10px rgba(0,0,0,.12); }
+.st-ticket-main [data-tk-save] { margin-top: 6px; }
+
+/* หน้าร้านรวม */
+.st-easy-calls { display: grid; gap: 8px; margin: 0 0 14px; }
+.st-easy-call { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px;
+  background: #FFE7E3; border: 1.5px solid #F2B8B0; position: relative; }
+.st-easy-call::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 3px solid #E5342A; opacity: 0; animation: st-blink-op 1.1s ease-in-out infinite; pointer-events: none; }
+.st-easy-call b { display: block; font-size: 15px; }
+.st-easy-call small { color: var(--st-muted); font-size: 12.5px; }
+.st-easy-call--bill, .st-easy-call--slip { background: #FFF6DD; border-color: #E8C46A; }
+html[data-theme="dark"] .st-easy-call { background: #3C1E1A; border-color: #6B2B24; }
+html[data-theme="dark"] .st-easy-call--bill, html[data-theme="dark"] .st-easy-call--slip { background: #3A3020; border-color: #6B5A2E; }
+.st-easy-acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; flex: none; }
+.st-easy-acts .st-btn { width: auto; padding: 10px 16px; margin: 0; }
+.st-easy-grid { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 820px) { .st-easy-grid { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); } }
+.st-easy-col h3 { margin: 0; }
+.st-count { display: inline-block; min-width: 24px; padding: 0 7px; border-radius: 12px; background: var(--st-accent); color: #fff; font-size: 13px; text-align: center; vertical-align: 2px; }
+.st-count:empty { display: none; }
+.st-easy-order { border: 1.5px solid var(--st-line); border-radius: 14px; padding: 10px 12px; margin-top: 10px; background: var(--st-card); }
+.st-easy-order--new { border-color: var(--st-accent); background: var(--st-accent-soft); }
+.st-easy-order--late { border-color: #E5342A; }
+.st-easy-order header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.st-easy-order header b { font-size: 17px; }
+.st-easy-order header span { font-size: 12.5px; color: var(--st-muted); }
+.st-easy-order ul { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.st-easy-order li { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.st-easy-order li.done { opacity: .5; text-decoration: line-through; }
+.st-easy-order li small { color: var(--st-muted); font-size: 12.5px; }
+.st-easy-order .st-easy-acts { justify-content: stretch; }
+.st-easy-order .st-easy-acts .st-btn { flex: 1; }
+.st-easy-tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin-top: 10px; }
+.st-easy-table { position: relative; display: grid; gap: 2px; padding: 10px; border-radius: 14px; background: var(--st-ok-soft); border: 1.5px solid transparent; text-decoration: none; color: var(--st-ink); }
+.st-easy-table b { font-size: 20px; }
+.st-easy-table span { font-weight: 700; }
+.st-easy-table small { color: var(--st-muted); font-size: 12px; }
+.st-easy-table--bill { background: #FFF6DD; }
+html[data-theme="dark"] .st-easy-table--bill { background: #3A3020; }
+.st-easy-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.st-page--wide { max-width: 1100px; }
+a.st-btn, .st-easy-acts a { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }

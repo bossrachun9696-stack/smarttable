@@ -312,7 +312,7 @@
     const tq = ins.top_qty, maxQ = Math.max(...tq.map(x => Number(x.qty)), 1);
     $('#top-qty').innerHTML = tq.length ? tq.map((x, i) => `
       <div class="st-hbar st-hbar--img">
-        <span class="st-hbar-img">${x.image ? `<img src="${esc(avatarUrl(x.image))}" alt="" loading="lazy">` : '🍽'}</span>
+        <span class="st-hbar-img">${x.image ? ST.thumbImg(x.image) : '🍽'}</span>
         <div><div class="st-hbar-label"><span>${i + 1}. ${esc(x.name)}</span><b>${num(x.qty)} จาน</b></div>
         <div class="st-hbar-track"><i style="width:${Math.max(2, Number(x.qty) / maxQ * 100)}%"></i></div>
         <small>${money(x.revenue)}</small></div>

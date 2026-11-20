@@ -84,7 +84,7 @@
     if (!b) return;
     lang = b.dataset.lang;
     ls.set('st-lang', lang);
-    renderLang(); renderState(); renderTicket(); renderDiet(); renderMenu(); renderButtons(); renderRate(); renderPay(); renderDealsBtn();
+    renderLang(); renderState(); renderTicket(); renderDiet(); renderMenu(); renderButtons(); renderRate(); renderPay(); renderDealsBtn(); renderBuffet();
     if (sheetMode === 'deals') renderDeals();
     if (sheetMode === 'cart') renderCart();
     if (sheetMode === 'orders') renderOrders();
@@ -105,12 +105,30 @@
   let cartSig = '';
   let cartCh = null, cartTopic = null;
   let guestInfo = null;     // ผลล่าสุดจาก st_guest_orders
+  let dealsAt = 0, dealsFor = null;   // โหลดโปร/คูปองล่าสุดเมื่อไร / ของรอบโต๊ะไหน
 
   const isHub = () => !!lastScan && lastScan.table.kind === 'hub';
   const ticket = () => lastScan && lastScan.ticket;
   const canOrder = () => (state === 'open' && !!token) || (state === 'takeaway' && !staffMode);
   // โหมด "ลูกค้าเปิดโต๊ะ ร้านยืนยัน": ใส่ตะกร้าได้ แต่ส่งได้หลังร้านยืนยัน
   const waitConfirm = () => !staffMode && state === 'open' && !!token && !!lastScan && lastScan.confirm === 'pending';
+  // ---------- บุฟเฟ่ต์ (st-17) ----------
+  const isQueueShop = () => !!(lastScan && lastScan.shop && lastScan.shop.shop_type === 'queue');
+  const tq = (k, v) => t(isQueueShop() && (ST_I18N[lang] || ST_I18N.th)[k + '_q'] ? k + '_q' : k, v);   // คำเฉพาะร้านคิว
+  const isBuffetShop = () => !!(lastScan && lastScan.shop && lastScan.shop.shop_type === 'buffet' && !isHub() && !ticket());
+  const buf = () => (lastScan && lastScan.buffet) || null;
+  // เมนูนี้ฟรีเพราะอะไร: 'package' (ในบุฟเฟ่ต์) | 'addon' (รีฟิลที่โต๊ะเอา) | null
+  function bufCover(i) {
+    const b = buf();
+    if (!b || !i) return null;
+    const hit = (o) => (o.item_ids || []).includes(i.id) || (i.category_id && (o.category_ids || []).includes(i.category_id));
+    if (b.mode === 'package' && (b.include_all || hit(b))) return 'package';
+    return (b.addons || []).some(hit) ? 'addon' : null;
+  }
+  const bufIncl = (i) => !!bufCover(i);
+  const waitBuffet = () => !staffMode && isBuffetShop() && state === 'open' && !!token && !buf();
+  let skew = 0;                                   // เวลาเซิร์ฟเวอร์ - เวลาเครื่อง (นับถอยหลังตรงกันทุกเครื่อง)
+  const nowMs = () => Date.now() + skew;
   const remaining = (it) => it.stock_left == null ? Infinity
     : it.stock_left - cart.filter(l => l.item_id === it.id).reduce((s, l) => s + l.qty, 0);
   const maxQty = (it) => Math.max(1, Math.min(20, remaining(it)));
@@ -125,8 +143,9 @@
     }
     return best;
   }
-  const applyPromo = (i, amount) => { const p = promoFor(i); return p ? round2(amount * (100 - Number(p.percent)) / 100) : amount; };
+  const applyPromo = (i, amount) => { if (bufIncl(i)) return 0; const p = promoFor(i); return p ? round2(amount * (100 - Number(p.percent)) / 100) : amount; };
   function priceHtml(i) {
+    if (bufIncl(i)) return `<s class="st-was">${baht(i.price)}</s> <b class="st-bf-in">${esc(t(bufCover(i) === 'addon' ? 'bf_refill_in' : 'bf_in'))}</b>`;
     const p = promoFor(i);
     return p ? `<s class="st-was">${baht(i.price)}</s> <b>${baht(applyPromo(i, Number(i.price)))}</b> <span class="st-tag st-tag--promo">−${Number(p.percent)}%</span>`
              : `<b>${baht(i.price)}</b>`;
@@ -181,7 +200,15 @@
       return null;
     }
     const wasPending = !!(lastScan && lastScan.confirm === 'pending' && token);
+    const hadBuffet = !!(lastScan && lastScan.buffet && lastScan.buffet.mode === 'package');
+    const prevBufKey = lastScan && lastScan.buffet ? JSON.stringify([lastScan.buffet.mode, lastScan.buffet.package_id, lastScan.buffet.adults, lastScan.buffet.children, (lastScan.buffet.addons || []).map(x => x.id + ':' + x.qty)]) : null;
     lastScan = data;
+    if (data.now) skew = Date.parse(data.now) - Date.now();
+    const bufKey = data.buffet ? JSON.stringify([data.buffet.mode, data.buffet.package_id, data.buffet.adults, data.buffet.children, (data.buffet.addons || []).map(x => x.id + ':' + x.qty)]) : null;
+    if (!staffMode && bufKey !== prevBufKey) {
+      if (data.buffet && data.buffet.mode === 'package' && !hadBuffet && data.session_token && data.session_token === token) toast(t('bf_started'));
+      setTimeout(() => { repriceCart(); renderMenu(); if (sheetMode === 'cart') renderCart(); }, 0);
+    }
     const newToken = data.session_token || null;
     // โหมด "ลูกค้าเปิดโต๊ะเอง ร้านยืนยัน" (st-14)
     if (!staffMode) {
@@ -213,16 +240,23 @@
     renderTicket();
     renderCartBar();
     if (token) refreshGuest(); else { renderButtons(); renderRate(); renderPay(); }
-    loadDeals().then(applyPendingCoupon);
+    // โปร/คูปอง: โหลดครั้งแรก, เมื่อเปลี่ยนรอบโต๊ะ, หรือทุก 5 นาที (ไม่ต้องดึงทุกครั้งที่เช็กสถานะ)
+    if (!dealsAt || dealsFor !== token || sheetMode === 'deals' || Date.now() - dealsAt > 300000) {
+      dealsAt = Date.now(); dealsFor = token;
+      loadDeals().then(applyPendingCoupon);
+    }
+    renderBuffet();
+    if (!bufAddons && isBuffetShop() && token) loadAddons();
     return data;
   }
 
   function renderState() {
+    $('#g-state').hidden = waitBuffet();      // ร้านบุฟเฟ่ต์ที่ยังไม่เริ่ม: ใช้การ์ด "รอพนักงานเริ่มบุฟเฟ่ต์" แทน
     const data = lastScan;
     if (!data) return;
     $('#g-shop').textContent = data.shop.name;
     $('#g-sub').textContent = data.table.zone || '';
-    const place = isHub() ? '🛍 ' + t('ta_title') : ticket() ? '🛍 ' + t('queue_no', { n: ticket().queue_no })
+    const place = isHub() ? '🛍 ' + tq('ta_title') : ticket() ? '🛍 ' + t('queue_no', { n: ticket().queue_no })
       : t('table') + ' ' + data.table.label;
     $('#g-table').textContent = place;
     $('#g-table').hidden = false;
@@ -349,7 +383,7 @@
         <h2>${esc(g.name)}</h2>
         ${g.items.map(i => `
           <article class="st-gitem${i.is_available ? '' : ' st-gitem--off'}" data-id="${esc(i.id)}" role="button" tabindex="0">
-            <div class="st-gimg">${i.image_path ? `<img src="${esc(imgUrl(i.image_path))}" alt="" loading="lazy">` : ''}</div>
+            <div class="st-gimg">${ST.thumbImg(i.image_path)}</div>
             <div class="st-gbody">
               <h3>${esc(iname(i))}</h3>
               ${idesc(i) ? `<p>${esc(idesc(i))}</p>` : ''}
@@ -366,6 +400,18 @@
           </article>`).join('')}
       </section>`).join('')
       : `<div class="st-empty">${esc(term ? t('no_result') : t('no_menu'))}</div>`;
+  }
+  // อัปเดตเฉพาะป้าย "ในตะกร้า" (ไม่วาดรายการเมนูและรูปใหม่ทั้งหน้า -> ลื่นขึ้นมากบนมือถือ)
+  function renderCartTags() {
+    const cnt = {};
+    for (const l of cart) cnt[l.item_id] = (cnt[l.item_id] || 0) + l.qty;
+    document.querySelectorAll('#g-items .st-gitem').forEach(el => {
+      const n = cnt[el.dataset.id] || 0;
+      let tag = el.querySelector('.st-tag--cart');
+      if (!n) { tag?.remove(); return; }
+      if (!tag) { tag = document.createElement('span'); tag.className = 'st-tag st-tag--cart'; el.querySelector('.st-gmeta')?.appendChild(tag); }
+      tag.textContent = t('in_cart', { n });
+    });
   }
   async function loadMenu() {
     const [{ data, error }] = await Promise.all([sb.rpc('st_public_menu', { p_qr: qr }), loadPromos()]);
@@ -547,7 +593,7 @@
     }
     saveCart();
     if (sharedOn()) putLine(same);
-    renderMenu();
+    renderCartTags();
     const name = iname(current);
     closeSheet();
     toast(t('added', { x: name, n: qty }));
@@ -569,7 +615,7 @@
           const it = menu.items.find(x => x.id === l.item_id);
           return `
           <div class="st-line st-line--img" data-k="${esc(l.key)}">
-            <div class="st-line-img">${it && it.image_path ? `<img src="${esc(imgUrl(it.image_path))}" alt="" loading="lazy">` : '<span>🍽</span>'}</div>
+            <div class="st-line-img">${it && it.image_path ? ST.thumbImg(it.image_path) : '<span>🍽</span>'}</div>
             <div class="st-line-main">
               <b>${esc(it ? iname(it) : l.name)}</b>
               ${l.labels.length ? `<small>${esc(l.labels.map(s => oname(it, s)).join(' · '))}</small>` : ''}
@@ -605,10 +651,10 @@
         </label>
         <div class="st-sum"><span>${esc(t('food_total'))}</span><b>${baht(cartTotal())}</b></div>
         <p class="st-sub" style="margin-top:4px">${esc(t('fees_later'))}${promos.length ? ' · ' + esc(t('promo_note')) : ''}</p>
-        <button class="st-btn" type="submit" id="btn-send"${waitConfirm() ? ' disabled' : ''}>${esc(sendLabel())}</button>
+        <button class="st-btn" type="submit" id="btn-send"${waitConfirm() || waitBuffet() ? ' disabled' : ''}>${esc(sendLabel())}</button>
       </form>`;
   }
-  const sendLabel = () => waitConfirm() ? t('cf_wait_btn') : t(state === 'takeaway' ? 'ta_send' : sharedOn() ? 'send_all' : 'send', { n: cartCount() });
+  const sendLabel = () => waitConfirm() ? t('cf_wait_btn') : waitBuffet() ? t('bf_wait_btn') : t(state === 'takeaway' ? 'ta_send' : sharedOn() ? 'send_all' : 'send', { n: cartCount() });
   // อัปเดตเฉพาะรายการ + ยอด (ไม่ล้างช่องที่กำลังพิมพ์)
   function updateCartSheet() {
     if (sheetMode !== 'cart') return;
@@ -617,7 +663,7 @@
     const sum = $('#sheet-body .st-sum b');
     if (sum) sum.textContent = baht(cartTotal());
     const btn = $('#btn-send');
-    if (btn && (!btn.disabled || waitConfirm())) btn.textContent = sendLabel();
+    if (btn && (!btn.disabled || waitConfirm() || waitBuffet())) btn.textContent = sendLabel();
   }
   $('#btn-cart').addEventListener('click', () => {
     openSheet('cart', sharedOn() ? t('table_cart') : t('my_cart'));
@@ -641,7 +687,7 @@
       line.qty = Math.min(20, line.qty);
       const it = menu.items.find(x => x.id === line.item_id);
       if (Number(db.dataset.d) > 0 && it && remaining(it) < 0) { line.qty -= 1; sheetMsg(t('not_enough', { x: iname(it) })); }
-      saveCart(); renderMenu(); renderCart();
+      saveCart(); renderCartTags(); renderCart();
       if (sharedOn()) putLine(line);
     }
   });
@@ -651,6 +697,9 @@
     e.preventDefault();
     if (!canOrder()) return sheetMsg(t('st_' + state + '_t') || t('cant_order'));
     if (waitConfirm()) return sheetMsg(t('cf_wait_btn'));
+    if (waitBuffet()) return sheetMsg(t('bf_wait_btn'));
+    const bErr = buffetCartError();
+    if (bErr) return sheetMsg(bErr);
     const f = e.target;
     if (state === 'takeaway') return sendTakeaway(f);
     const guestName = f.guest_name.value.trim().slice(0, 30);
@@ -677,11 +726,11 @@
       if (code.startsWith('st_')) pendingRef = null;            // ร้านปฏิเสธ = ยังไม่ได้สร้างออร์เดอร์
       if (isShared) pullCart();
       if (['st_item_sold_out', 'st_item_gone', 'st_options_changed', 'st_options_required', 'st_out_of_stock'].includes(code)) loadMenu();
-      if (['st_session_invalid', 'st_session_billing', 'st_shop_closed', 'st_table_not_open', 'st_wait_confirm'].includes(code)) scan(false);
+      if (['st_session_invalid', 'st_session_billing', 'st_shop_closed', 'st_table_not_open', 'st_wait_confirm', 'st_buffet_wait'].includes(code)) scan(false);
       return sheetMsg(gErr(error));
     }
     if (isShared) { ping('sent'); await pullCart(); } else { cart = []; saveCart(); }
-    renderMenu();
+    renderCartTags();
     await refreshGuest();
     openSheet('orders', t('ordered'));
     renderOrders();
@@ -767,7 +816,7 @@
     cartSig = sig;
     cart = lines.map(fromServer);
     renderCartBar();
-    renderMenu();
+    renderCartTags();
     updateCartSheet();
   }
 
@@ -850,6 +899,115 @@
     pullTick++;
     if (sheetMode === 'cart' || pullTick % 3 === 0) pullCart();
   }, 5000);
+
+  // ---------- บุฟเฟ่ต์: แถบเวลา + กติกา (st-17) · รีฟิล (st-18) ----------
+  let bufTimer = 0;
+  let bufAddons = null;                           // รีฟิลที่ร้านมี (โหลดครั้งเดียว)
+  async function loadAddons() {
+    if (bufAddons || !isBuffetShop()) return;
+    const { data, error } = await sb.rpc('st_guest_addons', { p_qr: qr });
+    bufAddons = error ? [] : (data || []);
+    renderBuffet();
+  }
+  $('#g-buffet').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-refill]');
+    if (!b) return;
+    b.disabled = true;
+    const { error } = await sb.rpc('st_guest_refill_request', { p_qr: qr, p_session_token: token, p_addon: b.dataset.refill });
+    if (error) { b.disabled = false; return showMsg(gErr(error)); }
+    b.textContent = '✓'; toast(t('bf_refill_asked'));
+  });
+  const bufWarned = new Set();
+  const hhmm = (ms) => new Date(ms).toLocaleTimeString(lang === 'th' ? 'th-TH' : lang === 'zh' ? 'zh-CN' : 'en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const mmss = (ms) => { const s = Math.max(0, Math.round(ms / 1000)); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+    return (h ? h + ':' + String(m).padStart(2, '0') : String(m)) + ':' + String(x).padStart(2, '0'); };
+  function bufTimes() {
+    const b = buf();
+    if (!b || !b.ends_at) return null;
+    const end = Date.parse(b.ends_at), last = end - (Number(b.last_order_min) || 0) * 60000, start = Date.parse(b.started_at);
+    return { end, last, start, now: nowMs() };
+  }
+  function repriceCart() {
+    let changed = false;
+    for (const l of cart) {
+      const it = menu.items.find(x => x.id === l.item_id);
+      if (!it || l.unit == null) continue;
+      if (bufIncl(it) && Number(l.unit) !== 0) { l.base = l.base ?? l.unit; l.unit = 0; changed = true; }
+      else if (!bufIncl(it) && Number(l.unit) === 0 && l.base != null) { l.unit = l.base; changed = true; }
+    }
+    if (changed) { saveCart(); renderCartBar(); }
+  }
+  function buffetCartError() {
+    const b = buf();
+    if (!b || b.mode !== 'package') return '';
+    const q = cart.reduce((s, l) => s + (bufCover(menu.items.find(x => x.id === l.item_id)) === 'package' ? l.qty : 0), 0);
+    if (!q) return '';
+    const tm = bufTimes();
+    if (tm && tm.now > tm.last) return t('bf_last');
+    const heads = Math.max(1, (Number(b.adults) || 0) + (Number(b.children) || 0));
+    if (b.round_limit && q > b.round_limit * heads) return t('bf_round_err', { n: b.round_limit * heads, q });
+    return '';
+  }
+  function renderBuffet() {
+    const box = $('#g-buffet');
+    clearInterval(bufTimer);
+    if (staffMode || !isBuffetShop() || state !== 'open' || !token) { box.hidden = true; return; }
+    const b = buf();
+    if (!b) {
+      box.hidden = false;
+      box.className = 'st-buffet st-buffet--wait';
+      box.innerHTML = `<b>${esc(t('bf_wait_t'))}</b><span>${esc(t('bf_wait'))}</span>`;
+      return;
+    }
+    const offers = (bufAddons || []).filter(a => !(b.addons || []).some(x => x.id === a.id));
+    const addHtml = (b.addons || []).map(a => `<span class="st-refill st-refill--on">${esc(t('bf_refill_have', { n: a.name }))}${a.per_head ? ' · ' + a.qty + '×' : ''}</span>`).join('')
+      + offers.map(a => `<span class="st-refill">🥤 ${esc(t('bf_refill_offer', { n: a.name, p: baht(a.price) + t(a.per_head ? 'bf_per_head' : 'bf_per_table') }))}
+          <button type="button" class="st-chip st-chip--sm" data-refill="${esc(a.id)}">${esc(t('bf_refill_ask'))}</button></span>`).join('');
+    if (b.mode !== 'package') {
+      box.hidden = !addHtml;
+      box.className = 'st-buffet st-buffet--lite';
+      box.innerHTML = addHtml ? `<div class="st-refills">${addHtml}</div>` : '';
+      return;
+    }
+    const heads = Number(b.children) ? t('bf_heads', { a: b.adults, c: b.children }) : t('bf_adults', { a: b.adults });
+    const rules = [];
+    if (b.round_limit) rules.push(t('bf_round', { n: b.round_limit * Math.max(1, Number(b.adults) + Number(b.children)) }));
+    if (b.round_gap_min) rules.push(t('bf_gap', { m: b.round_gap_min }));
+    if (b.ends_at && Number(b.overtime_fee)) rules.push(t('bf_overfee', { x: baht(b.overtime_fee), m: b.overtime_block_min }));
+    box.hidden = false;
+    box.className = 'st-buffet';
+    box.innerHTML = `
+      <div class="st-buffet-top"><b>🍖 ${esc(b.name)}</b><span>${esc(heads)}</span></div>
+      <div id="bf-clock" class="st-buffet-clock"></div>
+      ${rules.length ? `<small>${esc(rules.join(' · '))}</small>` : ''}
+      ${Number(b.children) && b.child_note ? `<small>${esc(t('bf_child', { x: b.child_note }))}</small>` : ''}
+      ${b.rules ? `<p>${esc(b.rules)}</p>` : ''}
+      ${addHtml ? `<div class="st-refills">${addHtml}</div>` : ''}`;
+    const tick = () => {
+      const tm = bufTimes(), el = $('#bf-clock');
+      if (!el) return;
+      if (!tm) { el.innerHTML = `<span class="st-buffet-free">${esc(t('bf_unlimited'))}</span>`; return; }
+      const pct = Math.min(100, Math.max(0, (tm.now - tm.start) / (tm.end - tm.start) * 100));
+      const toLast = tm.last - tm.now, toEnd = tm.end - tm.now;
+      let cls = '', big, label;
+      if (toEnd <= 0) { cls = 'over'; big = t('bf_over', { m: Math.ceil(-toEnd / 60000) }); label = t('bf_timeup'); }
+      else if (toLast <= 0) { cls = 'over'; big = mmss(toEnd); label = t('bf_end_left') + ' · ' + t('bf_last'); }
+      else { cls = toLast <= 5 * 60000 ? 'warn5' : toLast <= 15 * 60000 ? 'warn' : ''; big = mmss(toLast); label = t('bf_left'); }
+      el.className = 'st-buffet-clock' + (cls ? ' st-buffet-clock--' + cls : '');
+      el.innerHTML = `<div class="st-buffet-row"><span>${esc(label)}</span><b>${esc(big)}</b></div>
+        <div class="st-buffet-bar"><i style="width:${pct.toFixed(1)}%"></i></div>
+        <small>${esc(t('bf_until', { h: hhmm(tm.last), e: hhmm(tm.end) }))}</small>`;
+      // เตือนครั้งเดียวต่อจุด (15 / 5 นาทีก่อนหมดเวลาสั่ง · หมดเวลาสั่ง · หมดเวลา)
+      const key = b.ends_at + '|';
+      const warn = (k, msg) => { if (!bufWarned.has(key + k)) { bufWarned.add(key + k); toast(msg); try { navigator.vibrate && navigator.vibrate(200); } catch { /* */ } } };
+      if (toEnd <= 0) warn('end', t('bf_timeup'));
+      else if (toLast <= 0) warn('last', t('bf_last'));
+      else if (toLast <= 5 * 60000) warn('5', t('bf_warn', { m: Math.max(1, Math.ceil(toLast / 60000)) }));
+      else if (toLast <= 15 * 60000) warn('15', t('bf_warn', { m: Math.ceil(toLast / 60000) }));
+    };
+    tick();
+    if (b.ends_at) bufTimer = setInterval(tick, 1000);
+  }
 
   // ---------- โปรโมชันและคูปอง (st-15) ----------
   const KEY_COUPON = 'st-coupon-pending';
@@ -1128,6 +1286,80 @@
 
   // บัตรคิว: เลขคิว + สถานะ + เวลามารับ · แจ้งเตือนเมื่อพร้อม
   let wasReady = null;
+  // เสียงเมื่อของพร้อม: เบราว์เซอร์ให้เล่นเสียงได้หลังลูกค้าแตะจอ (เช่น ตอนกดส่งออร์เดอร์)
+  let tkAudio = null;
+  document.addEventListener('pointerdown', () => {
+    if (!ticket() && !isHub()) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    if (!tkAudio) tkAudio = new AC();
+    tkAudio.resume().catch(() => {});
+  }, { passive: true });
+  function tkBeep() {
+    if (!tkAudio || tkAudio.state !== 'running') return;
+    let t0 = tkAudio.currentTime + 0.05;
+    for (let r = 0; r < 3; r++) for (const f of [880, 1175, 1568]) {
+      const o = tkAudio.createOscillator(), g = tkAudio.createGain();
+      o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.6, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
+      o.connect(g).connect(tkAudio.destination); o.start(t0); o.stop(t0 + 0.25);
+      t0 += 0.24;
+    }
+  }
+  // ภาพบัตรคิว (PNG): ชื่อร้าน · เลขคิวตัวใหญ่ · รายการที่สั่ง · เวลา · QR เปิดบัตรคิวอีกครั้ง
+  async function ticketImage() {
+    const k = ticket();
+    if (!k) return null;
+    const items = [];
+    for (const o of (guestInfo && guestInfo.orders) || []) if (o.status !== 'cancelled') for (const i of o.items || []) items.push(`${i.qty}× ${i.name}`);
+    const W = 720, lines = items.slice(0, 14), H = 980 + lines.length * 44;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const x = cv.getContext('2d');
+    const font = (w, sz) => `${w} ${sz}px "IBM Plex Sans Thai", "Thonburi", sans-serif`;
+    x.fillStyle = '#FBF6EE'; x.fillRect(0, 0, W, H);
+    x.fillStyle = lastScan.shop.theme_color || '#E4572E'; x.fillRect(0, 0, W, 16);
+    x.textAlign = 'center'; x.fillStyle = '#1F1A14';
+    x.font = font(700, 40); x.fillText(lastScan.shop.name, W / 2, 86);
+    x.font = font(400, 30); x.fillStyle = '#6B6157'; x.fillText(t('queue_no', { n: '' }).trim(), W / 2, 160);
+    x.font = font(700, 220); x.fillStyle = lastScan.shop.theme_color || '#E4572E'; x.fillText(String(k.queue_no), W / 2, 380);
+    x.font = font(600, 30); x.fillStyle = '#1F1A14';
+    const when = new Date().toLocaleString(lang === 'th' ? 'th-TH' : lang === 'zh' ? 'zh-CN' : 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    x.fillText([k.contact_name, when].filter(Boolean).join(' · '), W / 2, 440);
+    x.font = font(400, 26); x.fillStyle = '#6B6157';
+    x.fillText(k.pickup_at ? t('tk_pickup', { t: lhhmm(k.pickup_at) }) : t('tk_img_show'), W / 2, 484);
+    x.strokeStyle = '#E2D7C9'; x.setLineDash([10, 8]); x.beginPath(); x.moveTo(40, 516); x.lineTo(W - 40, 516); x.stroke(); x.setLineDash([]);
+    x.textAlign = 'left'; x.font = font(400, 30); x.fillStyle = '#1F1A14';
+    lines.forEach((l, n) => x.fillText(l.length > 34 ? l.slice(0, 33) + '…' : l, 60, 566 + n * 44));
+    if (items.length > lines.length) { x.fillStyle = '#6B6157'; x.fillText(`+${items.length - lines.length} …`, 60, 566 + lines.length * 44); }
+    // QR เปิดบัตรคิวอีกครั้ง
+    try {
+      const url = new URL('table.html?t=' + encodeURIComponent(qr), location.href).href;
+      const img = new Image();
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(STQR.svg(url, { margin: 1 }));
+      await img.decode();
+      const y = 590 + lines.length * 44 + (items.length > lines.length ? 44 : 0);
+      x.drawImage(img, W / 2 - 110, y, 220, 220);
+      x.textAlign = 'center'; x.font = font(400, 24); x.fillStyle = '#6B6157';
+      x.fillText(t('tk_img_open'), W / 2, y + 256);
+    } catch { /* ไม่มี QR ก็ได้ */ }
+    return new Promise(res => cv.toBlob(res, 'image/png'));
+  }
+  $('#g-ticket').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-tk-save]');
+    if (!b) return;
+    b.disabled = true;
+    const blob = await ticketImage().catch(() => null);
+    b.disabled = false;
+    if (!blob) return;
+    const file = new File([blob], `queue-${ticket().queue_no}.png`, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: lastScan.shop.name }); return; } catch (er) { if (er && er.name === 'AbortError') return; }
+    }
+    // สำรอง: แสดงรูปให้กดค้างบันทึก
+    const url = URL.createObjectURL(blob);
+    openSheet('tkimg', t('tk_save'));
+    $('#sheet-body').innerHTML = `<p class="st-sub">${esc(t('tk_save_hint'))}</p><img class="st-tk-img" src="${url}" alt="">`;
+  });
   function renderTicket() {
     renderMine();
     const box = $('#g-ticket');
@@ -1136,6 +1368,7 @@
     const ready = !!k.ready_at && !k.closed;
     if (wasReady === false && ready && !staffMode) {
       try { navigator.vibrate && navigator.vibrate([300, 150, 300, 150, 500]); } catch { /* ไม่เป็นไร */ }
+      tkBeep();
       toast(t('tk_ready_t'));
     }
     wasReady = ready;
@@ -1155,7 +1388,8 @@
         <b>${esc(head)}</b>
         ${sub ? `<span>${esc(sub)}</span>` : ''}
         <small>${esc(k.contact_name || '')}${k.contact_name ? ' · ' : ''}${esc(pick)}${k.closed ? '' : ' · ' + esc(k.paid ? t('tk_paid') : t('tk_unpaid'))}</small>
-        ${k.closed && k.hub_qr && !staffMode ? `<a class="st-chip" href="table.html?t=${encodeURIComponent(k.hub_qr)}">🛍 ${esc(t('tk_new'))}</a>` : ''}
+        ${k.closed && k.hub_qr && !staffMode ? `<a class="st-chip" href="table.html?t=${encodeURIComponent(k.hub_qr)}">🛍 ${esc(tq('tk_new'))}</a>` : ''}
+        ${!k.closed && !staffMode ? `<button type="button" class="st-chip st-chip--sm" data-tk-save>${esc(t('tk_save'))}</button>` : ''}
       </div>`;
     box.hidden = false;
   }
@@ -1363,7 +1597,7 @@
   let lastPoll = Date.now(), lastPromo = Date.now();
   setInterval(async () => {
     if (document.hidden) return;
-    if (Date.now() - lastPoll >= (waitConfirm() ? 4000 : busy() ? 8000 : 20000)) { lastPoll = Date.now(); scan(false); }
+    if (Date.now() - lastPoll >= (waitConfirm() || waitBuffet() ? 4000 : busy() ? 8000 : 20000)) { lastPoll = Date.now(); scan(false); }
     if (Date.now() - lastPromo >= 300000) { lastPromo = Date.now(); await loadPromos(); renderMenu(); }
   }, 2000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) scan(false); });

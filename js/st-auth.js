@@ -115,6 +115,11 @@
     st_coupon_no_promo: 'คูปองนี้ใช้ร่วมกับโปรลดราคาตามเวลาไม่ได้',
     st_coupon_need_staff: 'มีคูปองที่ใส่ไว้ กรุณากด "ขอเช็กบิล" ให้พนักงานคิดส่วนลดให้',
     st_wait_confirm: 'ร้านยังไม่ได้ยืนยันโต๊ะ รอสักครู่แล้วกดส่งอีกครั้ง',
+    st_buffet_wait: 'รอพนักงานเริ่มบุฟเฟ่ต์ (นับจำนวนคน/เลือกแพ็กเกจ) ก่อน แล้วค่อยกดส่ง',
+    st_buffet_gap: 'ต้องเว้นระยะระหว่างรอบ · สั่งรอบถัดไปได้ในอีก (นาที)',
+    st_buffet_round_limit: 'รอบนี้สั่งเมนูบุฟเฟ่ต์เกินจำนวนที่ร้านกำหนด · สูงสุดรอบละ (จาน)',
+    st_buffet_last_order: 'หมดเวลาสั่งเมนูบุฟเฟ่ต์แล้ว (เมนูนอกแพ็กเกจยังสั่งได้)',
+    st_bad_buffet: 'ข้อมูลบุฟเฟ่ต์ไม่ถูกต้อง ตรวจชื่อ ราคา เวลา และจำนวนคนอีกครั้ง',
     // รอบ D: สถานี / สั่งกลับบ้าน
     st_station_taken: 'มีสถานีชื่อนี้แล้ว',
     st_station_limit: 'สร้างสถานีได้สูงสุด 10 จุด',
@@ -277,6 +282,14 @@
   applyMode();
   if (darkMq && darkMq.addEventListener) darkMq.addEventListener('change', applyMode);
   const avatarUrl = (path) => path ? sb.storage.from('st-images').getPublicUrl(path).data.publicUrl : null;
+  // รูปย่อของเมนู (320px ~20KB) เก็บคู่กับรูปเต็ม: shops/<id>/menu/<x>.jpg -> <x>-t.jpg
+  // รายการเมนู/ตะกร้า/จอครัว ใช้รูปย่อ · รูปเก่าที่ยังไม่มีรูปย่อ จะสลับไปใช้รูปเต็มเอง
+  const thumbPath = (p) => (p && /\/menu\/[^/]+\.jpg$/.test(p) && !/-t\.jpg$/.test(p)) ? p.replace(/\.jpg$/, '-t.jpg') : p;
+  function thumbImg(path) {
+    if (!path) return '';
+    const full = avatarUrl(path), th = avatarUrl(thumbPath(path));
+    return `<img src="${esc(th)}" data-full="${esc(full)}" onerror="if(this.dataset.full&&this.src!==this.dataset.full)this.src=this.dataset.full" alt="" loading="lazy" decoding="async">`;
+  }
 
   // ---------- ล็อกหน้าข้างหลังตอนเปิดแผ่นเลื่อนขึ้น (iPhone ไม่สนใจ overflow:hidden) ----------
   // ทุกหน้าใช้ class st-noscroll บน body อยู่แล้ว -> จับการเปลี่ยน class แล้วตรึงตำแหน่งให้เอง
@@ -311,5 +324,5 @@
   }
   window.ST = { sb, configOk, $, esc, ROLE_TH, thaiError, pageUrl, nextUrl, showMsg, hideMsg, setBusy,
                 ensureProfile, requireUser, copyText, TAGS, applyTheme, shrinkImage,
-                getPrefs, setPrefs, applyMode, avatarUrl, getSeen, markSeen };
+                getPrefs, setPrefs, applyMode, avatarUrl, getSeen, markSeen, thumbPath, thumbImg };
 })();

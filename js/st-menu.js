@@ -103,7 +103,7 @@
     (it.tags || []).forEach(t => TAGS[t] && tags.push(TAGS[t].icon + ' ' + TAGS[t].th));
     return `
       <div class="st-mi${it.is_available ? '' : ' st-mi--off'}" data-id="${esc(it.id)}">
-        <div class="st-thumb">${it.image_path ? `<img src="${esc(imgUrl(it.image_path))}" alt="" loading="lazy">` : esc(it.name.charAt(0))}</div>
+        <div class="st-thumb">${it.image_path ? ST.thumbImg(it.image_path) : esc(it.name.charAt(0))}</div>
         <div class="st-item-main"${canEdit ? ' data-act="edit" role="button" tabindex="0"' : ''}>
           <b>${esc(it.name)}</b><small>${esc(tags.join(' · '))}</small>
         </div>
@@ -272,6 +272,7 @@
   const fi = $('#form-item');
   let editing = null;       // เมนูที่กำลังแก้ (null = เพิ่มใหม่)
   let pendingBlob = null;   // รูปใหม่ที่ยังไม่อัปโหลด
+  let pendingThumb = null;  // รูปย่อ 320px (ใช้ในรายการเมนู ตะกร้า จอครัว)
   let removeImage = false;
 
   const sheetMsg = (text, type = 'error') => {
@@ -290,7 +291,7 @@
 
   function openSheet(item) {
     editing = item || null;
-    pendingBlob = null; removeImage = false;
+    pendingBlob = null; pendingThumb = null; removeImage = false;
     $('#sheet-msg').hidden = true;
     $('#sheet-title').textContent = item ? 'แก้ไขเมนู' : 'เพิ่มเมนู';
     $('#btn-delete').hidden = !item;
@@ -344,6 +345,7 @@
     if (!file) return;
     try {
       pendingBlob = await shrink(file);
+      pendingThumb = await shrink(pendingBlob, 320).catch(() => null);
       if (!pendingBlob) throw new Error('empty');
       removeImage = false;
       setPreview();
@@ -493,6 +495,8 @@
       const { error: upErr } = await sb.storage.from(BUCKET)
         .upload(newPath, pendingBlob, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: false });
       if (upErr) { setBusy(fi, false); return sheetMsg('อัปโหลดรูปไม่สำเร็จ: ' + thaiError(upErr)); }
+      if (pendingThumb) await sb.storage.from(BUCKET)
+        .upload(ST.thumbPath(newPath), pendingThumb, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: true });
     }
     const imagePath = newPath || (removeImage ? null : oldPath);
 
@@ -511,10 +515,10 @@
     });
     setBusy(fi, false);
     if (error) {
-      if (newPath) sb.storage.from(BUCKET).remove([newPath]);
+      if (newPath) sb.storage.from(BUCKET).remove([newPath, ST.thumbPath(newPath)]);
       return sheetMsg(thaiError(error));
     }
-    if (oldPath && oldPath !== imagePath) sb.storage.from(BUCKET).remove([oldPath]);
+    if (oldPath && oldPath !== imagePath) sb.storage.from(BUCKET).remove([oldPath, ST.thumbPath(oldPath)]);
     const stockRaw = fi.stock_left.value.trim();
     const { error: exErr } = await sb.rpc('st_set_item_extras', {
       p_item: savedId,
@@ -535,7 +539,7 @@
     if (!editing || !confirm(`ลบเมนู "${editing.name}"? ลบแล้วกู้คืนไม่ได้`)) return;
     const { data: img, error } = await sb.rpc('st_delete_item', { p_item: editing.id });
     if (error) return sheetMsg(thaiError(error));
-    if (img) sb.storage.from(BUCKET).remove([img]);
+    if (img) sb.storage.from(BUCKET).remove([img, ST.thumbPath(img)]);
     closeSheet();
     showMsg(`ลบ "${editing.name}" แล้ว`, 'ok');
     load();
@@ -543,4 +547,27 @@
 
   await load();
   $('#menu-body').hidden = false;
+
+  // ---------- ทำรูปย่อให้เมนูเดิม (ครั้งเดียวต่อร้านต่อเครื่อง · ทำเบื้องหลัง) ----------
+  // เมนูที่อัปโหลดก่อนรอบนี้มีแต่รูปเต็ม 1200px -> หน้าลูกค้าโหลดช้า · สร้างรูปย่อ 320px ให้
+  (async function makeThumbs() {
+    const KEY = 'st-thumbs-v1:' + shopId;
+    try { if (localStorage.getItem(KEY)) return; } catch { return; }
+    const todo = data.items.filter(it => it.image_path && ST.thumbPath(it.image_path) !== it.image_path);
+    if (!todo.length) { try { localStorage.setItem(KEY, '1'); } catch { /* */ } return; }
+    let done = 0, failed = 0;
+    for (const it of todo) {
+      try {
+        const res = await fetch(imgUrl(it.image_path), { cache: 'no-store' });
+        if (!res.ok) throw new Error('fetch');
+        const small = await shrink(await res.blob(), 320);
+        const { error } = await sb.storage.from(BUCKET)
+          .upload(ST.thumbPath(it.image_path), small, { contentType: 'image/jpeg', cacheControl: '31536000', upsert: true });
+        if (error) throw error;
+        done++;
+      } catch { failed++; }
+    }
+    if (!failed) { try { localStorage.setItem(KEY, '1'); } catch { /* */ } }
+    if (done) showMsg(`ทำรูปย่อให้เมนู ${done} รายการแล้ว — หน้าลูกค้าจะโหลดรูปเร็วขึ้น`, 'ok');
+  })();
 })();

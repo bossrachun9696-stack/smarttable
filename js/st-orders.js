@@ -229,7 +229,7 @@
           ${its.map(i => `
             <li class="${i.done ? 'done' : ''}">
               <button type="button" class="st-dish" data-item="${esc(i.id)}" ${o.status === 'cancelled' ? 'disabled' : ''} aria-pressed="${i.done}" aria-label="${i.done ? 'เอาติ๊กออก' : 'ติ๊กว่าเสร็จ'}">${i.done ? '✓' : ''}</button>
-              ${i.image ? `<img class="st-dish-img" src="${esc(ST.avatarUrl(i.image))}" alt="" loading="lazy">` : ''}<b>${i.qty}×</b> <span>${esc(i.name)}
+              ${i.image ? `<span class="st-dish-img">${ST.thumbImg(i.image)}</span>` : ''}<b>${i.qty}×</b> <span>${esc(i.name)}
               ${i.options.length ? `<small>${esc(i.options.map(x => x.name).join(' · '))}</small>` : ''}
               ${i.note ? `<em>📝 ${esc(i.note)}</em>` : ''}</span></li>`).join('')}
         </ul>

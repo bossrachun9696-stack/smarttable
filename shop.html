@@ -12,9 +12,11 @@
   <meta name="apple-mobile-web-app-title" content="SmartTable">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>จัดการร้าน · SmartTable</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet"></noscript>
   <link rel="stylesheet" href="css/st-style.css">
 </head>
 <body>
@@ -36,6 +38,11 @@
       <a id="link-layout" class="st-chip st-chip--sm" href="settings.html">🎨 เปลี่ยนรูปแบบ / ธีม</a>
     </div>
     <nav id="shop-links" class="st-list" style="margin-bottom:14px">
+      <a id="link-easy" class="st-item" href="#" hidden>
+        <div class="st-logo">⚡</div>
+        <div class="st-item-main"><b>หน้าร้านรวม</b><small>ออร์เดอร์ · ลูกค้าเรียก · โต๊ะ · เช็กบิล ในหน้าเดียว</small></div>
+        <span class="st-arrow" aria-hidden="true">›</span>
+      </a>
       <a id="link-orders" class="st-item" href="#">
         <div class="st-logo">🔔</div>
         <div class="st-item-main"><b>ออร์เดอร์ / จอครัว</b><small>ออร์เดอร์เด้งทันทีพร้อมเสียง กดรับ · เสิร์ฟแล้ว</small></div>
@@ -76,7 +83,29 @@
         <div class="st-item-main"><b>โต๊ะและ QR</b><small>ผังโต๊ะ เปิด/ปิดโต๊ะ พิมพ์ QR</small></div>
         <span class="st-arrow" aria-hidden="true">›</span>
       </a>
+      <a id="link-buffet" class="st-item" href="#" hidden>
+        <div class="st-logo">🍖</div>
+        <div class="st-item-main"><b>แพ็กเกจบุฟเฟ่ต์</b><small>ราคาต่อหัว ผู้ใหญ่/เด็ก · จำกัดเวลา · ค่าเกินเวลา · จำนวนต่อรอบ</small></div>
+        <span class="st-arrow" aria-hidden="true">›</span>
+      </a>
     </nav>
+
+    <!-- ประเภทร้าน -->
+    <section class="st-card" id="type-card" hidden>
+      <h3>ประเภทร้าน</h3>
+      <form id="form-type" class="st-choices">
+        <label class="st-choice"><input type="radio" name="shop_type" value="restaurant">
+          <div><b>🍽 ร้านอาหาร</b><small>สั่งตามเมนู คิดเงินตามจาน (แบบที่ใช้อยู่)</small></div></label>
+        <label class="st-choice"><input type="radio" name="shop_type" value="buffet">
+          <div><b>🍖 บุฟเฟ่ต์ / หมูกระทะ / ชาบู</b><small>ราคาต่อหัว ผู้ใหญ่/เด็ก · จำกัดเวลาหรือไม่จำกัด · เมนูในแพ็กเกจ 0 บาท · ค่าเกินเวลา</small></div></label>
+        <label class="st-choice"><input type="radio" name="shop_type" value="queue">
+          <div><b>🧋 ร้านน้ำ / สั่งแล้วรอคิว</b><small>ลูกค้าสแกน QR หน้าร้าน → สั่ง → ได้เลขคิวบนมือถือ (บันทึกภาพได้) → เตือนเมื่อพร้อมรับ · ไม่ต้องมีโต๊ะ</small></div></label>
+        <label class="st-choice st-choice--soon"><input type="radio" name="shop_type" value="grocery" disabled>
+          <div><b>🛒 ร้านขายของชำ</b><small>เร็ว ๆ นี้ · สแกน QR สั่งของ รับที่ร้าน / ส่งถึงบ้าน (จำกัดระยะ)</small></div></label>
+        <label class="st-choice"><input type="radio" name="shop_type" value="small">
+          <div><b>👫 ร้านเล็ก 2 คน (โหมดง่าย)</b><small>ไม่มีพนักงาน · ซ่อนเรื่องพนักงาน · "หน้าร้านรวม" ออร์เดอร์ + ลูกค้าเรียก + โต๊ะ + เช็กบิล ในหน้าเดียว</small></div></label>
+      </form>
+    </section>
 
     <!-- รูปแบบการสั่งอาหาร -->
     <section class="st-card">
@@ -179,7 +208,7 @@
     </section>
 
     <!-- พนักงาน -->
-    <section class="st-card">
+    <section class="st-card" id="staff-card">
       <h3>พนักงาน</h3>
       <div id="member-list"></div>
 

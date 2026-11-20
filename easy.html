@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FBF6EE">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="SmartTable">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>หน้าร้านรวม · SmartTable</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet"></noscript>
+  <link rel="stylesheet" href="css/st-style.css">
+</head>
+<body>
+<main class="st-page st-page--wide st-easy">
+  <div class="st-top">
+    <a id="back" href="home.html" class="st-chip">‹ ร้าน</a>
+    <div class="st-top-tools">
+      <span id="live" class="st-live" title="สถานะการเชื่อมต่อ">กำลังเชื่อมต่อ…</span>
+      <button id="btn-sound" class="st-chip" type="button">🔔 เสียง</button>
+      <button id="btn-wake" class="st-chip" type="button" hidden>จอไม่ดับ</button>
+    </div>
+  </div>
+  <h1 class="st-title">หน้าร้านรวม <small id="shop-sub" class="st-sub"></small></h1>
+  <div id="st-msg" class="st-msg" role="status" hidden></div>
+  <div id="sound-hint" class="st-banner" hidden>🔔 <b>แตะหน้าจอตรงไหนก็ได้ 1 ครั้ง</b> เพื่อเปิดเสียงแจ้งเตือนและโหมดจอไม่ดับ (iPhone ต้องปิดโหมดเงียบด้วย)</div>
+
+  <section id="e-calls" class="st-easy-calls" hidden></section>
+
+  <div class="st-easy-grid">
+    <section class="st-card st-easy-col">
+      <div class="st-row-between"><h3>🔔 ออร์เดอร์ที่ต้องทำ <b id="n-orders" class="st-count"></b></h3><a id="to-orders" class="st-chip st-chip--sm" href="#">จอครัวเต็ม ›</a></div>
+      <div id="e-orders"></div>
+    </section>
+    <section class="st-card st-easy-col">
+      <div class="st-row-between"><h3>🍽 โต๊ะที่มีลูกค้า <b id="n-tables" class="st-count"></b></h3><a id="to-tables" class="st-chip st-chip--sm" href="#">ผังโต๊ะ ›</a></div>
+      <div id="e-tables"></div>
+      <div id="e-queue" hidden></div>
+    </section>
+  </div>
+
+  <section class="st-card">
+    <h3>ทางลัด</h3>
+    <div class="st-easy-links">
+      <a id="q-menu" class="st-chip" href="#">📖 เมนู / กด "หมด"</a>
+      <a id="q-receipts" class="st-chip" href="#">🧾 ใบเสร็จ</a>
+      <a id="q-reports" class="st-chip" href="#">📊 ยอดขายวันนี้</a>
+      <a id="q-queue" class="st-chip" href="#">🛍 คิวกลับบ้าน</a>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/st-config.js"></script>
+<script src="js/st-auth.js"></script>
+<script src="js/st-easy.js"></script>
+</body>
+</html>

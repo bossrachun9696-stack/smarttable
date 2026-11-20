@@ -543,6 +543,29 @@
         () => { clearTimeout(rt); rt = setTimeout(load, 400); })
     .subscribe();
 
+  // ---------- บุฟเฟ่ต์: ค่าเกินเวลา (st-17) ----------
+  async function loadBuffet() {
+    const { data, error } = await sb.rpc('st_buffet_status', { p_table: tableId });
+    const box = $('#b-buffet');
+    if (error || !data || !data.buffet || data.buffet.mode !== 'package') { box.hidden = true; return; }
+    const b = data.buffet, ot = data.overtime || {}, charged = Number(data.overtime_charged || 0);
+    const heads = (b.adults || 0) + (b.children || 0);
+    const due = Number(ot.amount || 0);
+    box.hidden = false;
+    box.className = 'st-bf-panel' + (ot.minutes > 0 ? ' st-bf-panel--over' : '');
+    box.innerHTML = `<b>🍖 ${esc(b.name)} · ${heads} คน</b>
+      <span>${!b.ends_at ? 'ไม่จำกัดเวลา' : ot.minutes > 0 ? `⏰ เกินเวลา ${ot.minutes} นาที` : 'ยังไม่เกินเวลา'}${charged ? ` · คิดค่าเกินเวลาแล้ว ${baht(charged)}` : ''}</span>
+      ${due > 0 && due !== charged ? `<div class="st-bf-acts"><button class="st-chip st-chip--accent" type="button" id="b-ot">${charged ? 'อัปเดต' : 'เพิ่ม'}ค่าเกินเวลา ${baht(due)} (${ot.blocks} ช่วง × ${baht(ot.fee)} × ${heads} คน)</button></div>` : ''}`;
+    $('#b-ot')?.addEventListener('click', async (e) => {
+      e.target.disabled = true;
+      const { error: er } = await sb.rpc('st_buffet_overtime', { p_table: tableId });
+      if (er) { e.target.disabled = false; return showMsg(thaiError(er)); }
+      showMsg('เพิ่มค่าเกินเวลาในบิลแล้ว', 'ok');
+      await load(); loadBuffet();
+    });
+  }
+
   await load();
   loadGuestCoupons();
+  loadBuffet();
 })();
