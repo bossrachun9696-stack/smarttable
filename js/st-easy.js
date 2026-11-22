@@ -124,7 +124,7 @@
       const m = mins(o.created_at);
       const where = o.order_type === 'takeaway' ? `🛍 คิว ${esc(o.queue_no ?? o.table_label)}` : `โต๊ะ ${esc(o.table_label)}`;
       return `<article class="st-easy-order${o.status === 'new' ? ' st-easy-order--new' : ''}${m >= 20 ? ' st-easy-order--late' : ''}" data-id="${esc(o.id)}">
-        <header><b>${where}</b><span>#${esc(o.order_no)} · ${ago(m)}</span></header>
+        <header><b>${where}${o.to_go ? ' <em class="st-badge st-badge--togo">🛍 ห่อกลับบ้าน</em>' : ''}</b><span>#${esc(o.order_no)} · ${ago(m)}</span></header>
         <ul>${o.items.map(i => `<li class="${i.done ? 'done' : ''}">
           ${i.image ? `<span class="st-dish-img">${ST.thumbImg(i.image)}</span>` : ''}<b>${i.qty}×</b> <span>${esc(i.name)}${(i.options || []).length ? ` <small>${esc(i.options.map(x => x.name || x).join(', '))}</small>` : ''}${i.note ? ` <small>📝 ${esc(i.note)}</small>` : ''}</span></li>`).join('')}</ul>
         ${o.note ? `<p class="st-sub">📝 ${esc(o.note)}</p>` : ''}

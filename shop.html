@@ -83,6 +83,11 @@
         <div class="st-item-main"><b>โต๊ะและ QR</b><small>ผังโต๊ะ เปิด/ปิดโต๊ะ พิมพ์ QR</small></div>
         <span class="st-arrow" aria-hidden="true">›</span>
       </a>
+      <a id="link-shift" class="st-item" href="#" hidden>
+        <div class="st-logo">💵</div>
+        <div class="st-item-main"><b>ปิดกะ / นับเงิน</b><small>เงินทอนตั้งต้น · เงินเข้า/ออก · นับเงินลิ้นชักตอนปิดร้าน ขาด/เกินเท่าไร</small></div>
+        <span class="st-arrow" aria-hidden="true">›</span>
+      </a>
       <a id="link-buffet" class="st-item" href="#" hidden>
         <div class="st-logo">🍖</div>
         <div class="st-item-main"><b>แพ็กเกจบุฟเฟ่ต์</b><small>ราคาต่อหัว ผู้ใหญ่/เด็ก · จำกัดเวลา · ค่าเกินเวลา · จำนวนต่อรอบ</small></div>
@@ -100,10 +105,95 @@
           <div><b>🍖 บุฟเฟ่ต์ / หมูกระทะ / ชาบู</b><small>ราคาต่อหัว ผู้ใหญ่/เด็ก · จำกัดเวลาหรือไม่จำกัด · เมนูในแพ็กเกจ 0 บาท · ค่าเกินเวลา</small></div></label>
         <label class="st-choice"><input type="radio" name="shop_type" value="queue">
           <div><b>🧋 ร้านน้ำ / สั่งแล้วรอคิว</b><small>ลูกค้าสแกน QR หน้าร้าน → สั่ง → ได้เลขคิวบนมือถือ (บันทึกภาพได้) → เตือนเมื่อพร้อมรับ · ไม่ต้องมีโต๊ะ</small></div></label>
-        <label class="st-choice st-choice--soon"><input type="radio" name="shop_type" value="grocery" disabled>
-          <div><b>🛒 ร้านขายของชำ</b><small>เร็ว ๆ นี้ · สแกน QR สั่งของ รับที่ร้าน / ส่งถึงบ้าน (จำกัดระยะ)</small></div></label>
+        <label class="st-choice"><input type="radio" name="shop_type" value="grocery">
+          <div><b>🛒 ร้านขายของชำ</b><small>ลูกค้าสแกน QR หน้าร้าน → เลือกสินค้า → รับที่ร้าน หรือส่งถึงบ้าน (จำกัดระยะ · ค่าส่ง · ยอดขั้นต่ำ ตั้งเองได้)</small></div></label>
         <label class="st-choice"><input type="radio" name="shop_type" value="small">
           <div><b>👫 ร้านเล็ก 2 คน (โหมดง่าย)</b><small>ไม่มีพนักงาน · ซ่อนเรื่องพนักงาน · "หน้าร้านรวม" ออร์เดอร์ + ลูกค้าเรียก + โต๊ะ + เช็กบิล ในหน้าเดียว</small></div></label>
+      </form>
+    </section>
+
+    <!-- ร้านขายของชำ: รับที่ร้าน / ส่งถึงบ้าน (รอบ M) -->
+    <section class="st-card" id="grocery-card" hidden>
+      <h3>🛒 รับที่ร้าน / ส่งถึงบ้าน</h3>
+      <form id="form-grocery" novalidate>
+        <label class="st-check st-check--box"><input type="checkbox" name="pickup"> <span><b>ลูกค้ามารับที่ร้านได้</b></span></label>
+        <label class="st-check st-check--box"><input type="checkbox" name="delivery"> <span><b>ส่งถึงบ้าน</b><small>ลูกค้ากดแชร์ตำแหน่ง + ใส่ที่อยู่ · ระบบวัดระยะเส้นตรงจากร้าน</small></span></label>
+        <div id="gc-delivery">
+          <h4>📍 ตำแหน่งร้าน</h4>
+          <p class="st-sub" id="gc-loc-text">ยังไม่ได้ตั้ง — ต้องตั้งก่อนจึงส่งถึงบ้านได้</p>
+          <div class="st-grid2">
+            <button type="button" class="st-btn st-btn--ghost" id="gc-here">📍 ใช้ตำแหน่งตอนนี้ (ยืนอยู่ที่ร้าน)</button>
+            <a class="st-btn st-btn--ghost st-btn-link" id="gc-map" href="#" target="_blank" rel="noopener" hidden>ดูบนแผนที่</a>
+          </div>
+          <details><summary>ใส่พิกัดเอง</summary>
+            <div class="st-grid2">
+              <label class="st-field"><span>ละติจูด</span><input name="lat" type="number" step="0.000001" inputmode="decimal" placeholder="13.756331"></label>
+              <label class="st-field"><span>ลองจิจูด</span><input name="lng" type="number" step="0.000001" inputmode="decimal" placeholder="100.501765"></label>
+            </div>
+            <small class="st-sub">Google Maps: กดค้างที่ร้าน → คัดลอกตัวเลข 2 ตัวมาใส่</small>
+          </details>
+          <label class="st-field"><span>ส่งไกลสุด (กม.)</span><input name="max_km" type="number" min="0.2" max="100" step="0.1" inputmode="decimal" placeholder="5"></label>
+          <h4>🛵 ค่าส่ง</h4>
+          <div class="st-radioseg" id="gc-mode">
+            <label><input type="radio" name="fee_mode" value="free"><span>ส่งฟรี</span></label>
+            <label><input type="radio" name="fee_mode" value="flat"><span>เหมาจ่าย</span></label>
+            <label><input type="radio" name="fee_mode" value="per_km"><span>ตามระยะทาง</span></label>
+          </div>
+          <div data-fee="flat"><label class="st-field"><span>ค่าส่งเหมา (บาท)</span><input name="fee_flat" type="number" min="0" step="1" inputmode="numeric"></label></div>
+          <div data-fee="per_km" class="st-grid2">
+            <label class="st-field"><span>ค่าส่งเริ่มต้น (บาท)</span><input name="fee_base" type="number" min="0" step="1" inputmode="numeric" placeholder="10"></label>
+            <label class="st-field"><span>บาท / กม.</span><input name="fee_per_km" type="number" min="0" step="1" inputmode="numeric" placeholder="5"></label>
+            <label class="st-field"><span>กม. แรกไม่คิดเพิ่ม</span><input name="fee_free_km" type="number" min="0" step="0.5" inputmode="decimal" placeholder="1"></label>
+            <label class="st-field"><span>ค่าส่งสูงสุด (ไม่บังคับ)</span><input name="fee_cap" type="number" min="0" step="1" inputmode="numeric"></label>
+          </div>
+          <label class="st-field"><span>ส่งฟรีเมื่อซื้อครบ (บาท · ไม่บังคับ)</span><input name="free_over" type="number" min="0" step="1" inputmode="numeric" placeholder="เช่น 300"></label>
+          <label class="st-field"><span>ยอดขั้นต่ำสำหรับส่งถึงบ้าน (บาท)</span><input name="min_delivery" type="number" min="0" step="1" inputmode="numeric" placeholder="0 = ไม่มีขั้นต่ำ"></label>
+          <label class="st-check st-check--box"><input type="checkbox" name="need_phone"> <span><b>บังคับใส่เบอร์โทร</b><small>ไว้โทรหาตอนไปส่ง</small></span></label>
+          <label class="st-field"><span>ส่งถึงภายในประมาณ (นาที · ไม่บังคับ)</span><input name="eta_min" type="number" min="0" step="5" inputmode="numeric" placeholder="เช่น 45"></label>
+        </div>
+        <label class="st-field"><span>ยอดขั้นต่ำสำหรับมารับที่ร้าน (บาท)</span><input name="min_order" type="number" min="0" step="1" inputmode="numeric" placeholder="0 = ไม่มีขั้นต่ำ"></label>
+        <label class="st-field"><span>ข้อความถึงลูกค้า (ไม่บังคับ)</span><input name="note" type="text" maxlength="300" placeholder="เช่น ส่งรอบ 10 โมง / บ่าย 3 โมง · จ่ายปลายทางได้"></label>
+        <p class="st-sub" id="gc-example"></p>
+        <button class="st-btn" type="submit">บันทึก</button>
+      </form>
+    </section>
+
+    <!-- ตั้งค่าเพิ่มเติม: ขายพ่วง คอมโบ ปิดกะ ต้นทุน การพิมพ์ (รอบ M) -->
+    <section class="st-card" id="tools-card" hidden>
+      <h3>⚙️ ตั้งค่าเพิ่มเติม</h3>
+      <form id="form-tools" novalidate>
+        <h4>🍟 ขายพ่วง "มักสั่งคู่กับ…"</h4>
+        <p class="st-sub">ลูกค้ากดใส่ตะกร้าแล้ว ขึ้นเมนูแนะนำให้กดเพิ่มได้ทันที</p>
+        <div class="st-radioseg">
+          <label><input type="radio" name="upsell_mode" value="off"><span>ปิด</span></label>
+          <label><input type="radio" name="upsell_mode" value="manual"><span>ตั้งเองที่เมนู</span></label>
+          <label><input type="radio" name="upsell_mode" value="auto"><span>อัตโนมัติจากที่ลูกค้าสั่งคู่กัน</span></label>
+          <label><input type="radio" name="upsell_mode" value="both"><span>ตั้งเอง + อัตโนมัติ</span></label>
+        </div>
+        <div class="st-grid2">
+          <label class="st-field"><span>แนะนำสูงสุด</span><select name="upsell_max"><option value="1">1 เมนู</option><option value="2">2 เมนู</option><option value="3">3 เมนู</option><option value="4">4 เมนู</option><option value="6">6 เมนู</option></select></label>
+          <label class="st-field"><span>อัตโนมัติ: ดูย้อนหลัง</span><select name="upsell_days"><option value="14">14 วัน</option><option value="30">30 วัน</option><option value="60">60 วัน</option><option value="90">90 วัน</option><option value="180">180 วัน</option></select></label>
+        </div>
+        <h4>🍱 ชุดคอมโบ</h4>
+        <label class="st-check st-check--box"><input type="checkbox" name="combo_save"> <span><b>บอกลูกค้าว่าประหยัดกี่บาท</b><small>เทียบกับซื้อแยกทีละอย่าง</small></span></label>
+        <label class="st-check st-check--box"><input type="checkbox" name="combo_stock"> <span><b>ขายชุดแล้วตัดจำนวนเหลือของเมนูในชุดด้วย</b></span></label>
+        <h4>💵 ปิดกะ / นับเงิน</h4>
+        <label class="st-check st-check--box"><input type="checkbox" name="shift_required"> <span><b>ต้องเปิดกะก่อนรับเงิน</b><small>ลืมเปิดกะ = เก็บเงินไม่ได้ (กันเงินหลุดนอกกะ)</small></span></label>
+        <label class="st-check st-check--box"><input type="checkbox" name="shift_waiter"> <span><b>พนักงานเสิร์ฟเปิด/ปิดกะได้</b><small>ปกติ: แคชเชียร์ ผู้จัดการ เจ้าของ</small></span></label>
+        <label class="st-check st-check--box"><input type="checkbox" name="shift_blind"> <span><b>นับแบบไม่เห็นยอดที่ควรมี</b><small>พนักงานนับเงินโดยไม่รู้ตัวเลข → เจ้าของเห็นขาด/เกินทีหลัง (กันปรับตัวเลขให้ตรง)</small></span></label>
+        <h4>💹 ต้นทุน / กำไร</h4>
+        <label class="st-check st-check--box"><input type="checkbox" name="cost_fallback"> <span><b>บิลเก่าที่ยังไม่มีต้นทุน ใช้ต้นทุนปัจจุบันแทน</b><small>ปิด = นับเฉพาะรายการที่ขายหลังใส่ต้นทุนแล้ว</small></span></label>
+        <h4>🖨 การพิมพ์ (ทั้งร้าน)</h4>
+        <div class="st-grid2">
+          <label class="st-field"><span>ขนาดกระดาษ</span><select name="p_paper"><option value="58">58 มม. (เครื่องเล็ก)</option><option value="80">80 มม. (เครื่องใหญ่)</option></select></label>
+          <label class="st-field"><span>ขนาดตัวอักษร</span><select name="p_font"><option value="s">เล็ก</option><option value="m">กลาง</option><option value="l">ใหญ่</option></select></label>
+          <label class="st-field"><span>พิมพ์ครั้งละ</span><select name="p_copies"><option value="1">1 ใบ</option><option value="2">2 ใบ</option><option value="3">3 ใบ</option></select></label>
+        </div>
+        <label class="st-check st-check--box"><input type="checkbox" name="p_kitchen_big"> <span><b>ใบสั่งครัว ตัวใหญ่</b></span></label>
+        <label class="st-check st-check--box"><input type="checkbox" name="p_kitchen_price"> <span><b>ใบสั่งครัว แสดงราคา</b></span></label>
+        <label class="st-field"><span>หัวใบเสร็จ (ไม่บังคับ)</span><input name="p_header" type="text" maxlength="200" placeholder="เช่น สาขาหน้าตลาด · เปิด 7:00–20:00"></label>
+        <label class="st-field"><span>ท้ายใบเสร็จ</span><input name="p_footer" type="text" maxlength="200" placeholder="ขอบคุณที่ใช้บริการ"></label>
+        <p class="st-sub">ต่อเครื่องพิมพ์ / พิมพ์อัตโนมัติ ตั้งที่ปุ่ม 🖨 ในหน้าออร์เดอร์ หรือหน้าใบเสร็จ (ตั้งแยกแต่ละเครื่อง)</p>
       </form>
     </section>
 

@@ -1252,3 +1252,71 @@ html[data-theme="dark"] .st-easy-table--bill { background: #3A3020; }
 .st-easy-links { display: flex; flex-wrap: wrap; gap: 8px; }
 .st-page--wide { max-width: 1100px; }
 a.st-btn, .st-easy-acts a { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+
+/* ===================== รอบ L ===================== */
+.st-badge--togo { background: #3B5BDB; color: #fff; font-style: normal; font-weight: 700; }
+.st-togo { align-items: flex-start; padding: 10px 12px; border: 1.5px dashed var(--st-accent); border-radius: 12px; margin: 4px 0 10px; }
+.st-togo b { display: block; }
+.st-togo small { display: block; color: var(--st-muted); font-size: 12.5px; }
+.st-tv-back { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; text-decoration: none;
+  color: inherit; background: rgba(255,255,255,.12); }
+
+/* ===== รอบ M: เครื่องมือร้าน · ปิดกะ · เช็กระบบ · เครื่องพิมพ์ · ของชำ ===== */
+.st-radioseg { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 12px; }
+.st-radioseg label { position: relative; }
+.st-radioseg input { position: absolute; opacity: 0; pointer-events: none; }
+.st-radioseg span { display: inline-block; padding: 9px 14px; border-radius: 999px; border: 1.5px solid var(--st-line, #e5dccd); background: var(--st-card); font-weight: 600; font-size: 14px; cursor: pointer; }
+.st-radioseg input:checked + span { background: var(--st-accent, #B4532A); border-color: var(--st-accent, #B4532A); color: #fff; }
+.st-radioseg input:focus-visible + span { outline: 2px solid var(--st-accent, #B4532A); outline-offset: 2px; }
+.st-chip--icon { min-width: 40px; justify-content: center; }
+.st-print-tools { display: inline-flex; gap: 6px; }
+.st-kv { display: grid; gap: 6px; margin: 10px 0; }
+.st-kv > div { display: flex; justify-content: space-between; gap: 10px; }
+.st-kv-total { border-top: 1px dashed var(--st-line, #e5dccd); padding-top: 8px; font-size: 1.1em; }
+.st-count { margin: 6px 0 12px; }
+.st-count summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+.st-count-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.st-count-grid label { display: grid; gap: 2px; font-size: 13px; }
+.st-count-grid input { width: 100%; min-width: 0; padding: 8px; border-radius: 10px; border: 1px solid var(--st-line, #e5dccd); font: inherit; background: var(--st-card); color: inherit; }
+.st-moves { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 4px; }
+.st-moves small { color: var(--st-muted); }
+.neg { color: #C0392B; } .pos { color: #2F7D5B; } .ok { color: #2F7D5B; }
+.st-diff { font-size: 1.2em; font-weight: 700; margin: 4px 0 10px; }
+.st-hist { border-top: 1px solid var(--st-line, #e5dccd); padding: 8px 0; }
+.st-hist summary { display: flex; justify-content: space-between; gap: 10px; cursor: pointer; }
+.st-check-score { padding: 14px 16px; border-radius: 14px; font-weight: 700; margin: 10px 0; }
+.st-check-score.ok { background: #E6F4EC; color: #1E6B45; }
+.st-check-score.warn { background: #FFF4DB; color: #8A5A00; }
+.st-check-score.bad { background: #FDE8E6; color: #A1281C; }
+.st-check-row { display: grid; grid-template-columns: 28px 1fr; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--st-line, #e5dccd); }
+.st-check-row small { display: block; color: var(--st-muted); margin-top: 2px; word-break: break-word; }
+.st-check-fix { margin: 6px 0 0; font-size: 14px; }
+.st-check-row code { font-size: 12.5px; background: var(--st-bg); padding: 1px 5px; border-radius: 6px; }
+/* ลูกค้า: ขายพ่วง / คอมโบ / รับ-ส่ง */
+.st-upsell { margin: 10px 0 0; display: grid; gap: 8px; }
+.st-upsell h4 { margin: 0; font-size: 15px; }
+.st-upsell-row { display: grid; grid-template-columns: 52px 1fr auto; gap: 10px; align-items: center; background: var(--st-card); border: 1px solid var(--st-line, #e5dccd); border-radius: 14px; padding: 8px; }
+.st-up-img { width: 52px; height: 52px; border-radius: 10px; overflow: hidden; background: var(--st-bg); display: grid; place-items: center; font-size: 22px; }
+.st-up-img img { width: 100%; height: 100%; object-fit: cover; }
+.st-upsell-row > div:nth-child(2) { min-width: 0; }
+.st-upsell-row .st-chip { white-space: nowrap; }
+.st-upsell-row b { display: block; font-size: 14.5px; }
+.st-upsell-row small { color: var(--st-muted); }
+.st-combo-list { font-size: 13px; color: var(--st-muted); margin: 2px 0 0; }
+.st-tag--save { background: #E6F4EC; color: #1E6B45; }
+.st-fulfil { display: grid; gap: 8px; margin: 0 0 12px; }
+.st-fulfil-opt { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; padding: 12px; border: 1.5px solid var(--st-line, #e5dccd); border-radius: 14px; cursor: pointer; background: var(--st-card); }
+.st-fulfil-opt:has(input:checked) { border-color: var(--st-accent, #B4532A); box-shadow: 0 0 0 2px color-mix(in srgb, var(--st-accent, #B4532A) 20%, transparent); }
+.st-fulfil-opt small { display: block; color: var(--st-muted); }
+.st-quote { padding: 10px 12px; border-radius: 12px; background: var(--st-bg); font-size: 14px; margin: 6px 0 10px; }
+.st-quote.bad { background: #FDE8E6; color: #A1281C; }
+.st-badge--deliver { background: #2F7D5B; color: #fff; }
+.st-deliver { margin: 6px 0; padding: 8px 10px; border-radius: 10px; background: #EAF5EF; font-size: 14px; }
+.st-deliver a { font-weight: 600; }
+/* รายงาน: กำไร / ส่งออก */
+.st-export-kinds { display: grid; gap: 6px; margin: 8px 0 12px; }
+.st-profit td.neg { color: #C0392B; }
+.st-combo-pick, .st-upsell-pick { display: grid; gap: 6px; max-height: 260px; overflow: auto; padding: 4px 0; }
+.st-combo-pick label { display: grid; grid-template-columns: auto 1fr 64px; gap: 8px; align-items: center; }
+.st-combo-pick input[type=number] { width: 64px; padding: 6px; border-radius: 8px; border: 1px solid var(--st-line, #e5dccd); font: inherit; background: var(--st-card); color: inherit; }
+.st-margin { font-size: 13px; color: var(--st-muted); margin-top: 4px; }

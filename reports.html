@@ -114,9 +114,29 @@
       <h3>⏱ ความเร็วครัวและการยกเลิก</h3>
       <div id="kitchen" class="st-kpis st-kpis--sm"></div>
     </section>
+    <section class="st-card" data-card="profit">
+      <h3>💹 ต้นทุน / กำไร</h3>
+      <div id="profit"></div>
+    </section>
     <section class="st-card" data-card="ratings">
       <h3>⭐ คะแนนจากลูกค้า</h3>
       <div id="ratings"></div>
+    </section>
+    <section class="st-card" id="export-card">
+      <h3>⬇️ ส่งออก Excel</h3>
+      <p class="st-sub">ช่วงวันที่ตามที่เลือกด้านบน · ไฟล์ Excel มีหลายแผ่นในไฟล์เดียว · ภาษาไทยไม่เพี้ยน</p>
+      <form id="form-export">
+        <div class="st-export-kinds">
+          <label class="st-check"><input type="checkbox" value="daily" checked> <span>ยอดขายรายวัน (แยกเงินสด / พร้อมเพย์ / โอน / บัตร)</span></label>
+          <label class="st-check"><input type="checkbox" value="receipts" checked> <span>ใบเสร็จทุกใบ</span></label>
+          <label class="st-check"><input type="checkbox" value="items"> <span>รายการที่สั่งทุกจาน (พร้อมต้นทุน)</span></label>
+          <label class="st-check"><input type="checkbox" value="profit"> <span>กำไรแยกเมนู</span></label>
+          <label class="st-check"><input type="checkbox" value="shifts"> <span>ปิดกะ / เงินขาดเกิน</span></label>
+          <label class="st-check"><input type="checkbox" value="menu"> <span>รายการเมนู ราคา ต้นทุน (ทั้งหมดตอนนี้)</span></label>
+        </div>
+        <div class="st-radioseg"><label><input type="radio" name="fmt" value="xlsx" checked><span>Excel (.xlsx)</span></label><label><input type="radio" name="fmt" value="csv"><span>CSV (แยกไฟล์)</span></label></div>
+        <button class="st-btn" type="submit">⬇️ ดาวน์โหลด</button>
+      </form>
     </section>
   </div>
 </main>
@@ -125,6 +145,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/st-config.js"></script>
 <script src="js/st-auth.js"></script>
+<script src="js/st-xlsx.js"></script>
 <script src="js/st-reports.js"></script>
 </body>
 </html>

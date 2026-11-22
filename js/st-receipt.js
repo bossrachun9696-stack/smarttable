@@ -17,6 +17,11 @@
   const { data: me } = await sb.from('st_shop_members').select('role')
     .eq('shop_id', shopId).eq('user_id', user.id).maybeSingle();
   const canVoid = me && ['owner', 'manager'].includes(me.role);
+  const { data: shopRow } = await sb.from('st_shops').select('name, tool_cfg').eq('id', shopId).maybeSingle();
+  const cfg = (shopRow && shopRow.tool_cfg) || {};
+  const pc = (cfg.print || {});
+  const PR = window.ST_PRINTER;
+  const AUTO_KEY = 'st-autoprint-receipt:' + shopId;
 
   const baht = (n) => Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const METHOD = { cash: 'เงินสด', promptpay: 'พร้อมเพย์', transfer: 'โอนเงิน', card: 'บัตร', mixed: 'หลายช่องทาง' };
@@ -43,6 +48,7 @@
       ${r.shop.phone ? `<div class="c muted">โทร ${esc(r.shop.phone)}</div>` : ''}
       ${tax ? `<div class="c muted">เลขประจำตัวผู้เสียภาษี ${esc(fmtTax(tax.tax_id))}${tax.branch ? ` (${esc(tax.branch)})` : ''}</div>
                ${tax.pos_id ? `<div class="c muted">POS ID ${esc(tax.pos_id)}</div>` : ''}` : ''}
+      ${pc.header ? `<div class="c">${esc(pc.header)}</div>` : ''}
       <div class="title">${tax ? 'ใบเสร็จรับเงิน/ใบกำกับภาษีอย่างย่อ' : 'ใบเสร็จรับเงิน'}</div>
       <div class="row"><span>เลขที่</span><span>${ymd}-${String(r.receipt_no).padStart(3, '0')}</span></div>
       <div class="row"><span>วันที่</span><span>${at.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: '2-digit' })} ${at.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</span></div>
@@ -76,7 +82,7 @@
       ${r.note ? `<div class="muted">หมายเหตุ: ${esc(r.note)}</div>` : ''}
       ${r.status === 'void' ? `<div class="muted">ยกเลิกเพราะ: ${esc(r.void_reason || '')}</div>` : ''}
       <hr>
-      <div class="c">ขอบคุณที่ใช้บริการ</div>
+      <div class="c">${esc(pc.footer || 'ขอบคุณที่ใช้บริการ')}</div>
       <div class="c muted">SmartTable</div>`;
     $('#rc').hidden = false;
     $('#rc-actions').hidden = false;
@@ -88,6 +94,10 @@
           : `<b>รับเงินแล้ว · ปิดโต๊ะ ${esc(r.table_label)}</b>`)
         + (Number(r.change) ? `ทอนเงิน <b>฿${baht(r.change)}</b>` : '');
       $('#done').hidden = false;
+      if (PR && PR.autoOn(AUTO_KEY) && !sessionStorage.getItem('st-rc-printed:' + pid)) {
+        try { sessionStorage.setItem('st-rc-printed:' + pid, '1'); } catch { /* ไม่เป็นไร */ }
+        printReceipt();
+      }
     }
     const nx = r.session_open && r.status === 'paid' && Number(r.remaining) > 0
       ? (nextUrl || `bill.html?id=${encodeURIComponent(shopId)}&table=${encodeURIComponent(r.table_id)}`) : null;
@@ -98,7 +108,13 @@
     $('#slips').innerHTML = slips.map((p, i) => `<button type="button" class="st-btn st-btn--ghost" data-slip="${esc(p)}">ดูรูปสลิป${slips.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('');
   }
 
-  $('#btn-print').addEventListener('click', () => window.print());
+  async function printReceipt() {
+    try { await PR.print($('#rc').innerHTML, cfg); }
+    catch (e) { showMsg(e && e.message === 'bt_pick' ? 'ยังไม่ได้จับคู่เครื่องพิมพ์บลูทูธ — กด 🖨' : 'พิมพ์ไม่สำเร็จ: ' + ((e && e.message) || e)); }
+  }
+  $('#btn-print').addEventListener('click', () => PR ? printReceipt() : window.print());
+  $('#btn-printer').addEventListener('click', () => PR.openSettings({ shopCfg: cfg, shopName: shopRow && shopRow.name,
+    auto: { key: AUTO_KEY, label: 'พิมพ์ใบเสร็จเองทุกครั้งที่รับเงิน' } }));
   $('#slips').addEventListener('click', async (e) => {
     const b = e.target.closest('[data-slip]');
     if (!b) return;

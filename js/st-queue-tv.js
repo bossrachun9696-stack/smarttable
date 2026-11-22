@@ -61,3 +61,14 @@
   await load();
   setInterval(load, 6000);
 })();
+
+// ปุ่มกลับ: เปิดมาจากหน้าคิวของร้าน = ย้อนกลับ · เปิดตรง (แท็บเล็ต/ทีวี) = ไปหน้าร้านของฉัน
+(function () {
+  const b = document.getElementById('tv-back');
+  if (!b) return;
+  b.addEventListener('click', (e) => {
+    let same = false;
+    try { same = !!document.referrer && new URL(document.referrer).origin === location.origin; } catch { same = false; }
+    if (same && history.length > 1) { e.preventDefault(); history.back(); }
+  });
+})();

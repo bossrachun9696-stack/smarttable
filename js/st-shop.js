@@ -35,6 +35,17 @@
     else $('#link-audit').hidden = !canManage;
     const staff = document.getElementById('staff-card');
     if (staff) staff.hidden = type === 'small';
+    // ร้านคิว / ร้านขายของชำ: ไม่ใช้โต๊ะ/จอครัว (จัดการทุกอย่างที่หน้า "สั่งกลับบ้าน / คิว")
+    const noTables = type === 'queue' || type === 'grocery';
+    $('#link-tables').hidden = noTables;
+    $('#link-orders').hidden = noTables;
+    const qb = $('#link-queue .st-item-main b');
+    if (qb) qb.textContent = type === 'grocery' ? 'ออร์เดอร์สินค้า / ส่งของ' : 'สั่งกลับบ้าน / คิว';
+    const gc = document.getElementById('grocery-card');
+    if (gc) gc.hidden = !(canManage && type === 'grocery');
+    // ปิดกะ: เจ้าของ ผู้จัดการ แคชเชียร์ (+ เสิร์ฟ ถ้าร้านตั้ง)
+    const sh = document.getElementById('link-shift');
+    if (sh) sh.hidden = !(canManage || role === 'cashier' || (role === 'waiter' && ((current || shop).tool_cfg || {}).shift_waiter));
   }
 
   $('#my-role').textContent = 'คุณ: ' + (ROLE_TH[role] || '-');
@@ -54,6 +65,7 @@
   $('#link-receipts').href = 'receipts.html?id=' + encodeURIComponent(shopId);
   $('#link-tables').href = 'tables.html?id=' + encodeURIComponent(shopId);
   $('#link-buffet').href = 'buffet.html?id=' + encodeURIComponent(shopId);
+  $('#link-shift').href = 'shift.html?id=' + encodeURIComponent(shopId);
   $('#link-layout').href = 'settings.html?back=' + encodeURIComponent('shop.html?id=' + shopId);
   applyLayout(getPrefs().layout);
   $('#shop-body').hidden = false;
@@ -63,9 +75,9 @@
   // (ใช้ function เพื่อให้เรียกได้ก่อนบรรทัดนี้ — applyLayout ถูกเรียกตั้งแต่ด้านบน)
   function linkOrder() {
     const type = (current && current.shop_type) || 'restaurant';
-    const def = type === 'queue' ? ['queue', 'orders', 'receipts', 'menu', 'promos', 'reports', 'tables', 'easy', 'buffet', 'audit']
-      : type === 'small' ? ['easy', 'menu', 'tables', 'receipts', 'reports', 'orders', 'queue', 'promos', 'buffet', 'audit']
-      : ['orders', 'tables', 'buffet', 'queue', 'receipts', 'menu', 'promos', 'reports', 'audit', 'easy'];
+    const def = type === 'queue' || type === 'grocery' ? ['queue', 'orders', 'receipts', 'menu', 'shift', 'promos', 'reports', 'tables', 'easy', 'buffet', 'audit']
+      : type === 'small' ? ['easy', 'menu', 'tables', 'receipts', 'shift', 'reports', 'orders', 'queue', 'promos', 'buffet', 'audit']
+      : ['orders', 'tables', 'buffet', 'queue', 'receipts', 'shift', 'menu', 'promos', 'reports', 'audit', 'easy'];
     const saved = (getPrefs().order || []).filter(k => def.includes(k));
     return [...saved, ...def.filter(k => !saved.includes(k))];
   }
@@ -77,7 +89,7 @@
     nav.querySelectorAll('.st-links-group').forEach(g => g.remove());
     if (layout !== 'groups') { links.forEach(a => nav.appendChild(a)); return; }
     const GROUPS = [
-      ['งานหน้าร้าน', ['link-easy', 'link-orders', 'link-tables', 'link-queue', 'link-receipts']],
+      ['งานหน้าร้าน', ['link-easy', 'link-orders', 'link-tables', 'link-queue', 'link-receipts', 'link-shift']],
       ['จัดการร้าน', ['link-menu', 'link-buffet', 'link-promos']],
       ['ตัวเลข', ['link-reports', 'link-audit']]
     ];
@@ -201,6 +213,7 @@
       const ASK = {
         buffet: 'เปลี่ยนเป็นร้านบุฟเฟ่ต์?\nลูกค้าจะสั่งได้หลังพนักงาน "เริ่มบุฟเฟ่ต์" ที่โต๊ะ (เลือกแพ็กเกจ + นับคน)\nอย่าลืมตั้งแพ็กเกจก่อน',
         queue: 'เปลี่ยนเป็นร้านน้ำ / สั่งแล้วรอคิว?\nระบบจะเปิด "สั่งกลับบ้าน / คิว" ให้ · พิมพ์ QR หน้าร้านได้ที่หน้า "สั่งกลับบ้าน / คิว"',
+        grocery: 'เปลี่ยนเป็นร้านขายของชำ?\nลูกค้าสแกน QR หน้าร้าน → เลือกสินค้า → รับที่ร้าน หรือส่งถึงบ้าน\nระบบจะเปิด "สั่งกลับบ้าน / คิว" ให้ · ตั้งค่าส่งและตำแหน่งร้านในการ์ด "รับที่ร้าน / ส่งถึงบ้าน"',
         small: 'เปลี่ยนเป็นร้านเล็ก 2 คน (โหมดง่าย)?\nซ่อนเรื่องพนักงาน และให้ลูกค้าสแกนแล้วสั่งได้ทันที (ไม่ต้องรอเปิดโต๊ะ)\nพนักงานเดิมยังอยู่ ไม่ถูกลบ'
       };
       if (ASK[r.value] && !confirm(ASK[r.value])) { ft.querySelector(`[value="${prev}"]`).checked = true; return; }
@@ -208,7 +221,7 @@
       if (error) { ft.querySelector(`[value="${prev}"]`).checked = true; return showMsg(thaiError(error)); }
       current = data;
       // ร้านคิว: เปิดสั่งกลับบ้าน/คิว + สร้าง QR หน้าร้าน · ร้านเล็ก: ลูกค้าสแกนแล้วสั่งได้ทันที
-      if (current.shop_type === 'queue' && !current.takeaway_enabled) {
+      if ((current.shop_type === 'queue' || current.shop_type === 'grocery') && !current.takeaway_enabled) {
         const tk = await sb.rpc('st_takeaway_settings', { p_shop: shopId, p_enabled: true, p_preorder: !!current.preorder_enabled });
         if (!tk.error) current.takeaway_enabled = true;
       }
@@ -220,9 +233,138 @@
       applyLayout(getPrefs().layout);
       showMsg({ buffet: 'ตั้งเป็นร้านบุฟเฟ่ต์แล้ว → กด "แพ็กเกจบุฟเฟ่ต์" เพื่อตั้งราคาและเวลา',
                 queue: 'ตั้งเป็นร้านคิวแล้ว → กด "สั่งกลับบ้าน / คิว" เพื่อพิมพ์ QR หน้าร้าน',
+                grocery: 'ตั้งเป็นร้านขายของชำแล้ว → ตั้ง "รับที่ร้าน / ส่งถึงบ้าน" ด้านล่าง แล้วพิมพ์ QR หน้าร้านที่ "ออร์เดอร์สินค้า / ส่งของ"',
                 small: 'ตั้งเป็นร้านเล็กแล้ว → กด "⚡ หน้าร้านรวม" ทำทุกอย่างในหน้าเดียว',
                 restaurant: 'ตั้งเป็นร้านอาหารแล้ว' }[current.shop_type] || 'บันทึกแล้ว', 'ok');
     });
+  }
+
+  // ---------- ร้านขายของชำ: รับที่ร้าน / ส่งถึงบ้าน (รอบ M) ----------
+  if (canManage) {
+    const fg = $('#form-grocery');
+    const G = () => current.grocery_cfg || {};
+    const num = (v) => v === '' || v == null ? null : Number(v);
+    function fillGrocery() {
+      const g = G();
+      fg.pickup.checked = g.pickup !== false;
+      fg.delivery.checked = !!g.delivery;
+      fg.need_phone.checked = g.need_phone !== false;
+      ['lat', 'lng', 'max_km', 'fee_flat', 'fee_base', 'fee_per_km', 'fee_free_km', 'fee_cap', 'min_order', 'min_delivery', 'free_over', 'eta_min']
+        .forEach(k => { fg[k].value = g[k] ?? ''; });
+      fg.note.value = g.note || '';
+      const m = fg.querySelector(`[name=fee_mode][value="${g.fee_mode || 'free'}"]`);
+      if (m) m.checked = true;
+      groceryUi();
+    }
+    function groceryUi() {
+      $('#gc-delivery').hidden = !fg.delivery.checked;
+      const mode = (fg.querySelector('[name=fee_mode]:checked') || {}).value || 'free';
+      fg.querySelectorAll('[data-fee]').forEach(d => { d.hidden = d.dataset.fee !== mode; });
+      const lat = num(fg.lat.value), lng = num(fg.lng.value);
+      $('#gc-loc-text').textContent = lat != null && lng != null ? `ตั้งแล้ว: ${lat.toFixed(5)}, ${lng.toFixed(5)}` : 'ยังไม่ได้ตั้ง — ต้องตั้งก่อนจึงส่งถึงบ้านได้';
+      const map = $('#gc-map');
+      map.hidden = !(lat != null && lng != null);
+      if (!map.hidden) map.href = `https://www.google.com/maps?q=${lat},${lng}`;
+      // ตัวอย่างค่าส่ง
+      const ex = (km) => {
+        let f = 0;
+        if (mode === 'flat') f = num(fg.fee_flat.value) || 0;
+        if (mode === 'per_km') {
+          f = (num(fg.fee_base.value) || 0) + Math.max(0, Math.ceil(km - (num(fg.fee_free_km.value) || 0))) * (num(fg.fee_per_km.value) || 0);
+          if (num(fg.fee_cap.value) != null) f = Math.min(f, num(fg.fee_cap.value));
+        }
+        return f;
+      };
+      $('#gc-example').textContent = fg.delivery.checked
+        ? `ตัวอย่างค่าส่ง: 1 กม. ฿${ex(1)} · 3 กม. ฿${ex(3)} · 5 กม. ฿${ex(5)}${num(fg.free_over.value) ? ` · ซื้อครบ ฿${num(fg.free_over.value)} ส่งฟรี` : ''} · ไกลเกิน ${num(fg.max_km.value) || 5} กม. = ให้มารับเอง`
+        : '';
+    }
+    fg.addEventListener('input', groceryUi);
+    fg.addEventListener('change', groceryUi);
+    $('#gc-here').addEventListener('click', () => {
+      if (!navigator.geolocation) return showMsg('เครื่องนี้หาตำแหน่งไม่ได้ — ใส่พิกัดเอง');
+      $('#gc-here').disabled = true;
+      navigator.geolocation.getCurrentPosition((pos) => {
+        $('#gc-here').disabled = false;
+        fg.lat.value = pos.coords.latitude.toFixed(6);
+        fg.lng.value = pos.coords.longitude.toFixed(6);
+        groceryUi();
+        showMsg(`ได้ตำแหน่งแล้ว (คลาดเคลื่อนประมาณ ${Math.round(pos.coords.accuracy)} ม.) → กด "บันทึก"`, 'ok');
+      }, (err) => {
+        $('#gc-here').disabled = false;
+        showMsg(err.code === 1 ? 'ไม่ได้อนุญาตตำแหน่ง — iPhone: ตั้งค่า → ความเป็นส่วนตัว → บริการหาตำแหน่ง → Safari → "ขณะใช้แอป"' : 'หาตำแหน่งไม่สำเร็จ ลองใหม่ หรือใส่พิกัดเอง');
+      }, { enableHighAccuracy: true, timeout: 15000 });
+    });
+    fg.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const cfg = {
+        pickup: fg.pickup.checked, delivery: fg.delivery.checked, need_phone: fg.need_phone.checked,
+        fee_mode: (fg.querySelector('[name=fee_mode]:checked') || {}).value || 'free',
+        lat: num(fg.lat.value), lng: num(fg.lng.value), note: fg.note.value.trim()
+      };
+      ['max_km', 'fee_flat', 'fee_base', 'fee_per_km', 'fee_free_km', 'fee_cap', 'min_order', 'min_delivery', 'free_over', 'eta_min']
+        .forEach(k => { cfg[k] = num(fg[k].value); });
+      if (!cfg.pickup && !cfg.delivery) return showMsg('ต้องเปิดอย่างน้อย 1 แบบ: มารับที่ร้าน หรือ ส่งถึงบ้าน');
+      if (cfg.delivery && (cfg.lat == null || cfg.lng == null)) return showMsg('ส่งถึงบ้านต้องตั้งตำแหน่งร้านก่อน');
+      setBusy(fg, true);
+      const { data, error } = await sb.rpc('st_save_grocery_cfg', { p_shop: shopId, p_cfg: cfg });
+      setBusy(fg, false);
+      if (error) return showMsg(thaiError(error));
+      current.grocery_cfg = data;
+      showMsg('บันทึกการรับ/ส่งแล้ว ✓', 'ok');
+    });
+    if ('grocery_cfg' in shop) fillGrocery();
+  }
+
+  // ---------- ตั้งค่าเพิ่มเติม: ขายพ่วง คอมโบ ปิดกะ ต้นทุน การพิมพ์ (รอบ M · บันทึกทันที) ----------
+  if (canManage && 'tool_cfg' in shop) {
+    const ftl = $('#form-tools');
+    $('#tools-card').hidden = false;
+    const T = () => current.tool_cfg || {};
+    function fillTools() {
+      const t = T(), p = t.print || {};
+      const um = ftl.querySelector(`[name=upsell_mode][value="${t.upsell_mode || 'auto'}"]`);
+      if (um) um.checked = true;
+      ftl.upsell_max.value = String(t.upsell_max || 3);
+      ftl.upsell_days.value = String(t.upsell_days || 60);
+      ftl.combo_save.checked = t.combo_save !== false;
+      ftl.combo_stock.checked = !!t.combo_stock;
+      ftl.shift_required.checked = !!t.shift_required;
+      ftl.shift_waiter.checked = !!t.shift_waiter;
+      ftl.shift_blind.checked = !!t.shift_blind;
+      ftl.cost_fallback.checked = t.cost_fallback !== false;
+      ftl.p_paper.value = p.paper || '58';
+      ftl.p_font.value = p.font || 'm';
+      ftl.p_copies.value = String(p.copies || 1);
+      ftl.p_kitchen_big.checked = p.kitchen_big !== false;
+      ftl.p_kitchen_price.checked = !!p.kitchen_price;
+      ftl.p_header.value = p.header || '';
+      ftl.p_footer.value = p.footer || '';
+    }
+    let tt = 0;
+    async function saveTools(key) {
+      const cfg = key === 'print' ? { print: {
+          paper: ftl.p_paper.value, font: ftl.p_font.value, copies: Number(ftl.p_copies.value),
+          kitchen_big: ftl.p_kitchen_big.checked, kitchen_price: ftl.p_kitchen_price.checked,
+          header: ftl.p_header.value.trim(), footer: ftl.p_footer.value.trim() } }
+        : key === 'upsell_mode' ? { upsell_mode: (ftl.querySelector('[name=upsell_mode]:checked') || {}).value || 'auto' }
+        : ['upsell_max', 'upsell_days'].includes(key) ? { [key]: Number(ftl[key].value) }
+        : { [key]: ftl[key].checked };
+      const { data, error } = await sb.rpc('st_save_tool_cfg', { p_shop: shopId, p_cfg: cfg });
+      if (error) { fillTools(); return showMsg(thaiError(error)); }
+      current.tool_cfg = data;
+      showMsg('บันทึกแล้ว ✓', 'ok');
+    }
+    ftl.addEventListener('change', (e) => {
+      const n = e.target.name || '';
+      if (n.startsWith('p_')) { if (e.target.type !== 'text') saveTools('print'); return; }
+      saveTools(n);
+    });
+    ftl.addEventListener('input', (e) => {
+      if (!['p_header', 'p_footer'].includes(e.target.name)) return;
+      clearTimeout(tt); tt = setTimeout(() => saveTools('print'), 900);
+    });
+    fillTools();
   }
 
   // ---------- รูปแบบการสั่งอาหาร (บันทึกทันทีเมื่อเลือก) ----------

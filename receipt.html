@@ -23,7 +23,8 @@
 <div class="st-print-bar no-print">
   <a id="back" href="home.html" class="st-chip">‹ ผังโต๊ะ</a>
   <span></span>
-  <button id="btn-print" class="st-chip st-chip--accent" type="button">พิมพ์ใบเสร็จ</button>
+  <span class="st-print-tools"><button id="btn-printer" class="st-chip" type="button" title="ตั้งค่าเครื่องพิมพ์">🖨</button>
+  <button id="btn-print" class="st-chip st-chip--accent" type="button">พิมพ์ใบเสร็จ</button></span>
 </div>
 <div id="st-msg" class="st-msg no-print" role="status" hidden></div>
 <div id="done" class="st-rc-done no-print" hidden></div>
@@ -40,6 +41,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/st-config.js"></script>
 <script src="js/st-auth.js"></script>
+<script src="js/st-printer.js"></script>
 <script src="js/st-receipt.js"></script>
 </body>
 </html>

@@ -84,6 +84,7 @@
     report = data;
     render();
     loadRatings(from, to);
+    loadProfit(from, to);
     $('#r-body').hidden = false;
     $('#btn-csv').hidden = !data.receipts.length;
   }
@@ -340,6 +341,75 @@
       <div class="st-kpi"><span>ออร์เดอร์ที่ยกเลิก</span><b>${num(cx.orders)}</b></div>
       <div class="st-kpi"><span>มูลค่าที่ยกเลิก</span><b>${money(cx.amount)}</b></div>`;
   }
+
+  // ---------- ต้นทุน / กำไร (รอบ M) ----------
+  async function loadProfit(from, to) {
+    const box = $('#profit');
+    const { data, error } = await sb.rpc('st_profit_report', { p_shop: shopId, p_from: from, p_to: to });
+    if (error) { box.innerHTML = `<p class="st-sub">${/st_profit_report|PGRST202|function/i.test(error.message || '') ? 'ต้องรัน sql/st-20-tools.sql ก่อน' : esc(thaiError(error))}</p>`; return; }
+    if (!data || !data.totals) { box.innerHTML = '<p class="st-sub">ยังไม่มีข้อมูล</p>'; return; }
+    const t = data.totals;
+    const items = data.items || [];
+    if (!items.length) { box.innerHTML = '<p class="st-sub">ยังไม่มียอดขายในช่วงนี้</p>'; return; }
+    const known = items.filter(i => i.cost != null);
+    if (!known.length) { box.innerHTML = '<p class="st-sub">ยังไม่ได้ใส่ต้นทุนเมนู → หน้าเมนู → แก้เมนู → ช่อง "ต้นทุน"</p>'; return; }
+    const profit = Number(t.revenue_known) - Number(t.cost);
+    const pct = Number(t.revenue_known) ? Math.round(profit / Number(t.revenue_known) * 100) : 0;
+    const low = [...known].filter(i => Number(i.revenue) > 0).sort((a, b) => (a.profit / a.revenue) - (b.profit / b.revenue)).slice(0, 3);
+    box.innerHTML = `
+      <div class="st-kpis">
+        <div class="st-kpi"><span>ยอดขาย (เมนูที่มีต้นทุน)</span><b>${money(t.revenue_known)}</b></div>
+        <div class="st-kpi"><span>ต้นทุน</span><b>${money(t.cost)}</b></div>
+        <div class="st-kpi st-kpi--hero"><span>กำไรขั้นต้น</span><b class="${profit < 0 ? 'neg' : ''}">${money(profit)} <small>(${pct}%)</small></b></div>
+      </div>
+      ${t.missing ? `<p class="st-sub">⚠️ ${t.missing} เมนูยังไม่มีต้นทุน (ไม่นับในกำไร)</p>` : ''}
+      ${low.length ? `<p class="st-sub">กำไรต่ำสุด: ${low.map(i => `${esc(i.name)} ${Math.round(i.profit / i.revenue * 100)}%`).join(' · ')}</p>` : ''}
+      <details class="st-table-view"><summary>ดูทุกเมนู</summary>
+        <table class="st-table st-profit"><thead><tr><th>เมนู</th><th>จำนวน</th><th>ยอดขาย</th><th>ต้นทุน</th><th>กำไร</th></tr></thead>
+        <tbody>${items.map(i => `<tr><td>${esc(i.name)}</td><td>${num(i.qty)}</td><td>${money(i.revenue)}</td>
+          <td>${i.cost == null ? '–' : money(i.cost)}</td><td class="${Number(i.profit) < 0 ? 'neg' : ''}">${i.profit == null ? '–' : money(i.profit)}</td></tr>`).join('')}</tbody></table>
+      </details>
+      <p class="st-sub">กำไรขั้นต้น = ยอดขายเมนู − ต้นทุนเมนู (ยังไม่หักส่วนลด ค่าแรง ค่าเช่า)</p>`;
+  }
+
+  // ---------- ส่งออก Excel / CSV (รอบ M) ----------
+  const EXPORT = {
+    daily: { name: 'ยอดรายวัน', cols: [['day', 'วันที่'], ['bills', 'บิล'], ['gross', 'ค่าอาหาร'], ['discount', 'ส่วนลด'], ['service', 'ค่าบริการ'], ['vat', 'VAT'], ['net', 'ยอดสุทธิ'], ['cash', 'เงินสด'], ['promptpay', 'พร้อมเพย์'], ['transfer', 'โอน'], ['card', 'บัตร']] },
+    receipts: { name: 'ใบเสร็จ', cols: [['at', 'วันเวลา'], ['receipt_no', 'เลขที่'], ['table', 'โต๊ะ/คิว'], ['method', 'ช่องทาง'], ['subtotal', 'ค่าอาหาร'], ['discount', 'ส่วนลด'], ['service', 'ค่าบริการ'], ['vat', 'VAT'], ['total', 'ยอดสุทธิ'], ['cash', 'ส่วนที่เป็นเงินสด'], ['status', 'สถานะ'], ['by', 'พนักงาน']] },
+    items: { name: 'รายการที่สั่ง', cols: [['at', 'วันเวลา'], ['order_no', 'ออร์เดอร์'], ['table', 'โต๊ะ/คิว'], ['status', 'สถานะ'], ['to_go', 'ห่อกลับ'], ['name', 'เมนู'], ['options', 'ตัวเลือก'], ['qty', 'จำนวน'], ['unit_price', 'ราคา/หน่วย'], ['line_total', 'รวม'], ['unit_cost', 'ต้นทุน/หน่วย'], ['cost_total', 'ต้นทุนรวม']] },
+    profit: { name: 'กำไรแยกเมนู', cols: [['name', 'เมนู'], ['qty', 'จำนวน'], ['revenue', 'ยอดขาย'], ['cost', 'ต้นทุน'], ['profit', 'กำไร']] },
+    shifts: { name: 'ปิดกะ', cols: [['opened_at', 'เปิดกะ'], ['closed_at', 'ปิดกะ'], ['opening', 'เงินทอนตั้งต้น'], ['cash_sales', 'รับเงินสด'], ['moves_in', 'เงินเข้า'], ['moves_out', 'เงินออก'], ['expected', 'ควรมี'], ['counted', 'นับได้'], ['diff', 'ขาด(-)/เกิน(+)'], ['opened_by', 'คนเปิด'], ['closed_by', 'คนปิด'], ['note', 'หมายเหตุ']] },
+    menu: { name: 'เมนู', cols: [['category', 'หมวด'], ['name', 'เมนู'], ['price', 'ราคา'], ['cost', 'ต้นทุน'], ['margin', 'กำไร/จาน'], ['available', 'ขายอยู่'], ['stock_left', 'เหลือ'], ['combo', 'เป็นชุด']] }
+  };
+  const STATUS_TH = { paid: 'ชำระแล้ว', void: 'ยกเลิก', new: 'ใหม่', accepted: 'รับแล้ว', cooking: 'กำลังทำ', served: 'เสิร์ฟแล้ว', cancelled: 'ยกเลิก' };
+  const cellOf = (k, v) => {
+    if (v == null) return '';
+    if (k === 'method') return METHOD[v] || v;
+    if (k === 'status') return STATUS_TH[v] || v;
+    if (typeof v === 'string' && /^-?\d+(\.\d+)?$/.test(v) && !['receipt_no', 'day', 'table'].includes(k)) return Number(v);
+    return v;
+  };
+  $('#form-export').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const f = e.target;
+    const kinds = [...f.querySelectorAll('.st-export-kinds input:checked')].map(i => i.value);
+    if (!kinds.length) return showMsg('เลือกอย่างน้อย 1 อย่าง');
+    const from = $('#d-from').value, to = $('#d-to').value;
+    const btn = f.querySelector('button[type=submit]');
+    btn.disabled = true; btn.textContent = 'กำลังเตรียมไฟล์…';
+    const res = await Promise.all(kinds.map(k => sb.rpc('st_export', { p_shop: shopId, p_from: from, p_to: to, p_kind: k })));
+    btn.disabled = false; btn.textContent = '⬇️ ดาวน์โหลด';
+    const err = res.find(r => r.error);
+    if (err) return showMsg(/st_export|PGRST202|function/i.test(err.error.message || '') ? 'ต้องรัน sql/st-20-tools.sql ก่อน' : thaiError(err.error));
+    const sheets = res.map((r, i) => {
+      const d = EXPORT[kinds[i]];
+      return { name: d.name, head: d.cols.map(c => c[1]), rows: (r.data.rows || []).map(row => d.cols.map(([k]) => cellOf(k, row[k]))) };
+    });
+    const base = `smarttable-${from}_${to}`;
+    if (f.fmt.value === 'csv') sheets.forEach((sh, i) => setTimeout(() => ST_XLSX.download(ST_XLSX.csv(sh), `${base}-${kinds[i]}.csv`), i * 400));
+    else ST_XLSX.download(ST_XLSX.build(sheets), base + '.xlsx');
+    showMsg(`ดาวน์โหลดแล้ว (${sheets.map(s => s.name + ' ' + s.rows.length + ' แถว').join(' · ')})`, 'ok');
+  });
 
   // ---------- เลือกการ์ดที่จะแสดง (จำในเครื่อง + บัญชี) ----------
   const CARDS = [...document.querySelectorAll('[data-card]')].map(c => [c.dataset.card, c.querySelector('h3').textContent.trim()]);

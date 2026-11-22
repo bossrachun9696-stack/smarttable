@@ -120,6 +120,23 @@
         <small>ขายครบแล้วขึ้น "หมด" ให้เอง · ยกเลิกออร์เดอร์แล้วคืนจำนวนให้</small>
       </label>
 
+      <h4>💹 ต้นทุนต่อจาน (ไม่บังคับ)</h4>
+      <label class="st-field"><span>ต้นทุน (บาท) · ลูกค้าและครัวไม่เห็น</span>
+        <input name="cost" type="number" min="0" max="100000" step="0.01" inputmode="decimal" placeholder="เช่น 22">
+        <small id="cost-margin" class="st-margin"></small>
+      </label>
+
+      <h4>🍱 ชุดคอมโบ</h4>
+      <label class="st-check st-check--box"><input type="checkbox" name="is_combo"> <span><b>เมนูนี้เป็นชุด</b><small>เลือกเมนูในชุด · ครัวเห็นรายการในชุดครบ · ราคาชุดตั้งที่ช่อง "ราคา" ด้านบน</small></span></label>
+      <div id="combo-box" hidden>
+        <div id="combo-pick" class="st-combo-pick"></div>
+        <small id="combo-sum" class="st-margin"></small>
+      </div>
+
+      <h4>🍟 แนะนำให้สั่งคู่กับเมนูนี้</h4>
+      <p class="st-sub">ลูกค้ากดเมนูนี้ใส่ตะกร้า แล้วขึ้นเมนูที่ติ๊กไว้ให้กดเพิ่ม (ใช้เมื่อตั้ง "ขายพ่วง" เป็นตั้งเอง หรือตั้งเอง + อัตโนมัติ) · เลือกได้ 6</p>
+      <div id="upsell-pick" class="st-upsell-pick st-tagpick"></div>
+
       <h4>ตัวเลือกเพิ่มเติม</h4>
       <p class="st-sub">เช่น "ไข่" (ไข่ดาว +10, ไข่เจียว +15) หรือ "ความเผ็ด" (น้อย / กลาง / มาก)</p>
       <div id="opt-groups"></div>

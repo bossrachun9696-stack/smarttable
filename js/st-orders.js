@@ -14,7 +14,7 @@
   $('#back').href = 'shop.html?id=' + encodeURIComponent(shopId);
 
   const [{ data: shop }, { data: me }] = await Promise.all([
-    sb.from('st_shops').select('id, name').eq('id', shopId).maybeSingle(),
+    sb.from('st_shops').select('id, name, tool_cfg').eq('id', shopId).maybeSingle(),
     sb.from('st_shop_members').select('role').eq('shop_id', shopId).eq('user_id', user.id).maybeSingle()
   ]);
   if (!shop || !me) return showMsg('ไม่พบร้านนี้ หรือคุณไม่ได้เป็นพนักงานของร้าน');
@@ -161,9 +161,11 @@
       stations = b.data.stations || [];
       if (station && !stations.some(x => x.id === station)) station = '';
       const ids = new Set(orders.map(o => o.id));
-      if (seenOrders && orders.some(o => o.status === 'new' && !seenOrders.has(o.id))) {
+      const fresh = seenOrders ? orders.filter(o => o.status === 'new' && !seenOrders.has(o.id)) : [];
+      if (fresh.length) {
         beep('order');
         flash();
+        autoPrint(fresh);
       }
       seenOrders = ids;
     }
@@ -224,7 +226,7 @@
           <span class="st-ocard-no">#${o.order_no}</span>
           <time>${o.status === 'cancelled' ? 'ยกเลิก' : col !== 'served' ? ageText(m) : 'เสร็จแล้ว'}</time>
         </header>
-        <div class="st-ocard-meta">${hhmm(o.created_at)}${isTicket(o) ? ' · กลับบ้าน' + (o.contact_name ? ' · ' + esc(o.contact_name) : '') : ''}${o.guest_name && !isTicket(o) ? ' · ' + esc(o.guest_name) : ''}${o.zone ? ' · ' + esc(o.zone) : ''}${o.source === 'staff' ? ' · พนักงานสั่ง' : ''} ${pickSoon}${o.confirm_pending && o.status !== 'cancelled' ? ' <em class="st-badge st-badge--wait">⚠ โต๊ะยังไม่ยืนยัน</em>' : ''}</div>
+        <div class="st-ocard-meta">${hhmm(o.created_at)}${isTicket(o) ? ' · กลับบ้าน' + (o.contact_name ? ' · ' + esc(o.contact_name) : '') : ''}${o.guest_name && !isTicket(o) ? ' · ' + esc(o.guest_name) : ''}${o.zone ? ' · ' + esc(o.zone) : ''}${o.source === 'staff' ? ' · พนักงานสั่ง' : ''} ${pickSoon}${o.confirm_pending && o.status !== 'cancelled' ? ' <em class="st-badge st-badge--wait">⚠ โต๊ะยังไม่ยืนยัน</em>' : ''}${o.to_go ? ' <em class="st-badge st-badge--togo">🛍 ห่อกลับบ้าน</em>' : ''}</div>
         <ul class="st-ocard-items">
           ${its.map(i => `
             <li class="${i.done ? 'done' : ''}">
@@ -235,7 +237,7 @@
         </ul>
         ${others ? `<p class="st-ocard-other">+ อีก ${others} รายการที่สถานีอื่น</p>` : ''}
         ${o.note ? `<p class="st-ocard-note">📝 ${esc(o.note)}</p>` : ''}
-        <footer>${btns}<span class="st-ocard-sum">${station ? '' : baht(o.subtotal)}</span></footer>
+        <footer>${btns}<button type="button" class="st-chip st-chip--icon" data-print title="พิมพ์ใบสั่งครัว" aria-label="พิมพ์ใบสั่งครัว">🖨</button><span class="st-ocard-sum">${station ? '' : baht(o.subtotal)}</span></footer>
       </article>`;
   }
 
@@ -359,6 +361,34 @@
     render();
     schedule();
   });
+
+  // ---------- พิมพ์ใบสั่งครัว (รอบ M) ----------
+  const PR = window.ST_PRINTER;
+  const AUTO_KEY = 'st-autoprint-kitchen:' + shopId;
+  const printedKey = 'st-printed:' + shopId;
+  const printed = new Set((() => { try { return JSON.parse(sessionStorage.getItem(printedKey) || '[]'); } catch { return []; } })());
+  const markPrinted = (id) => { printed.add(id); try { sessionStorage.setItem(printedKey, JSON.stringify([...printed].slice(-300))); } catch { /* ไม่เป็นไร */ } };
+  let printChain = Promise.resolve();
+  function printOrder(o) {
+    const one = station ? Object.assign({}, o, { items: myItems(o) }) : o;
+    printChain = printChain.then(() => PR.print(PR.kitchenHtml(one, shop.tool_cfg, shop.name), shop.tool_cfg))
+      .then(() => markPrinted(o.id))
+      .catch((e) => showMsg(e && e.message === 'bt_pick' ? 'ยังไม่ได้จับคู่เครื่องพิมพ์บลูทูธ — กด 🖨 ด้านบน' : 'พิมพ์ไม่สำเร็จ: ' + ((e && e.message) || e)));
+    return printChain;
+  }
+  function autoPrint(list) {
+    if (!PR || !PR.autoOn(AUTO_KEY)) return;
+    list.filter(o => !printed.has(o.id) && myItems(o).length).forEach(printOrder);
+  }
+  $('#btn-printer').addEventListener('click', () => PR.openSettings({ shopCfg: shop.tool_cfg, shopName: shop.name,
+    auto: { key: AUTO_KEY, label: 'พิมพ์ใบสั่งครัวเองเมื่อมีออร์เดอร์ใหม่' + (station ? ' (เฉพาะสถานีที่เลือก)' : '') } }));
+  $('#board').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-print]');
+    if (!b) return;
+    e.stopPropagation();
+    const o = orders.find(x => x.id === b.closest('[data-id]').dataset.id);
+    if (o) printOrder(o);
+  }, true);
 
   // ---------- Realtime ----------
   const live = $('#live');

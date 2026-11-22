@@ -302,6 +302,7 @@
     fi.spicy_level.value = item ? String(item.spicy_level) : '0';
     fi.is_recommended.checked = item ? item.is_recommended : false;
     fi.stock_left.value = item && item.stock_left != null ? item.stock_left : '';
+    fillBiz(item);
     i18nDraft = JSON.parse(JSON.stringify((item && item.i18n) || {}));
     renderI18n();
     const have = new Set(item ? item.tags || [] : []);
@@ -314,6 +315,59 @@
     document.body.classList.add('st-noscroll');
     sheet.querySelector('.st-sheet-scroll').scrollTop = 0;
   }
+  // ---------- ต้นทุน / ชุดคอมโบ / ขายพ่วง (รอบ M) ----------
+  const bzOthers = (item) => data.items.filter(x => !item || x.id !== item.id);
+  function fillBiz(item) {
+    fi.cost.value = item && item.cost != null ? Number(item.cost) : '';
+    const combo = (item && item.combo) || [];
+    fi.is_combo.checked = combo.length > 0;
+    const inCombo = new Map(combo.map(c => [c.id, c.qty]));
+    // เมนูที่อยู่ในชุดอื่น เป็นชุดเองไม่ได้ · ชุดใส่ในชุดไม่ได้
+    const usedInCombo = item && data.items.some(x => (x.combo || []).some(c => c.id === item.id));
+    fi.is_combo.disabled = !!usedInCombo;
+    $('#combo-pick').innerHTML = bzOthers(item).filter(x => !(x.combo && x.combo.length)).map(x => `
+      <label><input type="checkbox" value="${esc(x.id)}"${inCombo.has(x.id) ? ' checked' : ''}>
+        <span>${esc(x.name)} <small>฿${Number(x.price)}</small></span>
+        <input type="number" min="1" max="9" step="1" value="${inCombo.get(x.id) || 1}" aria-label="จำนวน ${esc(x.name)}" data-q="${esc(x.id)}"></label>`).join('')
+      || '<p class="st-sub">ยังไม่มีเมนูอื่นให้ใส่ในชุด</p>';
+    const up = new Set((item && item.upsell_ids) || []);
+    $('#upsell-pick').innerHTML = bzOthers(item).map(x =>
+      `<label class="st-tagchip"><input type="checkbox" value="${esc(x.id)}"${up.has(x.id) ? ' checked' : ''}><span>${esc(x.name)}</span></label>`).join('');
+    bizUi();
+  }
+  function bizUi() {
+    $('#combo-box').hidden = !fi.is_combo.checked;
+    const price = Number(fi.price.value) || 0;
+    const cost = fi.cost.value === '' ? null : Number(fi.cost.value);
+    let comboCost = 0, comboFull = 0, anyCost = true;
+    $('#combo-pick').querySelectorAll('input[type=checkbox]:checked').forEach(c => {
+      const it = data.items.find(x => x.id === c.value);
+      const q = Number($('#combo-pick').querySelector(`[data-q="${c.value}"]`).value) || 1;
+      if (!it) return;
+      comboFull += Number(it.price) * q;
+      if (it.cost == null) anyCost = false; else comboCost += Number(it.cost) * q;
+    });
+    $('#combo-sum').textContent = fi.is_combo.checked && comboFull
+      ? `ซื้อแยก ฿${comboFull} · ราคาชุด ฿${price} · ลูกค้าประหยัด ฿${Math.max(0, comboFull - price)}${anyCost ? ` · ต้นทุนรวมเมนูในชุด ฿${comboCost}` : ''}` : '';
+    $('#cost-margin').textContent = cost != null && price
+      ? `กำไรต่อจาน ฿${(price - cost).toFixed(2).replace(/\.00$/, '')} (${Math.round((price - cost) / price * 100)}%)` : '';
+    const n = $('#upsell-pick').querySelectorAll('input:checked').length;
+    $('#upsell-pick').querySelectorAll('input:not(:checked)').forEach(b => { b.disabled = n >= 6; });
+  }
+  function collectBiz() {
+    const combo = fi.is_combo.checked ? [...$('#combo-pick').querySelectorAll('input[type=checkbox]:checked')].map(c => ({
+      id: c.value, qty: Math.max(1, Math.min(9, Number($('#combo-pick').querySelector(`[data-q="${c.value}"]`).value) || 1)) })) : [];
+    return {
+      cost: fi.cost.value === '' ? null : Math.max(0, Number(fi.cost.value)),
+      combo: combo.length ? combo : null,
+      upsell: [...$('#upsell-pick').querySelectorAll('input:checked')].map(c => c.value)
+    };
+  }
+  ['#combo-pick', '#upsell-pick'].forEach(sel => { $(sel).addEventListener('change', bizUi); $(sel).addEventListener('input', bizUi); });
+  fi.cost.addEventListener('input', bizUi);
+  fi.price.addEventListener('input', bizUi);
+  fi.is_combo.addEventListener('change', bizUi);
+
   function closeSheet() {
     sheet.hidden = true;
     document.body.classList.remove('st-noscroll');
@@ -526,6 +580,9 @@
       p_stock: stockRaw === '' ? null : Math.max(0, parseInt(stockRaw, 10) || 0)
     });
     if (exErr) { showMsg('บันทึกเมนูแล้ว แต่บันทึกป้าย/จำนวนไม่สำเร็จ: ' + thaiError(exErr)); }
+    const biz = collectBiz();
+    const { error: bzErr } = await sb.rpc('st_set_item_biz', { p_item: savedId, p_cost: biz.cost, p_combo: biz.combo, p_upsell: biz.upsell });
+    if (bzErr && !/st_set_item_biz|PGRST202|function/i.test(bzErr.message || '')) showMsg('บันทึกเมนูแล้ว แต่บันทึกต้นทุน/ชุด/ขายพ่วงไม่สำเร็จ: ' + thaiError(bzErr));
     if (LANGS.length) {
       const { error: trErr } = await sb.rpc('st_set_item_i18n', { p_item: savedId, p_i18n: collectI18n() });
       if (trErr) showMsg('บันทึกเมนูแล้ว แต่บันทึกคำแปลไม่สำเร็จ: ' + thaiError(trErr));

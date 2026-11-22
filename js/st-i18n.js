@@ -2,6 +2,15 @@
 // ชื่อเมนูและคำอธิบาย ร้านใส่คำแปลเองในหน้าเมนู (ถ้าไม่ใส่จะแสดงภาษาไทย)
 window.ST_I18N = {
   th: {
+    up_title: '🍟 มักสั่งคู่กับ', up_added: '✓ ใส่ตะกร้าแล้ว: {x}', up_no: 'ไม่เป็นไร ขอบคุณ', up_add: '+ เพิ่ม', up_pick: 'เลือก', combo_in: 'ในชุด', combo_save: 'ประหยัด ฿{n}',
+    gr_how: 'รับสินค้าอย่างไร', gr_pickup: '🏪 มารับที่ร้าน', gr_pickup_sub: 'สั่งไว้ แล้วมารับเมื่อพร้อม', gr_delivery: '🛵 ส่งถึงบ้าน', gr_delivery_sub: 'ส่งได้ไม่เกิน {km} กม. จากร้าน',
+    gr_address: 'ที่อยู่สำหรับส่ง *', gr_address_ph: 'บ้านเลขที่ ซอย จุดสังเกต', gr_locate: '📍 แชร์ตำแหน่งของฉัน', gr_locating: 'กำลังหาตำแหน่ง…', gr_relocate: '📍 หาตำแหน่งใหม่',
+    gr_loc_denied: 'ไม่ได้อนุญาตตำแหน่ง — iPhone: ตั้งค่า → ความเป็นส่วนตัว → บริการหาตำแหน่ง → Safari → "ขณะใช้แอป" แล้วลองใหม่',
+    gr_loc_fail: 'หาตำแหน่งไม่สำเร็จ ลองใหม่อีกครั้ง', gr_far: 'ไกลเกินระยะส่ง ({km} กม. · ร้านส่งได้ไม่เกิน {max} กม.) — เลือก "มารับที่ร้าน" แทน',
+    gr_km: 'ห่างร้าน {km} กม.', gr_min: 'สั่งขั้นต่ำ ฿{n} (ขาดอีก ฿{d})', gr_fee: 'ค่าส่ง', gr_fee_free: 'ส่งฟรี', gr_free_over: 'ซื้อครบ ฿{n} ส่งฟรี', gr_total: 'รวมทั้งหมด',
+    gr_need_loc: 'กด "แชร์ตำแหน่งของฉัน" ก่อน เพื่อคำนวณค่าส่ง', gr_send_pickup: 'สั่ง · มารับที่ร้าน ({n})', gr_send_delivery: 'สั่ง · ส่งถึงบ้าน ({n})',
+    gr_eta: 'ส่งถึงประมาณ {n} นาทีหลังร้านรับออร์เดอร์', gr_phone_req: 'เบอร์โทร *', gr_tk_delivery: '🛵 ส่งถึงบ้าน', gr_tk_pickup: '🏪 มารับที่ร้าน', gr_tk_addr: 'ส่งที่: {x}', gr_tk_fee: 'ค่าส่ง ฿{n} (รวมในบิลแล้ว)', gr_tk_ready: 'กำลังนำไปส่ง', gr_ready_d: 'สินค้าพร้อม กำลังจะออกไปส่ง 🛵', gr_ready_p: 'สินค้าพร้อมแล้ว! มารับที่ร้านได้เลย',
+    togo_label: '🛍 ห่อกลับบ้าน (ทุกรายการในรอบนี้)', togo_hint: 'ใส่กล่องแยกให้ คิดรวมในบิลโต๊ะนี้', togo_buffet: 'เมนูบุฟเฟ่ต์/รีฟิลที่ห่อกลับบ้าน คิดราคาปกติ', togo_send: 'ส่งรายการห่อกลับบ้าน ({n})', togo_tag: '🛍 ห่อกลับบ้าน',
     tk_save: '📸 บันทึกภาพบัตรคิว', tk_save_hint: 'กดค้างที่รูปแล้วเลือก "บันทึกรูปภาพ" · แสดงเลขคิวนี้ตอนรับของ', tk_img_show: 'แสดงเลขคิวนี้ตอนรับของ', tk_img_open: 'สแกนเพื่อเปิดบัตรคิวอีกครั้ง', ta_title_q: 'สั่งแล้วรับที่ร้าน', tk_new_q: 'สั่งใหม่',
     bf_refill_in: '🥤 รีฟิล ✓', bf_refill_have: '🥤 {n} ✓', bf_refill_offer: '{n} {p}', bf_per_head: '/คน', bf_per_table: '/โต๊ะ', bf_refill_ask: 'ขอเพิ่ม', bf_refill_asked: 'เรียกพนักงานแล้ว รอสักครู่', bf_refill_free: 'ได้ฟรี: {x}',
     bf_wait_t: '🍖 รอพนักงานเริ่มบุฟเฟ่ต์', bf_wait: 'พนักงานจะมานับจำนวนคนและเลือกแพ็กเกจให้ · ดูเมนูและใส่ตะกร้ารอได้เลย', bf_wait_btn: 'รอพนักงานเริ่มบุฟเฟ่ต์ก่อน…', bf_started: 'เริ่มบุฟเฟ่ต์แล้ว ✓ สั่งได้เลย', bf_in: 'รวมในบุฟเฟ่ต์', bf_heads: 'ผู้ใหญ่ {a} · เด็ก {c}', bf_adults: '{a} คน', bf_unlimited: '⏱ ไม่จำกัดเวลา', bf_left: 'เหลือเวลาสั่ง', bf_end_left: 'เหลือเวลาทั้งหมด', bf_until: 'สั่งได้ถึง {h} · หมดเวลา {e}', bf_round: 'สั่งได้รอบละไม่เกิน {n} จาน', bf_gap: 'เว้น {m} นาทีระหว่างรอบ', bf_warn: 'อีก {m} นาทีหมดเวลาสั่งบุฟเฟ่ต์', bf_last: 'หมดเวลาสั่งเมนูบุฟเฟ่ต์แล้ว · เมนูนอกแพ็กเกจยังสั่งได้', bf_timeup: 'หมดเวลาบุฟเฟ่ต์แล้ว', bf_over: 'เกินเวลา {m} นาที', bf_overfee: 'เกินเวลาคิดเพิ่มคนละ {x} ทุก {m} นาที', bf_round_err: 'รอบนี้สั่งเมนูบุฟเฟ่ต์ได้ไม่เกิน {n} จาน (ในตะกร้ามี {q})', bf_child: 'เด็ก: {x}',
@@ -61,6 +70,15 @@ window.ST_I18N = {
     cart_sent_other: 'มีคนในโต๊ะส่งรายการแล้ว'
   },
   en: {
+    up_title: '🍟 Goes well with', up_added: '✓ Added: {x}', up_no: 'No thanks', up_add: '+ Add', up_pick: 'Choose', combo_in: 'Set includes', combo_save: 'Save ฿{n}',
+    gr_how: 'How would you like it?', gr_pickup: '🏪 Pick up at shop', gr_pickup_sub: 'Order now, collect when ready', gr_delivery: '🛵 Delivery', gr_delivery_sub: 'Within {km} km of the shop',
+    gr_address: 'Delivery address *', gr_address_ph: 'House no., soi, landmark', gr_locate: '📍 Share my location', gr_locating: 'Finding your location…', gr_relocate: '📍 Locate again',
+    gr_loc_denied: 'Location permission denied — allow location for your browser in Settings, then try again',
+    gr_loc_fail: 'Could not get your location. Please try again', gr_far: 'Too far to deliver ({km} km · max {max} km) — choose "Pick up at shop" instead',
+    gr_km: '{km} km from the shop', gr_min: 'Minimum order ฿{n} (฿{d} more)', gr_fee: 'Delivery fee', gr_fee_free: 'Free delivery', gr_free_over: 'Free delivery over ฿{n}', gr_total: 'Total',
+    gr_need_loc: 'Tap "Share my location" first to calculate the delivery fee', gr_send_pickup: 'Order · pick up ({n})', gr_send_delivery: 'Order · delivery ({n})',
+    gr_eta: 'Delivered about {n} min after the shop accepts', gr_phone_req: 'Phone *', gr_tk_delivery: '🛵 Delivery', gr_tk_pickup: '🏪 Pick up', gr_tk_addr: 'Deliver to: {x}', gr_tk_fee: 'Delivery fee ฿{n} (included in bill)', gr_tk_ready: 'Out for delivery', gr_ready_d: 'Your order is ready and on its way 🛵', gr_ready_p: 'Your order is ready to pick up!',
+    togo_label: '🛍 Take away (everything in this round)', togo_hint: 'Packed separately, added to this table\'s bill', togo_buffet: 'Buffet/refill items taken away are charged at menu price', togo_send: 'Send take-away order ({n})', togo_tag: '🛍 Take away',
     tk_save: '📸 Save queue ticket', tk_save_hint: 'Press and hold the image, then "Save Image" · show this number at pickup', tk_img_show: 'Show this number at pickup', tk_img_open: 'Scan to reopen this ticket', ta_title_q: 'Order & pick up', tk_new_q: 'New order',
     bf_refill_in: '🥤 Refill ✓', bf_refill_have: '🥤 {n} ✓', bf_refill_offer: '{n} {p}', bf_per_head: '/person', bf_per_table: '/table', bf_refill_ask: 'Add', bf_refill_asked: 'Staff called — please wait', bf_refill_free: 'Free: {x}',
     bf_wait_t: '🍖 Waiting for staff to start the buffet', bf_wait: 'Staff will count your party and set the package · browse and fill your cart meanwhile', bf_wait_btn: 'Waiting for staff to start the buffet…', bf_started: 'Buffet started ✓ Order away', bf_in: 'Included', bf_heads: 'Adults {a} · Children {c}', bf_adults: '{a} guests', bf_unlimited: '⏱ No time limit', bf_left: 'Ordering time left', bf_end_left: 'Time left', bf_until: 'Last order {h} · Ends {e}', bf_round: 'Up to {n} items per round', bf_gap: '{m} min between rounds', bf_warn: '{m} min until last order', bf_last: 'Buffet last order has passed · other menu items can still be ordered', bf_timeup: 'Buffet time is over', bf_over: '{m} min over time', bf_overfee: 'Overtime: {x} per person every {m} min', bf_round_err: 'Max {n} buffet items this round (cart has {q})', bf_child: 'Children: {x}',
@@ -120,6 +138,15 @@ window.ST_I18N = {
     cart_sent_other: 'Someone at your table sent the order'
   },
   zh: {
+    up_title: '🍟 常一起点', up_added: '✓ 已加入：{x}', up_no: '不用了，谢谢', up_add: '+ 加入', up_pick: '选择', combo_in: '套餐包含', combo_save: '省 ฿{n}',
+    gr_how: '取货方式', gr_pickup: '🏪 到店自取', gr_pickup_sub: '先下单，准备好后来取', gr_delivery: '🛵 送货上门', gr_delivery_sub: '距店 {km} 公里内',
+    gr_address: '送货地址 *', gr_address_ph: '门牌号、巷、地标', gr_locate: '📍 分享我的位置', gr_locating: '正在定位…', gr_relocate: '📍 重新定位',
+    gr_loc_denied: '未允许定位 — 请在设置中允许浏览器使用位置后重试',
+    gr_loc_fail: '定位失败，请重试', gr_far: '超出配送范围（{km} 公里 · 最远 {max} 公里）— 请选择到店自取',
+    gr_km: '距店 {km} 公里', gr_min: '最低消费 ฿{n}（还差 ฿{d}）', gr_fee: '配送费', gr_fee_free: '免配送费', gr_free_over: '满 ฿{n} 免配送费', gr_total: '合计',
+    gr_need_loc: '请先点"分享我的位置"以计算配送费', gr_send_pickup: '下单 · 到店自取（{n}）', gr_send_delivery: '下单 · 送货上门（{n}）',
+    gr_eta: '店家接单后约 {n} 分钟送达', gr_phone_req: '电话 *', gr_tk_delivery: '🛵 送货上门', gr_tk_pickup: '🏪 到店自取', gr_tk_addr: '送至：{x}', gr_tk_fee: '配送费 ฿{n}（已计入账单）', gr_tk_ready: '配送中', gr_ready_d: '商品已备好，即将送出 🛵', gr_ready_p: '商品已备好，请到店自取！',
+    togo_label: '🛍 打包带走（本轮全部）', togo_hint: '单独打包，计入本桌账单', togo_buffet: '打包的自助餐/续杯菜品按原价计算', togo_send: '提交打包订单（{n}）', togo_tag: '🛍 打包',
     tk_save: '📸 保存取餐号', tk_save_hint: '长按图片选择"保存图片" · 取餐时出示此号码', tk_img_show: '取餐时出示此号码', tk_img_open: '扫码重新打开取餐号', ta_title_q: '下单后到店取', tk_new_q: '再下一单',
     bf_refill_in: '🥤 续杯 ✓', bf_refill_have: '🥤 {n} ✓', bf_refill_offer: '{n} {p}', bf_per_head: '/人', bf_per_table: '/桌', bf_refill_ask: '加购', bf_refill_asked: '已呼叫店员，请稍候', bf_refill_free: '免费：{x}',
     bf_wait_t: '🍖 等待店员开始自助餐', bf_wait: '店员会来确认人数和套餐 · 现在可以先浏览菜单并加入购物车', bf_wait_btn: '等待店员开始自助餐…', bf_started: '自助餐已开始 ✓ 可以点餐了', bf_in: '套餐内', bf_heads: '成人 {a} · 儿童 {c}', bf_adults: '{a} 人', bf_unlimited: '⏱ 不限时', bf_left: '剩余点餐时间', bf_end_left: '剩余时间', bf_until: '最后点餐 {h} · 结束 {e}', bf_round: '每轮最多 {n} 份', bf_gap: '每轮间隔 {m} 分钟', bf_warn: '还有 {m} 分钟停止点自助餐', bf_last: '自助餐已停止点餐 · 套餐外菜品仍可点', bf_timeup: '自助餐时间已到', bf_over: '超时 {m} 分钟', bf_overfee: '超时每 {m} 分钟每人加收 {x}', bf_round_err: '本轮自助餐最多 {n} 份（购物车有 {q} 份）', bf_child: '儿童：{x}',
@@ -182,6 +209,7 @@ window.ST_I18N = {
 // ข้อความผิดพลาดที่ลูกค้าเจอบ่อย (ภาษาอื่นนอกจากไทย)
 window.ST_I18N_ERR = {
   en: {
+    st_grocery_far: 'Too far to deliver — please choose pick up.', st_grocery_min: 'Below the minimum order.', st_grocery_pickup_off: 'This shop does not offer pick up.', st_grocery_delivery_off: 'This shop does not deliver yet.', st_grocery_no_shop_location: 'The shop has not set its location yet, so delivery is unavailable.', st_grocery_need_location: 'Please share your location first.', st_need_address: 'Please enter your full address.', st_need_phone: 'Please enter your phone number for delivery.', st_delivery_off: 'This shop does not deliver yet.',
     st_buffet_wait: 'Please wait for staff to start your buffet, then send again.', st_buffet_gap: 'Please wait a few minutes before the next round.', st_buffet_round_limit: 'Too many buffet items in this round.', st_buffet_last_order: 'Buffet last order has passed (other menu items can still be ordered).',
     st_wait_confirm: 'The restaurant has not confirmed your table yet. Please wait a moment and try again.', st_coupon_invalid: 'Coupon not found or no longer active.', st_coupon_expired: 'This coupon is not valid today.', st_coupon_used_up: 'This coupon has been fully redeemed.', st_coupon_already: 'This coupon is already added.', st_coupon_limit: 'Your table has reached the coupon limit.', st_coupon_no_promo: 'This coupon cannot be combined with time-based discounts.', st_coupon_need_staff: 'You have a coupon — please tap "Request bill" so staff can apply it.',
     st_session_invalid: 'This table session has ended or moved. Please scan the QR at your table again.',
@@ -208,6 +236,7 @@ window.ST_I18N_ERR = {
     st_cart_full: 'The table cart is full (60 lines) — please send it first.'
   },
   zh: {
+    st_grocery_far: '超出配送范围，请选择到店自取。', st_grocery_min: '未达到最低消费。', st_grocery_pickup_off: '本店不提供自取。', st_grocery_delivery_off: '本店暂不送货。', st_grocery_no_shop_location: '店家尚未设置位置，暂不能送货。', st_grocery_need_location: '请先分享您的位置。', st_need_address: '请填写完整地址。', st_need_phone: '送货需要填写电话。', st_delivery_off: '本店暂不送货。',
     st_buffet_wait: '请等待店员开始自助餐后再下单。', st_buffet_gap: '请稍等几分钟再点下一轮。', st_buffet_round_limit: '本轮自助餐点得太多了。', st_buffet_last_order: '自助餐已停止点餐（套餐外菜品仍可点）。',
     st_wait_confirm: '餐厅尚未确认您的餐桌，请稍后再试。', st_coupon_invalid: '优惠券无效或已停用。', st_coupon_expired: '优惠券今天不可用。', st_coupon_used_up: '优惠券已被领完。', st_coupon_already: '已添加此优惠券。', st_coupon_limit: '本桌优惠券已达上限。', st_coupon_no_promo: '此优惠券不可与限时折扣同时使用。', st_coupon_need_staff: '您已添加优惠券，请点"请求结账"由店员扣减。',
     st_session_invalid: '本桌用餐已结束或已换桌，请重新扫描桌上的二维码。',

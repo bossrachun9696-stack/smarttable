@@ -95,6 +95,11 @@
   let state = null;
   let brandDone = false;
   let lastScan = null;
+  // รอบ M: ขายพ่วง · ร้านขายของชำ (ประกาศก่อนใช้ กัน TDZ)
+  let upsell = null;                                // {mode, max, combo_save, pairs: {item_id: [ids]}}
+  let gInfo = null;                                 // ตั้งค่ารับ/ส่งของร้านขายของชำ
+  const gState = { fulfil: null, lat: null, lng: null, quote: null, locating: false, err: '' };
+  let tkFulfil = null;                              // ข้อมูลรับ/ส่งของบัตรคิว
   const diet = new Set();        // ตัวกรองป้ายอาหารที่ลูกค้าเลือก
   let token = null;
   let menu = { categories: [], items: [] };
@@ -108,6 +113,7 @@
   let dealsAt = 0, dealsFor = null;   // โหลดโปร/คูปองล่าสุดเมื่อไร / ของรอบโต๊ะไหน
 
   const isHub = () => !!lastScan && lastScan.table.kind === 'hub';
+  const isGrocery = () => !!(lastScan && lastScan.shop && lastScan.shop.shop_type === 'grocery');
   const ticket = () => lastScan && lastScan.ticket;
   const canOrder = () => (state === 'open' && !!token) || (state === 'takeaway' && !staffMode);
   // โหมด "ลูกค้าเปิดโต๊ะ ร้านยืนยัน": ใส่ตะกร้าได้ แต่ส่งได้หลังร้านยืนยัน
@@ -387,6 +393,7 @@
             <div class="st-gbody">
               <h3>${esc(iname(i))}</h3>
               ${idesc(i) ? `<p>${esc(idesc(i))}</p>` : ''}
+              ${comboLine(i)}
               <div class="st-gmeta">
                 ${priceHtml(i)}
                 ${i.is_recommended ? `<span class="st-tag st-tag--rec">${esc(t('recommended'))}</span>` : ''}
@@ -419,6 +426,8 @@
     menu = data;
     renderDiet();
     renderMenu();
+    loadUpsell();
+    if (isHub() && isGrocery()) loadGrocery();
     return true;
   }
 
@@ -519,6 +528,7 @@
       <h2 class="st-hero-name">${esc(iname(it))}</h2>
       ${lang !== 'th' && iname(it) !== it.name ? `<p class="st-sub" style="margin:-2px 0 4px">${esc(it.name)}</p>` : ''}
       ${idesc(it) ? `<p class="st-sub">${esc(idesc(it))}</p>` : ''}
+      ${comboLine(it)}
       <p class="st-hero-price">${priceHtml(it)}${it.stock_left != null && it.is_available ? ` <small class="st-sub">· ${esc(t('left', { n: it.stock_left }))}</small>` : ''}</p>
       ${p ? `<p class="st-promo-line">🏷 ${esc(t('promo_until', { x: p.name, t: p.end_time }))}</p>` : ''}
       ${(it.tags || []).length ? `<p class="st-hero-tags">${it.tags.map(k => TAGS[k] ? `<span class="st-tag st-tag--${TAGS[k].kind}">${TAGS[k].icon} ${esc(tagLabel(k))}</span>` : '').join(' ')}</p>` : ''}
@@ -595,6 +605,7 @@
     if (sharedOn()) putLine(same);
     renderCartTags();
     const name = iname(current);
+    if (showUpsell(current, name, qty)) return;
     closeSheet();
     toast(t('added', { x: name, n: qty }));
   });
@@ -609,6 +620,7 @@
       ${sharedOn() ? `<p class="st-shared-hint">👥 ${esc(t('shared_hint'))}</p>` : ''}
       <div class="st-lines">${linesHtml()}</div>
       ${sendFormHtml()}`;
+    if (state === 'takeaway' && isGrocery() && gInfo) { updateGrocery(); requestQuote(); }
   }
   function linesHtml() {
     return cart.map(l => {
@@ -633,10 +645,11 @@
     return `
       <form id="form-send" novalidate>
         ${state === 'takeaway' ? `
+        ${groceryHtml()}
         <label class="st-field"><span>${esc(t('ta_name'))} *</span>
           <input name="ta_name" type="text" maxlength="40" required autocomplete="name" placeholder="${esc(t('ta_name_ph'))}" value="${esc(ls.get(KEY_NAME) || '')}">
         </label>
-        <label class="st-field"><span>${esc(t('ta_phone'))}</span>
+        <label class="st-field"><span id="ta-phone-l">${esc(phoneLabel())}</span>
           <input name="ta_phone" type="tel" maxlength="16" inputmode="tel" autocomplete="tel" value="${esc(ls.get(KEY_PHONE) || '')}">
         </label>
         ${lastScan.takeaway && lastScan.takeaway.preorder ? `
@@ -649,12 +662,17 @@
         <label class="st-field"><span>${esc(t('note_shop'))}</span>
           <input name="note" type="text" maxlength="200" placeholder="${esc(t('note_shop_ph'))}">
         </label>
+        ${state === 'open' && !isHub() && !ticket() ? `
+        <label class="st-check st-togo"><input type="checkbox" name="to_go"${toGo ? ' checked' : ''}>
+          <span><b>${esc(t('togo_label'))}</b><small>${esc(t('togo_hint'))}${buf() ? ' · ' + esc(t('togo_buffet')) : ''}</small></span></label>` : ''}
         <div class="st-sum"><span>${esc(t('food_total'))}</span><b>${baht(cartTotal())}</b></div>
+        ${state === 'takeaway' && isGrocery() && gInfo ? '<div id="gr-sum"></div>' : ''}
         <p class="st-sub" style="margin-top:4px">${esc(t('fees_later'))}${promos.length ? ' · ' + esc(t('promo_note')) : ''}</p>
         <button class="st-btn" type="submit" id="btn-send"${waitConfirm() || waitBuffet() ? ' disabled' : ''}>${esc(sendLabel())}</button>
       </form>`;
   }
-  const sendLabel = () => waitConfirm() ? t('cf_wait_btn') : waitBuffet() ? t('bf_wait_btn') : t(state === 'takeaway' ? 'ta_send' : sharedOn() ? 'send_all' : 'send', { n: cartCount() });
+  let toGo = false;                               // ห่อกลับบ้าน (รอบนี้) · st-19
+  const sendLabel = () => waitConfirm() ? t('cf_wait_btn') : waitBuffet() ? t('bf_wait_btn') : t(state === 'takeaway' ? (isGrocery() && gInfo ? (gFulfil() === 'delivery' ? 'gr_send_delivery' : 'gr_send_pickup') : 'ta_send') : toGo ? 'togo_send' : sharedOn() ? 'send_all' : 'send', { n: cartCount() });
   // อัปเดตเฉพาะรายการ + ยอด (ไม่ล้างช่องที่กำลังพิมพ์)
   function updateCartSheet() {
     if (sheetMode !== 'cart') return;
@@ -664,6 +682,7 @@
     if (sum) sum.textContent = baht(cartTotal());
     const btn = $('#btn-send');
     if (btn && (!btn.disabled || waitConfirm() || waitBuffet())) btn.textContent = sendLabel();
+    if (state === 'takeaway' && isGrocery()) { updateGrocery(); requestQuote(); }
   }
   $('#btn-cart').addEventListener('click', () => {
     openSheet('cart', sharedOn() ? t('table_cart') : t('my_cart'));
@@ -692,15 +711,21 @@
     }
   });
 
+  $('#sheet-body').addEventListener('change', (e) => {
+    if (e.target.name !== 'to_go') return;
+    toGo = e.target.checked;
+    const btn = $('#btn-send');
+    if (btn && !btn.disabled) btn.textContent = sendLabel();
+  });
   $('#sheet-body').addEventListener('submit', async (e) => {
     if (e.target.id !== 'form-send') return;
     e.preventDefault();
     if (!canOrder()) return sheetMsg(t('st_' + state + '_t') || t('cant_order'));
     if (waitConfirm()) return sheetMsg(t('cf_wait_btn'));
     if (waitBuffet()) return sheetMsg(t('bf_wait_btn'));
-    const bErr = buffetCartError();
-    if (bErr) return sheetMsg(bErr);
     const f = e.target;
+    const bErr = f.to_go && f.to_go.checked ? '' : buffetCartError();    // ห่อกลับบ้าน = ราคาปกติ ไม่ติดกติกาบุฟเฟ่ต์
+    if (bErr) return sheetMsg(bErr);
     if (state === 'takeaway') return sendTakeaway(f);
     const guestName = f.guest_name.value.trim().slice(0, 30);
     ls.set(KEY_NAME, guestName || null);
@@ -709,14 +734,15 @@
     btn.disabled = true; btn.textContent = t('sending');
     const items = cart.map(l => ({ item_id: l.item_id, qty: l.qty, choices: l.choices, note: l.note || null }));
     const isShared = sharedOn();
+    const tg = !!(f.to_go && f.to_go.checked) ? '_to_go' : '';
     const { data, error } = staffMode
-      ? await sb.rpc('st_staff_order', { p_qr: qr, p_items: items, p_note: f.note.value.trim() || null, p_client_ref: pendingRef })
+      ? await sb.rpc('st_staff_order' + tg, { p_qr: qr, p_items: items, p_note: f.note.value.trim() || null, p_client_ref: pendingRef })
       : isShared
-      ? await sb.rpc('st_cart_send', {
+      ? await sb.rpc('st_cart_send' + tg, {
           p_qr: qr, p_session_token: token, p_note: f.note.value.trim() || null,
           p_guest_name: guestName || null, p_client_ref: pendingRef
         })
-      : await sb.rpc('st_place_order', {
+      : await sb.rpc('st_place_order' + tg, {
           p_qr: qr, p_session_token: token, p_items: items,
           p_note: f.note.value.trim() || null, p_guest_name: guestName || null, p_client_ref: pendingRef
         });
@@ -730,6 +756,7 @@
       return sheetMsg(gErr(error));
     }
     if (isShared) { ping('sent'); await pullCart(); } else { cart = []; saveCart(); }
+    toGo = false;
     renderCartTags();
     await refreshGuest();
     openSheet('orders', t('ordered'));
@@ -1244,19 +1271,32 @@
     const name = f.ta_name.value.trim().slice(0, 40);
     const phone = f.ta_phone.value.trim();
     if (!name) { f.ta_name.focus(); return sheetMsg(t('ta_need_name')); }
+    if (isGrocery() && gInfo) {
+      const ge = groceryError(f, phone);
+      if (ge) return sheetMsg(ge);
+      ls.set('st-guest-addr', f.gr_addr ? f.gr_addr.value.trim() || null : null);
+    }
     ls.set(KEY_NAME, name);
     ls.set(KEY_PHONE, phone || null);
     if (!pendingRef) pendingRef = rand();
     const btn = $('#btn-send');
     btn.disabled = true; btn.textContent = t('sending');
     const items = cart.map(l => ({ item_id: l.item_id, qty: l.qty, choices: l.choices, note: l.note || null }));
-    const { data, error } = await sb.rpc('st_takeaway_order', {
+    const gro = isGrocery() && gInfo;
+    const { data, error } = gro
+      ? await sb.rpc('st_grocery_order', {
+          p_hub_qr: qr, p_items: items, p_name: name, p_phone: phone || null,
+          p_pickup_at: (f.ta_pickup && f.ta_pickup.value) || null,
+          p_note: f.note.value.trim() || null, p_client_ref: pendingRef,
+          p_fulfil: gFulfil(), p_address: gFulfil() === 'delivery' ? f.gr_addr.value.trim() : null,
+          p_lat: gFulfil() === 'delivery' ? gState.lat : null, p_lng: gFulfil() === 'delivery' ? gState.lng : null })
+      : await sb.rpc('st_takeaway_order', {
       p_hub_qr: qr, p_items: items, p_name: name, p_phone: phone || null,
       p_pickup_at: (f.ta_pickup && f.ta_pickup.value) || null,
       p_note: f.note.value.trim() || null, p_client_ref: pendingRef
     });
     if (error) {
-      btn.disabled = false; btn.textContent = t('ta_send', { n: cartCount() });
+      btn.disabled = false; btn.textContent = sendLabel();
       const code = error.message || '';
       if (code.startsWith('st_')) pendingRef = null;
       if (['st_item_sold_out', 'st_item_gone', 'st_options_changed', 'st_options_required', 'st_out_of_stock'].includes(code)) loadMenu();
@@ -1381,18 +1421,213 @@
     } else {
       cls = 'prep'; head = t('tk_prep_t', { n: k.queue_no }); sub = t('tk_keep');
     }
+    const gDel = isGrocery() && tkFulfil && tkFulfil.fulfil === 'delivery';
+    if (isGrocery() && ready) { head = gDel ? t('gr_ready_d') : t('gr_ready_p'); if (gDel) sub = ''; }
     box.className = 'st-ticket st-ticket--' + cls;
     box.innerHTML = `
       <div class="st-ticket-no"><small>${esc(t('queue_no', { n: '' }).trim())}</small><b>${esc(k.queue_no)}</b></div>
       <div class="st-ticket-main">
         <b>${esc(head)}</b>
         ${sub ? `<span>${esc(sub)}</span>` : ''}
-        <small>${esc(k.contact_name || '')}${k.contact_name ? ' · ' : ''}${esc(pick)}${k.closed ? '' : ' · ' + esc(k.paid ? t('tk_paid') : t('tk_unpaid'))}</small>
+        <small>${esc(k.contact_name || '')}${k.contact_name && !gDel ? ' · ' : ''}${gDel ? '' : esc(pick)}${k.closed ? '' : ' · ' + esc(k.paid ? t('tk_paid') : t('tk_unpaid'))}</small>
         ${k.closed && k.hub_qr && !staffMode ? `<a class="st-chip" href="table.html?t=${encodeURIComponent(k.hub_qr)}">🛍 ${esc(tq('tk_new'))}</a>` : ''}
+        ${tkFulfilHtml(k)}
         ${!k.closed && !staffMode ? `<button type="button" class="st-chip st-chip--sm" data-tk-save>${esc(t('tk_save'))}</button>` : ''}
       </div>`;
     box.hidden = false;
+    if (isGrocery() && tkFulfil === null) {
+      tkFulfil = false;
+      sb.rpc('st_guest_fulfil', { p_qr: qr }).then(({ data }) => { if (data && data.fulfil) { tkFulfil = data; renderTicket(); } });
+    }
   }
+  function tkFulfilHtml(k) {
+    if (!tkFulfil || !tkFulfil.fulfil) return '';
+    const d = tkFulfil.fulfil === 'delivery';
+    return `<div class="st-deliver">${esc(d ? t('gr_tk_delivery') : t('gr_tk_pickup'))}${d && tkFulfil.address ? '<br>' + esc(t('gr_tk_addr', { x: tkFulfil.address })) : ''}${d && Number(tkFulfil.fee) ? '<br>' + esc(t('gr_tk_fee', { n: Number(tkFulfil.fee) })) : ''}</div>`;
+  }
+
+  // ---------- รอบ M: ชุดคอมโบ ----------
+  function comboLine(i) {
+    if (!i.combo || !i.combo.length) return '';
+    let full = 0;
+    const names = i.combo.map(c => {
+      const x = menu.items.find(m => m.id === c.id);
+      if (!x) return '';
+      full += Number(x.price) * c.qty;
+      return iname(x) + (c.qty > 1 ? ' ×' + c.qty : '');
+    }).filter(Boolean);
+    const save = full - Number(i.price);
+    return `<p class="st-combo-list">🍱 ${esc(t('combo_in'))}: ${esc(names.join(' + '))}${save > 0 && (!upsell || upsell.combo_save !== false) ? ` <span class="st-tag st-tag--save">${esc(t('combo_save', { n: Math.round(save) }))}</span>` : ''}</p>`;
+  }
+
+  // ---------- รอบ M: ขายพ่วง "มักสั่งคู่กับ…" ----------
+  async function loadUpsell() {
+    if (staffMode) return;
+    const { data, error } = await sb.rpc('st_guest_upsell', { p_qr: qr });
+    if (error || !data) return;
+    const had = upsell;
+    upsell = data;
+    if (!had && menu.items.some(i => i.combo)) renderMenu();
+  }
+  function upsellFor(it) {
+    if (!upsell || upsell.mode === 'off' || !upsell.pairs) return [];
+    const inCart = new Set(cart.map(l => l.item_id));
+    return (upsell.pairs[it.id] || []).map(id => menu.items.find(x => x.id === id))
+      .filter(x => x && x.is_available && !inCart.has(x.id) && remaining(x) > 0).slice(0, upsell.max || 3);
+  }
+  function showUpsell(it, name, n) {
+    if (staffMode || !canOrder()) return false;
+    const list = upsellFor(it);
+    if (!list.length) return false;
+    sheetMode = 'upsell';
+    $('#sheet-title').textContent = t('up_title');
+    $('#sheet-body').innerHTML = `
+      <p class="st-msg st-msg--ok">${esc(t('up_added', { x: name + ' ×' + n }))}</p>
+      <div class="st-upsell">
+        <h4>${esc(t('up_title'))}</h4>
+        ${list.map(x => {
+          const need = x.options.some(g => g.min_select > 0);
+          return `<div class="st-upsell-row">
+            <div class="st-up-img">${x.image_path ? ST.thumbImg(x.image_path) : '<span>🍽</span>'}</div>
+            <div><b>${esc(iname(x))}</b><small>${baht(unitFor(x, []))}</small></div>
+            <button type="button" class="st-chip st-chip--accent" data-up-add="${esc(x.id)}">${esc(need ? t('up_pick') : t('up_add'))}</button>
+          </div>`;
+        }).join('')}
+      </div>
+      <button type="button" class="st-btn st-btn--ghost" data-up-close style="margin-top:14px">${esc(t('up_no'))}</button>`;
+    sheet.querySelector('.st-sheet-scroll').scrollTop = 0;
+    return true;
+  }
+  function quickAdd(it, btn) {
+    if (it.options.some(g => g.min_select > 0)) return openItem(it.id);
+    if (remaining(it) < 1) return sheetMsg(t('not_enough', { x: iname(it) }));
+    const key = [it.id, '', '', sharedOn() ? DEVICE : ''].join('|');
+    let same = cart.find(l => l.key === key);
+    if (same) same.qty = Math.min(20, same.qty + 1);
+    else {
+      same = { id: uuid(), key, item_id: it.id, name: it.name, unit: unitFor(it, []), qty: 1, choices: [], labels: [], note: '', mine: true };
+      cart.push(same);
+    }
+    saveCart();
+    if (sharedOn()) putLine(same);
+    renderCartTags();
+    if (btn) { btn.disabled = true; btn.textContent = '✓'; }
+    toast(t('added', { x: iname(it), n: 1 }));
+  }
+  $('#sheet-body').addEventListener('click', (e) => {
+    const a = e.target.closest('[data-up-add]');
+    if (a) {
+      const it = menu.items.find(x => x.id === a.dataset.upAdd);
+      if (it) quickAdd(it, a);
+      return;
+    }
+    if (e.target.closest('[data-up-close]')) closeSheet();
+  });
+
+  // ---------- รอบ M: ร้านขายของชำ รับที่ร้าน / ส่งถึงบ้าน ----------
+  async function loadGrocery() {
+    const { data, error } = await sb.rpc('st_grocery_info', { p_hub_qr: qr });
+    if (error || !data) return;
+    gInfo = data;
+    if (!gState.fulfil) gState.fulfil = data.pickup === false && data.delivery ? 'delivery' : 'pickup';
+    if (sheetMode === 'cart') renderCart();
+  }
+  const gFulfil = () => (gInfo && gInfo.delivery && (gState.fulfil === 'delivery' || gInfo.pickup === false)) ? 'delivery' : 'pickup';
+  const phoneLabel = () => isGrocery() && gInfo && gFulfil() === 'delivery' && gInfo.need_phone !== false ? t('gr_phone_req') : t('ta_phone');
+  function groceryHtml() {
+    if (!isGrocery() || !gInfo) return '';
+    const both = gInfo.pickup !== false && gInfo.delivery;
+    const del = gFulfil() === 'delivery';
+    return `
+      ${both ? `<div class="st-fulfil" role="radiogroup" aria-label="${esc(t('gr_how'))}">
+        <label class="st-fulfil-opt"><input type="radio" name="gr_fulfil" value="pickup"${del ? '' : ' checked'}><span><b>${esc(t('gr_pickup'))}</b><small>${esc(t('gr_pickup_sub'))}</small></span></label>
+        <label class="st-fulfil-opt"><input type="radio" name="gr_fulfil" value="delivery"${del ? ' checked' : ''}><span><b>${esc(t('gr_delivery'))}</b><small>${esc(t('gr_delivery_sub', { km: Number(gInfo.max_km) }))}${gInfo.free_over ? ' · ' + esc(t('gr_free_over', { n: Number(gInfo.free_over) })) : ''}</small></span></label>
+      </div>` : `<p class="st-deliver">${esc(del ? t('gr_delivery') : t('gr_pickup'))}</p>`}
+      ${gInfo.note ? `<p class="st-sub">📢 ${esc(gInfo.note)}</p>` : ''}
+      <div id="gr-del"${del ? '' : ' hidden'}>
+        <button type="button" class="st-btn st-btn--ghost" data-gr-locate>${esc(gState.lat != null ? t('gr_relocate') : t('gr_locate'))}</button>
+        <div id="gr-quote" class="st-quote" hidden></div>
+        <label class="st-field"><span>${esc(t('gr_address'))}</span>
+          <textarea name="gr_addr" rows="2" maxlength="300" placeholder="${esc(t('gr_address_ph'))}">${esc(ls.get('st-guest-addr') || '')}</textarea></label>
+        ${gInfo.eta_min ? `<p class="st-sub">⏱ ${esc(t('gr_eta', { n: Number(gInfo.eta_min) }))}</p>` : ''}
+      </div>`;
+  }
+  function groceryMin() {
+    if (!gInfo) return 0;
+    return Number(gFulfil() === 'delivery' ? (gInfo.min_delivery ?? gInfo.min_order ?? 0) : (gInfo.min_order ?? 0)) || 0;
+  }
+  function updateGrocery() {
+    if (!isGrocery() || !gInfo || !$('#gr-sum')) return;
+    const del = gFulfil() === 'delivery';
+    const d = $('#gr-del'); if (d) d.hidden = !del;
+    const pl = $('#ta-phone-l'); if (pl) pl.textContent = phoneLabel();
+    const q = $('#gr-quote');
+    const sub = cartTotal();
+    const min = groceryMin();
+    let fee = 0, msg = '', bad = false;
+    if (del) {
+      const qt = gState.quote;
+      if (gState.locating) msg = t('gr_locating');
+      else if (gState.err) { msg = gState.err; bad = true; }
+      else if (!qt) msg = t('gr_need_loc');
+      else if (qt.reason === 'far') { msg = t('gr_far', { km: qt.km, max: qt.max_km }); bad = true; }
+      else if (qt.km != null) { msg = t('gr_km', { km: qt.km }); fee = Number(qt.fee || 0); }
+      if (q) { q.hidden = false; q.className = 'st-quote' + (bad ? ' bad' : ''); q.textContent = msg; }
+    } else if (q) q.hidden = true;
+    const short = min > sub ? min - sub : 0;
+    $('#gr-sum').innerHTML = `
+      ${del && gState.quote && gState.quote.ok ? `<div class="st-sum"><span>${esc(t('gr_fee'))}</span><b>${fee ? baht(fee) : esc(t('gr_fee_free'))}</b></div>` : ''}
+      ${del && gState.quote && gState.quote.ok ? `<div class="st-sum"><span><b>${esc(t('gr_total'))}</b></span><b>${baht(sub + fee)}</b></div>` : ''}
+      ${short ? `<p class="st-quote bad">${esc(t('gr_min', { n: min, d: Math.ceil(short) }))}</p>` : ''}`;
+    const btn = $('#btn-send');
+    if (btn && btn.textContent !== t('sending')) btn.textContent = sendLabel();
+  }
+  let qTimer = 0;
+  function requestQuote() {
+    if (!isGrocery() || !gInfo || gFulfil() !== 'delivery' || gState.lat == null) return updateGrocery();
+    clearTimeout(qTimer);
+    qTimer = setTimeout(async () => {
+      const { data, error } = await sb.rpc('st_grocery_quote', { p_hub_qr: qr, p_fulfil: 'delivery', p_lat: gState.lat, p_lng: gState.lng, p_subtotal: cartTotal() });
+      gState.err = error ? gErr(error) : '';
+      gState.quote = error ? null : data;
+      updateGrocery();
+    }, 250);
+  }
+  function groceryError(f, phone) {
+    const sub = cartTotal(), min = groceryMin();
+    if (min > sub) return t('gr_min', { n: min, d: Math.ceil(min - sub) });
+    if (gFulfil() !== 'delivery') return '';
+    if (gState.lat == null) return t('gr_need_loc');
+    if (gState.quote && gState.quote.reason === 'far') return t('gr_far', { km: gState.quote.km, max: gState.quote.max_km });
+    if (!f.gr_addr || f.gr_addr.value.trim().length < 5) { if (f.gr_addr) f.gr_addr.focus(); return gErr({ message: 'st_need_address' }); }
+    if (gInfo.need_phone !== false && !phone) { f.ta_phone.focus(); return gErr({ message: 'st_need_phone' }); }
+    return '';
+  }
+  $('#sheet-body').addEventListener('change', (e) => {
+    if (e.target.name !== 'gr_fulfil') return;
+    gState.fulfil = e.target.value;
+    requestQuote();
+    updateGrocery();
+  });
+  $('#sheet-body').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-gr-locate]');
+    if (!b) return;
+    if (!navigator.geolocation) { gState.err = t('gr_loc_fail'); return updateGrocery(); }
+    gState.locating = true; gState.err = ''; updateGrocery();
+    b.disabled = true;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      b.disabled = false; b.textContent = t('gr_relocate');
+      gState.locating = false;
+      gState.lat = Math.round(pos.coords.latitude * 1e6) / 1e6;
+      gState.lng = Math.round(pos.coords.longitude * 1e6) / 1e6;
+      requestQuote();
+    }, (err) => {
+      b.disabled = false;
+      gState.locating = false;
+      gState.err = err.code === 1 ? t('gr_loc_denied') : t('gr_loc_fail');
+      updateGrocery();
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+  });
 
   // ---------- จ่ายเองด้วยพร้อมเพย์ + แนบสลิป ----------
   const money = (n) => '฿' + Number(n).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

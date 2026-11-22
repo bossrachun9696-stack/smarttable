@@ -34,6 +34,8 @@
   let board = null;
   let tab = 'cooking';
   let offset = 0;
+  let deliv = new Map();
+  let dcfg = {};                                       // table_id -> ข้อมูลรับ/ส่ง (ร้านขายของชำ)
   const mins = (iso) => Math.max(0, Math.floor((Date.now() + offset - new Date(iso).getTime()) / 60000));
 
   // ---------- โหลด ----------
@@ -41,11 +43,16 @@
   async function load() {
     if (loading) { again = true; return; }
     loading = true;
-    const { data, error } = await sb.rpc('st_queue_board', { p_shop: shopId });
+    const [{ data, error }, dv] = await Promise.all([
+      sb.rpc('st_queue_board', { p_shop: shopId }),
+      sb.rpc('st_delivery_board', { p_shop: shopId })            // รอบ M: ร้านขายของชำ (ยังไม่รัน st-21 = ข้าม)
+    ]);
     loading = false;
     if (error) { showMsg(thaiError(error)); }
     else {
       board = data;
+      deliv = new Map(((dv && !dv.error && dv.data && dv.data.list) || []).map(x => [x.table_id, x]));
+      dcfg = (dv && !dv.error && dv.data && dv.data.cfg) || {};
       offset = new Date(data.now).getTime() - Date.now();
       render();
       $('#q-body').hidden = false;
@@ -133,6 +140,18 @@
 
   // ---------- รายการคิว ----------
   const tabOf = (k) => k.status === 'closed' ? 'done' : k.ready_at ? 'ready' : 'cooking';
+  // รอบ M: ส่งถึงบ้าน / มารับเอง
+  function deliverHtml(k) {
+    const d = deliv.get(k.table_id);
+    if (!d || !d.fulfil) return dcfg.delivery && k.status !== 'closed' && canCash
+      ? '<p class="st-deliver"><button type="button" class="st-chip st-chip--sm" data-act="deliver">🛵 ตั้งเป็นส่งถึงบ้าน</button></p>' : '';
+    if (d.fulfil === 'pickup') return `<p class="st-deliver">🏪 มารับที่ร้าน${k.status !== 'closed' && canCash ? ' · <button type="button" class="st-chip st-chip--sm" data-act="deliver">เปลี่ยนเป็นส่ง</button>' : ''}</p>`;
+    const map = d.lat != null ? `https://www.google.com/maps/dir/?api=1&destination=${d.lat},${d.lng}` : '';
+    return `<div class="st-deliver"><b>🛵 ส่งถึงบ้าน</b>${d.km != null ? ` · ${Number(d.km)} กม.` : ''} · ค่าส่ง ${baht(d.fee || 0)}
+      ${d.address ? `<br>📍 ${esc(d.address)}` : ''}
+      <br>${map ? `<a href="${map}" target="_blank" rel="noopener">🗺 นำทาง</a> · ` : ''}${d.phone ? `<a href="tel:${esc(d.phone)}">📞 โทร</a>` : ''}
+      ${k.status !== 'closed' && canCash ? ' · <button type="button" class="st-chip st-chip--sm" data-act="deliver">แก้ค่าส่ง</button>' : ''}</div>`;
+  }
   function card(k) {
     const closed = k.status === 'closed';
     const due = Number(k.due);
@@ -170,7 +189,8 @@
                      : k.ready_at ? ` · <b class="st-ok-text">พร้อมรับตั้งแต่ ${hhmm(k.ready_at)}</b>`
                      : k.unfinished ? ` · กำลังทำ ${k.unfinished} ออร์เดอร์` : ''}
           </div>
-          <p class="st-qitems">${k.items.map(i => `${i.qty}× ${esc(i.name)}`).join(' · ') || '—'}</p>
+          ${deliverHtml(k)}
+          <p class="st-qitems">${k.items.filter(i => !/^🛵 /.test(i.name)).map(i => `${i.qty}× ${esc(i.name)}`).join(' · ') || '—'}</p>
           ${btns ? `<div class="st-qactions">${btns}</div>` : ''}
         </div>
       </article>`;
@@ -198,6 +218,19 @@
     if (!b) return;
     const el = b.closest('[data-table]');
     const k = board.tickets.find(x => x.table_id === el.dataset.table);
+    if (b.dataset.act === 'deliver') {
+      const d = deliv.get(k.table_id) || {};
+      const fee = prompt(d.fulfil === 'delivery' ? 'ค่าส่ง (บาท) · ใส่ "รับเอง" ถ้าลูกค้าจะมารับที่ร้าน' : 'ค่าส่ง (บาท) — เปลี่ยนเป็นส่งถึงบ้าน', d.fee != null ? Number(d.fee) : '');
+      if (fee === null) return;
+      const pickup = /รับเอง|pickup/i.test(fee);
+      let addr = null;
+      if (!pickup && !d.address) { addr = prompt('ที่อยู่สำหรับส่ง'); if (addr === null) return; }
+      if (!pickup && !(Number(fee) >= 0)) return showMsg('ใส่ค่าส่งเป็นตัวเลข');
+      const { error } = await sb.rpc('st_delivery_set', { p_table: k.table_id, p_fulfil: pickup ? 'pickup' : 'delivery', p_address: addr, p_fee: pickup ? null : Number(fee) });
+      if (error) return showMsg(thaiError(error));
+      showMsg('บันทึกแล้ว ✓', 'ok');
+      return load();
+    }
     const act = b.dataset.act;
     let error;
     if (act === 'ready' || act === 'unready') {
