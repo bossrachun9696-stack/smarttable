@@ -11,7 +11,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="SmartTable">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>เมนูอาหาร · SmartTable</title>
+  <title>เมนูอาหาร / สินค้า · SmartTable</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,7 +25,7 @@
     <a id="back" href="home.html" class="st-chip">‹ ร้าน</a>
     <span id="my-role" class="st-badge"></span>
   </div>
-  <h1 class="st-title">เมนูอาหาร</h1>
+  <h1 class="st-title">เมนูอาหาร / สินค้า</h1>
   <p id="shop-sub" class="st-sub">กำลังโหลด…</p>
 
   <div id="st-msg" class="st-msg" role="status" hidden></div>
@@ -54,11 +54,33 @@
     </section>
 
     <div class="st-row-between">
-      <h2 class="st-h">รายการเมนู <small id="item-count"></small></h2>
-      <button id="btn-add" class="st-chip st-chip--accent" type="button" hidden>+ เพิ่มเมนู</button>
+      <h2 class="st-h">รายการเมนู / สินค้า <small id="item-count"></small></h2>
+      <button id="btn-add" class="st-chip st-chip--accent" type="button" hidden>+ เพิ่มเมนู / สินค้า</button>
+    </div>
+    <!-- แสดงตามประเภทร้าน (รอบ N) -->
+    <div id="type-bar" class="st-typebar" hidden>
+      <p class="st-sub" id="type-now"></p>
+      <div class="st-radioseg" id="type-filter">
+        <label><input type="radio" name="tf" value="all" checked><span>ทั้งหมด</span></label>
+        <label><input type="radio" name="tf" value="shown"><span>👁 ลูกค้าเห็น</span></label>
+        <label><input type="radio" name="tf" value="hidden"><span>🙈 ซ่อนอยู่</span></label>
+      </div>
+      <button id="btn-pick" class="st-chip" type="button">☑ เลือกหลายเมนู ตั้งประเภทร้านพร้อมกัน</button>
     </div>
     <p id="staff-hint" class="st-sub" hidden>แตะสวิตช์เพื่อบอกลูกค้าว่าเมนูนั้น "หมด" หรือ "มี"</p>
     <div id="item-groups"></div>
+  </div>
+  <!-- แถบล่าง: ตั้งประเภทร้านให้หลายเมนู -->
+  <div id="pick-bar" class="st-pickbar" hidden>
+    <div class="st-pickbar-in">
+      <b id="pick-count">เลือก 0 เมนู</b>
+      <div class="st-pick-types" id="pick-types"></div>
+      <small class="st-sub">ไม่ติ๊กเลย = แสดงทุกประเภทร้าน</small>
+      <div class="st-row-between">
+        <button id="pick-cancel" class="st-btn st-btn--ghost" type="button">ยกเลิก</button>
+        <button id="pick-save" class="st-btn" type="button">บันทึก</button>
+      </div>
+    </div>
   </div>
 </main>
 
@@ -119,6 +141,10 @@
         <input name="stock_left" type="number" min="0" max="100000" step="1" inputmode="numeric" placeholder="เว้นว่าง = ไม่จำกัด">
         <small>ขายครบแล้วขึ้น "หมด" ให้เอง · ยกเลิกออร์เดอร์แล้วคืนจำนวนให้</small>
       </label>
+
+      <h4>👁 แสดงให้ลูกค้าเห็นในร้านประเภท</h4>
+      <div id="item-types" class="st-pick-types"></div>
+      <small class="st-sub">ไม่ติ๊กเลย = แสดงทุกประเภทร้าน · ลูกค้าเห็นเฉพาะเมนูที่ติ๊กประเภทร้านตอนนี้</small>
 
       <h4>💹 ต้นทุนต่อจาน (ไม่บังคับ)</h4>
       <label class="st-field"><span>ต้นทุน (บาท) · ลูกค้าและครัวไม่เห็น</span>

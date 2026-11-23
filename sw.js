@@ -3,7 +3,7 @@
 // * โหลดจากเน็ตก่อนเสมอ (ไฟล์ใหม่บน GitHub ขึ้นทันที) — ใช้ของที่เก็บไว้เฉพาะตอนออฟไลน์
 // * ไม่เก็บข้อมูลจาก Supabase (ออร์เดอร์ เงิน) — เก็บแค่ไฟล์หน้าเว็บของเว็บนี้
 // * ยังไม่มีแจ้งเตือน Push (จะเพิ่มหลังย้ายรวม DarkChat)
-const VERSION = 'st-v8';
+const VERSION = 'st-v9';
 const SHELL = [
   './', 'index.html', 'home.html', 'settings.html', 'offline.html', 'manifest.webmanifest',
   'css/st-style.css', 'js/st-auth.js', 'js/st-config.js',

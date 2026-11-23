@@ -76,16 +76,48 @@
         สร้างร้านแรกของคุณด้านล่าง หรือถ้าเป็นพนักงานที่ได้ลิงก์คำเชิญจากร้าน ให้เปิดลิงก์นั้น</div>`;
       return;
     }
-    list.innerHTML = data.map(s => `
-      <a class="st-item" href="shop.html?id=${encodeURIComponent(s.id)}">
-        <div class="st-logo">${s.logo_path ? `<img src="${esc(ST.avatarUrl(s.logo_path))}" alt="" loading="lazy">` : esc(s.name.charAt(0))}</div>
-        <div class="st-item-main">
-          <b>${esc(s.name)}</b>
-          <small>${esc(ROLE_TH[s.role] || s.role)} · ${s.is_open ? 'เปิดอยู่' : 'ปิดร้าน'}${s.status === 'suspended' ? ' · ถูกระงับ' : ''}</small>
-        </div>
-        <span class="st-arrow" aria-hidden="true">›</span>
-      </a>`).join('');
+    // รอบ N: สวิตช์เปิด/ปิดร้าน + เวลาอัตโนมัติ
+    const { data: hrs } = await sb.from('st_shops').select('id, hours').in('id', data.map(s => s.id));
+    const H = new Map((Array.isArray(hrs) ? hrs : []).map(x => [x.id, x.hours || {}]));
+    const today = String(new Date().getDay());
+    const autoText = (h) => {
+      if (!h || !h.auto) return '';
+      const t = h.days && h.days[today];
+      return ' · ⏰ ' + (t && t.on ? `${t.open}–${t.close}` : 'วันนี้ปิด');
+    };
+    list.innerHTML = data.map(s => {
+      const can = s.role === 'owner' || s.role === 'manager';
+      return `
+      <div class="st-shoprow${s.is_open ? '' : ' st-shoprow--closed'}" data-shop="${esc(s.id)}" data-name="${esc(s.name)}">
+        <a class="st-item" href="shop.html?id=${encodeURIComponent(s.id)}">
+          <div class="st-logo">${s.logo_path ? `<img src="${esc(ST.avatarUrl(s.logo_path))}" alt="" loading="lazy">` : esc(s.name.charAt(0))}</div>
+          <div class="st-item-main">
+            <b>${esc(s.name)}</b>
+            <small>${esc(ROLE_TH[s.role] || s.role)} · <span data-state>${s.is_open ? '🟢 เปิดอยู่' : '🔴 ปิดร้าน'}</span>${esc(autoText(H.get(s.id)))}${s.status === 'suspended' ? ' · ถูกระงับ' : ''}</small>
+          </div>
+          <span class="st-arrow" aria-hidden="true">›</span>
+        </a>
+        <label class="st-switch st-shop-switch" title="${can ? 'เปิด / ปิดร้าน' : 'เจ้าของ/ผู้จัดการเท่านั้น'}">
+          <input type="checkbox" data-open${s.is_open ? ' checked' : ''}${can ? '' : ' disabled'} aria-label="เปิดร้าน ${esc(s.name)}">
+          <span></span><em>${s.is_open ? 'เปิด' : 'ปิด'}</em>
+        </label>
+      </div>`;
+    }).join('');
   }
+  $('#shop-list').addEventListener('change', async (e) => {
+    if (!e.target.matches('[data-open]')) return;
+    const row = e.target.closest('[data-shop]');
+    const want = e.target.checked;
+    if (!want && !confirm(`ปิดร้าน "${row.dataset.name}" ตอนนี้?\nลูกค้าจะสแกน QR สั่งไม่ได้ จนกว่าจะเปิดอีกครั้ง`)) { e.target.checked = true; return; }
+    e.target.disabled = true;
+    const { data: r, error } = await sb.rpc('st_set_shop_open', { p_shop: row.dataset.shop, p_open: want });
+    e.target.disabled = false;
+    if (error) { e.target.checked = !want; return showMsg(thaiError(error)); }
+    row.classList.toggle('st-shoprow--closed', !r.is_open);
+    row.querySelector('[data-state]').textContent = r.is_open ? '🟢 เปิดอยู่' : '🔴 ปิดร้าน';
+    row.querySelector('.st-shop-switch em').textContent = r.is_open ? 'เปิด' : 'ปิด';
+    showMsg(`${row.dataset.name}: ${r.is_open ? 'เปิดร้านแล้ว ✓' : 'ปิดร้านแล้ว'}`, 'ok');
+  });
   await loadShops();
   $('#home-body').hidden = false;
 

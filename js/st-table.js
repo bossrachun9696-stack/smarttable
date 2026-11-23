@@ -274,6 +274,7 @@
       $('#g-state').innerHTML = `<b>${esc(t('cf_pending_t'))}</b><span><i class="st-dot-inline"></i>${esc(t('cf_pending'))}</span>`;
     } else
     $('#g-state').innerHTML = `<b>${esc(t('st_' + state + '_t'))}</b><span>${esc(t('st_' + state))}</span>`;
+    if (state === 'shop_closed') showHours();         // รอบ N: บอกเวลาเปิดร้าน
     $('#g-state').hidden = !!ticket();                // บัตรคิวมีการ์ดบอกสถานะแทน
     $('#g-actions').hidden = !token;
     if (staffMode) {
@@ -284,6 +285,21 @@
       $('#g-staff').hidden = false;
       if (state === 'waiting') $('#g-state').innerHTML = '<b>โต๊ะนี้ยังไม่ได้เปิด</b><span>เปิดโต๊ะที่ผังโต๊ะก่อน แล้วกลับมาหน้านี้</span>';
     }
+  }
+
+  // รอบ N: ร้านปิด → บอกเวลาเปิดถ้าร้านตั้งไว้
+  async function showHours() {
+    const { data: h } = await sb.rpc('st_guest_hours', { p_qr: qr });
+    const hh = h && h.hours;
+    if (!hh || !hh.auto || !hh.days || state !== 'shop_closed') return;
+    const names = t('hr_days').split(',');
+    const order = ['1', '2', '3', '4', '5', '6', '0'];
+    const rows = order.map((k, i) => { const d = hh.days[k]; return d ? `${names[i]} ${d.on ? d.open + '–' + d.close : t('hr_off')}` : ''; }).filter(Boolean);
+    const today = hh.days[String(new Date().getDay())];
+    const el = $('#g-state');
+    if (el.querySelector('.st-hours-g')) return;
+    el.insertAdjacentHTML('beforeend', `<small class="st-hours-g">🕒 ${esc(today && today.on ? t('hr_today', { x: today.open + '–' + today.close }) : t('hr_today', { x: t('hr_off') }))}
+      <details><summary>${esc(t('hr_all'))}</summary>${rows.map(r => esc(r)).join('<br>')}</details></small>`);
   }
 
   function renderButtons() {

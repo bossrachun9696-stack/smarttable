@@ -27,6 +27,7 @@
     const p = getPrefs();
     document.querySelectorAll('#theme-opts [data-theme]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.theme === p.theme)));
     document.querySelectorAll('#layout-opts [data-layout]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.layout === p.layout)));
+    document.querySelectorAll('#width-opts [data-width]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.width === ST.getWidth())));
   }
   render();
   $('#set-body').hidden = false;
@@ -98,6 +99,13 @@
   $('#theme-opts').addEventListener('click', (e) => {
     const b = e.target.closest('[data-theme]');
     if (b) savePrefs({ theme: b.dataset.theme }, 'เปลี่ยนธีมแล้ว');
+  });
+  $('#width-opts').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-width]');
+    if (!b) return;
+    ST.setWidth(b.dataset.width);
+    render();
+    showMsg('เปลี่ยนขนาดหน้าจอแล้ว (เครื่องนี้)', 'ok');
   });
   $('#layout-opts').addEventListener('click', (e) => {
     const b = e.target.closest('[data-layout]');

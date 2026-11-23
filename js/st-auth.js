@@ -93,6 +93,11 @@
     st_already_void: 'ใบเสร็จนี้ถูกยกเลิกไปแล้ว',
     st_out_of_stock: 'เมนูนี้เหลือไม่พอ ลดจำนวนหรือลบออกจากตะกร้า',
     st_table_busy: 'โต๊ะปลายทางมีลูกค้าอยู่ ใช้ "รวมโต๊ะ" แทน',
+    // รอบ N
+    st_wrong_password: 'รหัสผ่านไม่ถูกต้อง',
+    st_too_many_tries: 'ใส่รหัสผิดหลายครั้ง รอ 15 นาทีแล้วลองใหม่',
+    st_no_password: 'บัญชีนี้ไม่มีรหัสผ่าน (เข้าระบบด้วยลิงก์อีเมล) — ตั้งรหัสผ่านที่ ⚙️ ตั้งค่า ก่อน',
+    st_bad_hours: 'เวลาเปิด/ปิดไม่ถูกต้อง (เวลาเปิดกับปิดต้องไม่เท่ากัน และต้องเปิดอย่างน้อย 1 วัน)',
     // รอบ M: เครื่องมือร้าน / ร้านขายของชำ
     st_bad_combo: 'ชุดคอมโบไม่ถูกต้อง: เลือกได้ 1–8 เมนู ไม่ซ้ำ ห้ามใส่ตัวเอง และห้ามใส่ชุดในชุด',
     st_shift_closed: 'ยังไม่ได้เปิดกะ — ร้านตั้งให้ต้องเปิดกะก่อนรับเงิน (หน้าร้าน → ปิดกะ / นับเงิน → เปิดกะ)',
@@ -294,6 +299,10 @@
   }
   applyMode();
   if (darkMq && darkMq.addEventListener) darkMq.addEventListener('change', applyMode);
+  // รอบ N: ขนาดหน้าจอ (ต่อเครื่อง) auto | phone | full | large
+  function getWidth() { try { return localStorage.getItem('st-width') || 'auto'; } catch { return 'auto'; } }
+  function setWidth(w) { try { localStorage.setItem('st-width', w); } catch { /* ไม่เป็นไร */ } document.documentElement.dataset.width = w; }
+  document.documentElement.dataset.width = getWidth();
   const avatarUrl = (path) => path ? sb.storage.from('st-images').getPublicUrl(path).data.publicUrl : null;
   // รูปย่อของเมนู (320px ~20KB) เก็บคู่กับรูปเต็ม: shops/<id>/menu/<x>.jpg -> <x>-t.jpg
   // รายการเมนู/ตะกร้า/จอครัว ใช้รูปย่อ · รูปเก่าที่ยังไม่มีรูปย่อ จะสลับไปใช้รูปเต็มเอง
@@ -337,5 +346,5 @@
   }
   window.ST = { sb, configOk, $, esc, ROLE_TH, thaiError, pageUrl, nextUrl, showMsg, hideMsg, setBusy,
                 ensureProfile, requireUser, copyText, TAGS, applyTheme, shrinkImage,
-                getPrefs, setPrefs, applyMode, avatarUrl, getSeen, markSeen, thumbPath, thumbImg };
+                getPrefs, setPrefs, applyMode, getWidth, setWidth, avatarUrl, getSeen, markSeen, thumbPath, thumbImg };
 })();

@@ -2,6 +2,7 @@
 // ชื่อเมนูและคำอธิบาย ร้านใส่คำแปลเองในหน้าเมนู (ถ้าไม่ใส่จะแสดงภาษาไทย)
 window.ST_I18N = {
   th: {
+    hr_days: 'จ.,อ.,พ.,พฤ.,ศ.,ส.,อา.', hr_off: 'ปิด', hr_today: 'เวลาเปิดวันนี้: {x}', hr_all: 'เวลาเปิดทั้งสัปดาห์',
     up_title: '🍟 มักสั่งคู่กับ', up_added: '✓ ใส่ตะกร้าแล้ว: {x}', up_no: 'ไม่เป็นไร ขอบคุณ', up_add: '+ เพิ่ม', up_pick: 'เลือก', combo_in: 'ในชุด', combo_save: 'ประหยัด ฿{n}',
     gr_how: 'รับสินค้าอย่างไร', gr_pickup: '🏪 มารับที่ร้าน', gr_pickup_sub: 'สั่งไว้ แล้วมารับเมื่อพร้อม', gr_delivery: '🛵 ส่งถึงบ้าน', gr_delivery_sub: 'ส่งได้ไม่เกิน {km} กม. จากร้าน',
     gr_address: 'ที่อยู่สำหรับส่ง *', gr_address_ph: 'บ้านเลขที่ ซอย จุดสังเกต', gr_locate: '📍 แชร์ตำแหน่งของฉัน', gr_locating: 'กำลังหาตำแหน่ง…', gr_relocate: '📍 หาตำแหน่งใหม่',
@@ -70,6 +71,7 @@ window.ST_I18N = {
     cart_sent_other: 'มีคนในโต๊ะส่งรายการแล้ว'
   },
   en: {
+    hr_days: 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', hr_off: 'Closed', hr_today: 'Open today: {x}', hr_all: 'Opening hours',
     up_title: '🍟 Goes well with', up_added: '✓ Added: {x}', up_no: 'No thanks', up_add: '+ Add', up_pick: 'Choose', combo_in: 'Set includes', combo_save: 'Save ฿{n}',
     gr_how: 'How would you like it?', gr_pickup: '🏪 Pick up at shop', gr_pickup_sub: 'Order now, collect when ready', gr_delivery: '🛵 Delivery', gr_delivery_sub: 'Within {km} km of the shop',
     gr_address: 'Delivery address *', gr_address_ph: 'House no., soi, landmark', gr_locate: '📍 Share my location', gr_locating: 'Finding your location…', gr_relocate: '📍 Locate again',
@@ -138,6 +140,7 @@ window.ST_I18N = {
     cart_sent_other: 'Someone at your table sent the order'
   },
   zh: {
+    hr_days: '周一,周二,周三,周四,周五,周六,周日', hr_off: '休息', hr_today: '今日营业：{x}', hr_all: '营业时间',
     up_title: '🍟 常一起点', up_added: '✓ 已加入：{x}', up_no: '不用了，谢谢', up_add: '+ 加入', up_pick: '选择', combo_in: '套餐包含', combo_save: '省 ฿{n}',
     gr_how: '取货方式', gr_pickup: '🏪 到店自取', gr_pickup_sub: '先下单，准备好后来取', gr_delivery: '🛵 送货上门', gr_delivery_sub: '距店 {km} 公里内',
     gr_address: '送货地址 *', gr_address_ph: '门牌号、巷、地标', gr_locate: '📍 分享我的位置', gr_locating: '正在定位…', gr_relocate: '📍 重新定位',

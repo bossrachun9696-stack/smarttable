@@ -82,6 +82,22 @@
     </section>
 
     <section class="st-card">
+      <!-- เครื่องคิดเลข (รอบ N) -->
+      <details id="calc" class="st-calc">
+        <summary>🧮 เครื่องคิดเลข</summary>
+        <div class="st-calc-body">
+          <output id="calc-out" class="st-calc-out" aria-live="polite">0</output>
+          <small id="calc-expr" class="st-calc-expr"></small>
+          <div class="st-calc-keys">
+            <button type="button" data-k="C" class="st-calc-fn">C</button><button type="button" data-k="back" class="st-calc-fn" aria-label="ลบ">⌫</button><button type="button" data-k="bill" class="st-calc-fn" title="ใส่ยอดบิล">ยอดบิล</button><button type="button" data-k="/" class="st-calc-op">÷</button>
+            <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button><button type="button" data-k="*" class="st-calc-op">×</button>
+            <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button><button type="button" data-k="-" class="st-calc-op">−</button>
+            <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button><button type="button" data-k="+" class="st-calc-op">+</button>
+            <button type="button" data-k="0" class="st-calc-wide">0</button><button type="button" data-k=".">.</button><button type="button" data-k="=" class="st-calc-eq">=</button>
+          </div>
+          <button type="button" id="calc-use" class="st-chip st-chip--accent">ใส่ผลลัพธ์ในช่องรับเงิน</button>
+        </div>
+      </details>
       <div class="st-row-between">
         <h3 style="margin:0">วิธีชำระ</h3>
         <label class="st-switch-label"><input id="b-multi" type="checkbox"> หลายช่องทาง</label>

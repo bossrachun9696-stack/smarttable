@@ -6,7 +6,7 @@
 
   const FILES = ['st-01-auth', 'st-02-shops', 'st-03-menu', 'st-04-tables', 'st-05-orders', 'st-06-realtime',
     'st-07-payments', 'st-08-reports', 'st-09-ops', 'st-10-guest', 'st-11-pay', 'st-12-kitchen', 'st-13-cart',
-    'st-14-staff', 'st-15-alerts', 'st-16-speed', 'st-17-buffet', 'st-18-refill', 'st-19-togo', 'st-20-tools', 'st-21-grocery'];
+    'st-14-staff', 'st-15-alerts', 'st-16-speed', 'st-17-buffet', 'st-18-refill', 'st-19-togo', 'st-20-tools', 'st-21-grocery', 'st-22-manage'];
   const RT = ['st_orders', 'st_service_calls', 'st_table_sessions', 'st_payments', 'st_pay_requests'];
   const ok = (b) => b ? '✅' : '❌';
 

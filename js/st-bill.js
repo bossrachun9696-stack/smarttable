@@ -29,7 +29,9 @@
   let data = null;          // ผล st_bill_preview
   let method = 'cash';
   let multi = false;
-  let tenders = [];         // หลายช่องทาง: [{method, amount}] (แถวสุดท้ายคิดยอดที่เหลือให้เอง)
+  let tenders = [];         // หลายช่องทาง: [{method, amount, who, slip(Blob)}] (แถวสุดท้ายคิดยอดที่เหลือให้เอง) · ไม่จำกัดจำนวน (สูงสุด 30)
+  const MAX_T = 30;
+  let lastTenderInput = null;
   let slipBlob = null;
 
   // ---------- แบ่งจ่าย ----------
@@ -348,20 +350,24 @@
     const amts = tenderAmounts();
     $('#b-tenders').innerHTML = tenders.map((x, i) => {
       const last = i === tenders.length - 1;
+      const slipOk = x.method !== 'cash';
       return `<div class="st-tender" data-i="${i}">
-        <select data-t="method">${Object.keys(LABEL).map(k => `<option value="${k}" ${x.method === k ? 'selected' : ''}>${LABEL[k]}</option>`).join('')}</select>
+        <span class="st-tender-no">${i + 1}</span>
+        <select data-t="method" aria-label="ช่องทาง ${i + 1}">${Object.keys(LABEL).map(k => `<option value="${k}" ${x.method === k ? 'selected' : ''}>${LABEL[k]}</option>`).join('')}</select>
         ${last ? `<b class="st-tender-auto${amts[i] < 0 ? ' st-bad' : ''}">${baht(amts[i])}</b>`
-               : `<input data-t="amount" type="number" min="0" step="1" inputmode="decimal" value="${esc(x.amount)}" placeholder="ยอด">`}
-        ${tenders.length > 2 ? '<button type="button" class="st-chip" data-t="del" aria-label="ลบ">✕</button>' : ''}
+               : `<input data-t="amount" type="number" min="0" step="1" inputmode="decimal" value="${esc(x.amount)}" placeholder="ยอด" aria-label="ยอด ${i + 1}">`}
+        ${slipOk ? `<label class="st-chip st-tender-slip${x.slip ? ' has' : ''}" title="ถ่าย / แนบสลิป">${x.slip ? `<img src="${x.slipUrl}" alt="สลิป">` : '📎'}
+          <input type="file" accept="image/*" data-t="slip" hidden></label>` : '<span class="st-tender-slip-sp"></span>'}
+        ${tenders.length > 2 ? '<button type="button" class="st-chip" data-t="del" aria-label="ลบแถว">✕</button>' : ''}
+        <input data-t="who" class="st-tender-who" type="text" maxlength="40" value="${esc(x.who || '')}" placeholder="ชื่อคนจ่าย (ไม่บังคับ)" aria-label="ชื่อคนจ่าย ${i + 1}">
       </div>`;
     }).join('') + `<div class="st-row-between">
-        <small class="st-sub">แถวสุดท้ายคิดยอดที่เหลือให้เอง</small>
-        ${tenders.length < 4 ? '<button type="button" class="st-chip" data-t="add">+ เพิ่มช่องทาง</button>' : ''}</div>`;
+        <small class="st-sub">${tenders.length} ช่องทาง · แถวสุดท้ายคิดยอดที่เหลือให้เอง · 📎 = ถ่าย/แนบสลิป</small>
+        ${tenders.length < MAX_T ? '<button type="button" class="st-chip st-chip--accent" data-t="add">+ เพิ่มคนจ่าย / ช่องทาง</button>' : ''}</div>`;
   }
   function multiCheck() {                 // คืนข้อความผิด หรือ null
     const amts = tenderAmounts();
     if (amts.some(a => a <= 0)) return 'ใส่ยอดแต่ละช่องทางให้ครบ และรวมแล้วต้องไม่เกินยอดที่ต้องชำระ';
-    if (tenders.filter(x => x.method === 'cash').length > 1) return 'เงินสดใส่ได้ช่องเดียว';
     return null;
   }
 
@@ -373,7 +379,7 @@
 
     const ppAmt = multi ? tenders.reduce((s, x, i) => s + (x.method === 'promptpay' ? tenderAmounts()[i] : 0), 0)
                         : (method === 'promptpay' ? t : 0);
-    const hasNonCash = multi ? tenders.some(x => x.method !== 'cash') : method !== 'cash';
+    const hasNonCash = multi ? false : method !== 'cash';            // หลายช่องทาง: แนบสลิปที่แต่ละแถว
     document.querySelector('[data-panel="cash"]').hidden = multi || method !== 'cash';
     document.querySelector('[data-panel="promptpay"]').hidden = !(ppAmt > 0);
     document.querySelector('[data-panel="slip"]').hidden = !hasNonCash;
@@ -421,7 +427,9 @@
   });
   $('#b-tenders').addEventListener('input', (e) => {
     const row = e.target.closest('[data-i]');
+    if (row && e.target.dataset.t === 'who') { tenders[Number(row.dataset.i)].who = e.target.value; return; }
     if (!row || e.target.dataset.t !== 'amount') return;
+    lastTenderInput = e.target;
     tenders[Number(row.dataset.i)].amount = e.target.value;
     const last = $('#b-tenders').querySelector('.st-tender-auto');
     const a = tenderAmounts();
@@ -432,6 +440,19 @@
   let tt;
   $('#b-tenders').addEventListener('change', (e) => {
     const row = e.target.closest('[data-i]');
+    if (row && e.target.dataset.t === 'slip') {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      const tdr = tenders[Number(row.dataset.i)];
+      ST.shrinkImage(file, 1400, 0.85).then((blob) => {
+        tdr.slip = blob;
+        if (tdr.slipUrl) URL.revokeObjectURL(tdr.slipUrl);
+        tdr.slipUrl = URL.createObjectURL(blob);
+        renderMethod();
+      }).catch(() => showMsg('อ่านรูปนี้ไม่ได้ ลองรูปอื่น'));
+      return;
+    }
     if (!row || e.target.dataset.t !== 'method') return;
     tenders[Number(row.dataset.i)].method = e.target.value;
     renderMethod();
@@ -439,7 +460,9 @@
   $('#b-tenders').addEventListener('click', (e) => {
     const b = e.target.closest('[data-t]');
     if (!b || b.tagName === 'SELECT' || b.tagName === 'INPUT') return;
-    if (b.dataset.t === 'add' && tenders.length < 4) tenders.push({ method: 'card', amount: '' });
+    if (b.dataset.t === 'add' && tenders.length < MAX_T) {
+      tenders.push({ method: 'transfer', amount: '' });
+    }
     if (b.dataset.t === 'del') tenders.splice(Number(b.closest('[data-i]').dataset.i), 1);
     renderMethod();
   });
@@ -453,6 +476,59 @@
 
   let dt;
   $('#b-disc').addEventListener('input', () => { clearTimeout(dt); dt = setTimeout(load, 400); });
+
+  // ---------- เครื่องคิดเลข (รอบ N) ----------
+  let cExpr = '';
+  function calcEval(src) {                       // + − × ÷ ตามลำดับคณิต ไม่ใช้ eval
+    const tk = src.match(/\d+(?:\.\d*)?|\.\d+|[-+*/]/g) || [];
+    const out = [], ops = [];
+    const pr = { '+': 1, '-': 1, '*': 2, '/': 2 };
+    const apply = () => { const o = ops.pop(), b = out.pop(), a = out.pop(); out.push(o === '+' ? a + b : o === '-' ? a - b : o === '*' ? a * b : a / b); };
+    let expectNum = true;
+    for (const t of tk) {
+      if (/[-+*/]/.test(t)) {
+        if (expectNum) { if (t === '-') { out.push(0); } else continue; }
+        while (ops.length && pr[ops[ops.length - 1]] >= pr[t]) apply();
+        ops.push(t); expectNum = true;
+      } else { out.push(parseFloat(t)); expectNum = false; }
+    }
+    if (expectNum && ops.length) ops.pop();
+    while (ops.length) apply();
+    const v = out.length ? out[0] : 0;
+    return Number.isFinite(v) ? Math.round(v * 100) / 100 : NaN;
+  }
+  const calcShow = (v) => {
+    $('#calc-out').textContent = Number.isFinite(v) ? v.toLocaleString('th-TH', { maximumFractionDigits: 2 }) : 'หารด้วย 0 ไม่ได้';
+    $('#calc-expr').textContent = cExpr.replace(/\*/g, '×').replace(/\//g, '÷').replace(/-/g, '−');
+  };
+  $('#calc').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-k]');
+    if (!b) return;
+    const k = b.dataset.k;
+    if (k === 'C') cExpr = '';
+    else if (k === 'back') cExpr = cExpr.slice(0, -1);
+    else if (k === 'bill') cExpr += String(total());
+    else if (k === '=') { const v = calcEval(cExpr); cExpr = Number.isFinite(v) ? String(v) : ''; return calcShow(v); }
+    else if (/[-+*/]/.test(k) && /[-+*/]$/.test(cExpr)) cExpr = cExpr.slice(0, -1) + k;
+    else if (cExpr.length < 60) cExpr += k;
+    calcShow(calcEval(cExpr));
+  });
+  $('#calc-use').addEventListener('click', () => {
+    const v = calcEval(cExpr);
+    if (!Number.isFinite(v) || v <= 0) return showMsg('ยังไม่มีผลลัพธ์');
+    if (multi) {
+      const inp = lastTenderInput && document.body.contains(lastTenderInput) ? lastTenderInput : $('#b-tenders [data-t=amount]');
+      if (!inp) return showMsg('เพิ่มแถวช่องทางก่อน');
+      inp.value = String(v);
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+      inp.focus();
+    } else {
+      if (method !== 'cash') { method = 'cash'; renderMethod(); }
+      $('#b-recv').value = String(v);
+      updateChange();
+    }
+    showMsg('ใส่ ' + baht(v) + ' แล้ว', 'ok');
+  });
 
   // ---------- สลิป (พนักงานถ่ายเก็บไว้) ----------
   $('#slip-input').addEventListener('change', async (e) => {
@@ -491,7 +567,7 @@
       const err = multiCheck();
       if (err) return showMsg(err);
       const a = tenderAmounts();
-      list = tenders.map((x, i) => ({ method: x.method, amount: a[i] }));
+      list = tenders.map((x, i) => ({ method: x.method, amount: a[i], who: (x.who || '').trim() || null, _slip: x.slip || null }));
     } else {
       let received = null;
       if (method === 'cash') {
@@ -510,7 +586,17 @@
 
     const btn = $('#b-pay');
     btn.disabled = true; btn.textContent = 'กำลังบันทึก…';
-    if (slipBlob) {
+    // สลิปของแต่ละแถว (หลายช่องทาง)
+    for (const x of list) {
+      if (!x._slip) { delete x._slip; continue; }
+      const rand = (crypto.randomUUID && crypto.randomUUID()) || (Date.now() + '-' + Math.random().toString(36).slice(2));
+      const slipPath = `shops/${shopId}/slips/${rand}.jpg`;
+      const { error: upErr } = await sb.storage.from('st-slips').upload(slipPath, x._slip, { contentType: 'image/jpeg', upsert: false });
+      delete x._slip;
+      if (upErr) { btn.disabled = false; renderMethod(); return showMsg('อัปโหลดสลิปไม่สำเร็จ: ' + thaiError(upErr)); }
+      x.slip_path = slipPath;
+    }
+    if (slipBlob && !multi) {
       const target = list.find(x => x.method !== 'cash');
       if (target) {
         const rand = (crypto.randomUUID && crypto.randomUUID()) || (Date.now() + '-' + Math.random().toString(36).slice(2));

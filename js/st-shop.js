@@ -394,7 +394,6 @@
     fs.service_pct.value = Number(current.service_pct || 0);
     fs.vat_pct.value = Number(current.vat_pct || 0);
     fs.vat_included.checked = !!current.vat_included;
-    fs.is_open.checked = !!current.is_open;
     fs.self_pay.checked = !!current.self_pay;
     fs.shared_cart.checked = current.shared_cart !== false;
     fs.tax_id.value = current.tax_id || '';
@@ -427,7 +426,6 @@
       service_pct: pct(fs.service_pct.value),
       vat_pct: pct(fs.vat_pct.value),
       vat_included: fs.vat_included.checked,
-      is_open: fs.is_open.checked,
       self_pay: fs.self_pay.checked,
       shared_cart: fs.shared_cart.checked,
       tax_id: fs.tax_id.value.replace(/\D/g, '') || null,
@@ -743,4 +741,140 @@
       location.replace('home.html');
     });
   }
+
+  // ---------- รอบ N: เปิด/ปิดร้าน + ตั้งเวลา ----------
+  const DAYS = [['1', 'จันทร์'], ['2', 'อังคาร'], ['3', 'พุธ'], ['4', 'พฤหัสฯ'], ['5', 'ศุกร์'], ['6', 'เสาร์'], ['0', 'อาทิตย์']];
+  const fh = $('#form-hours');
+  function hoursText(h) {
+    if (!h || !h.auto) return 'เปิด/ปิดเอง';
+    const d = String(new Date().getDay());
+    const t = h.days && h.days[d];
+    return '⏰ อัตโนมัติ · วันนี้ ' + (t && t.on ? `${t.open}–${t.close}` : 'ปิดทั้งวัน');
+  }
+  function renderOpen() {
+    $('#open-now').checked = !!current.is_open;
+    $('#open-text').textContent = current.is_open ? '🟢 เปิดร้านอยู่' : '🔴 ปิดร้านอยู่';
+    $('#open-sub').textContent = hoursText(current.hours);
+    renderHead();
+  }
+  function fillHours() {
+    const h = current.hours || {};
+    fh.auto.checked = !!h.auto;
+    $('#hours-days').innerHTML = DAYS.map(([k, n]) => {
+      const d = (h.days && h.days[k]) || { on: true, open: '09:00', close: '21:00' };
+      return `<div class="st-hour-row" data-d="${k}">
+        <label class="st-check"><input type="checkbox" data-h="on"${d.on ? ' checked' : ''}> <span>${n}</span></label>
+        <input type="time" data-h="open" value="${esc(d.open)}" aria-label="เปิด ${n}">
+        <span aria-hidden="true">–</span>
+        <input type="time" data-h="close" value="${esc(d.close)}" aria-label="ปิด ${n}">
+      </div>`;
+    }).join('');
+    hoursUi();
+  }
+  function hoursUi() {
+    $('#hours-days').classList.toggle('st-off', !fh.auto.checked);
+    $('#hours-days').querySelectorAll('.st-hour-row').forEach(r => {
+      const on = r.querySelector('[data-h=on]').checked;
+      r.querySelectorAll('input[type=time]').forEach(i => { i.disabled = !on || !fh.auto.checked || !canManage; });
+    });
+  }
+  if ('hours' in shop) {
+    fillHours();
+    renderOpen();
+    if (!canManage) {
+      $('#open-now').disabled = true;
+      fh.querySelectorAll('input,button').forEach(el => { el.disabled = true; });
+    }
+    fh.addEventListener('change', hoursUi);
+    $('#hours-copy').addEventListener('click', () => {
+      const mon = $('#hours-days').querySelector('[data-d="1"]');
+      $('#hours-days').querySelectorAll('.st-hour-row').forEach(r => {
+        r.querySelector('[data-h=open]').value = mon.querySelector('[data-h=open]').value;
+        r.querySelector('[data-h=close]').value = mon.querySelector('[data-h=close]').value;
+      });
+    });
+    $('#open-now').addEventListener('change', async (e) => {
+      const want = e.target.checked;
+      if (!want && !confirm('ปิดร้านตอนนี้? ลูกค้าจะสแกน QR สั่งไม่ได้')) { e.target.checked = true; return; }
+      const { data, error } = await sb.rpc('st_set_shop_open', { p_shop: shopId, p_open: want });
+      if (error) { e.target.checked = !want; return showMsg(thaiError(error)); }
+      current.is_open = data.is_open;
+      renderOpen();
+      showMsg((data.is_open ? 'เปิดร้านแล้ว ✓' : 'ปิดร้านแล้ว') + (data.auto && data.scheduled !== data.is_open ? ' · ตั้งเวลาไว้ ระบบจะเปลี่ยนเองอีกครั้งตอนถึงเวลาเปิด/ปิดรอบถัดไป' : ''), 'ok');
+    });
+    fh.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const days = {};
+      for (const r of $('#hours-days').querySelectorAll('.st-hour-row')) {
+        const o = r.querySelector('[data-h=open]').value, c = r.querySelector('[data-h=close]').value;
+        const on = r.querySelector('[data-h=on]').checked;
+        if (on && (!o || !c || o === c)) return showMsg('ใส่เวลาเปิดและปิดให้ครบ (เวลาเปิดกับปิดต้องไม่เท่ากัน)');
+        days[r.dataset.d] = { on, open: o || '09:00', close: c || '21:00' };
+      }
+      if (fh.auto.checked && !Object.values(days).some(d => d.on)) return showMsg('ติ๊กอย่างน้อย 1 วันที่เปิด');
+      setBusy(fh, true);
+      const { data, error } = await sb.rpc('st_save_shop_hours', { p_shop: shopId, p_hours: { auto: fh.auto.checked, days } });
+      setBusy(fh, false);
+      if (error) return showMsg(thaiError(error));
+      current.hours = data.hours; current.is_open = data.is_open;
+      renderOpen();
+      showMsg(fh.auto.checked ? `บันทึกเวลาแล้ว ✓ ตอนนี้ร้าน${data.is_open ? 'เปิด' : 'ปิด'}ตามเวลา` : 'บันทึกแล้ว ✓ (เปิด/ปิดเอง)', 'ok');
+    });
+  } else {
+    $('#hours-card').hidden = true;
+  }
+
+  // ---------- รอบ N: ล้างข้อมูลร้าน (เจ้าของ + รหัสผ่าน) ----------
+  if (isOwner) {
+    const fr = $('#form-reset');
+    $('#reset-card').hidden = false;
+    $('#reset-email').textContent = '(' + (user.email || '') + ')';
+    $('#reset-export').href = 'reports.html?id=' + encodeURIComponent(shopId);
+    const KIND_TH = { sales: 'ประวัติการขาย', shifts: 'ประวัติปิดกะ', audit: 'ประวัติการทำงาน', menu: 'เมนูอาหาร/สินค้า', tables: 'โต๊ะและ QR', promos: 'โปรโมชันและคูปอง', buffet: 'แพ็กเกจบุฟเฟ่ต์' };
+    fr.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const kinds = [...fr.querySelectorAll('.st-reset-kinds input:checked')].map(i => i.value);
+      if (!kinds.length) return showMsg('เลือกอย่างน้อย 1 อย่างที่จะล้าง');
+      if (!fr.password.value) { fr.password.focus(); return showMsg('ใส่รหัสผ่านบัญชีเจ้าของร้าน'); }
+      if (!confirm(`ล้างข้อมูลถาวร กู้คืนไม่ได้:\n• ${kinds.map(k => KIND_TH[k]).join('\n• ')}\n\nร้าน "${current.name}" · ยืนยัน?`)) return;
+      setBusy(fr, true, 'กำลังล้าง…');
+      const { data, error } = await sb.rpc('st_shop_reset', { p_shop: shopId, p_password: fr.password.value, p_kinds: kinds });
+      if (error) { setBusy(fr, false); return showMsg(thaiError(error)); }
+      if (!data.ok) { setBusy(fr, false); fr.password.select(); return showMsg(thaiError({ message: data.reason })); }
+      // ลบไฟล์ที่ไม่ใช้แล้ว (สลิป / รูปเมนู) · ลบไม่ครบไม่เป็นไร
+      try {
+        const dirs = [];
+        if (kinds.includes('sales')) dirs.push(['st-slips', 'shops/' + shopId]);
+        if (kinds.includes('menu')) dirs.push(['st-images', 'shops/' + shopId + '/menu']);
+        for (const [bucket, dir] of dirs) {
+          const files = await listAll(bucket, dir);
+          for (let i = 0; i < files.length; i += 100) await sb.storage.from(bucket).remove(files.slice(i, i + 100));
+        }
+      } catch { /* ไม่เป็นไร */ }
+      setBusy(fr, false);
+      fr.reset();
+      const d = data.deleted || {};
+      showMsg('ล้างแล้ว ✓ ' + Object.keys(d).map(k => `${KIND_TH[k]} ${d[k]} รายการ`).join(' · '), 'ok');
+    });
+  }
+
+  // ---------- รอบ N: หมวดการตั้งค่า (แท็บ) ----------
+  const TAB_KEY = 'st-shop-tab';
+  function tabHas(t) {
+    return [...document.querySelectorAll(`#shop-body [data-tab="${t}"]`)].some(el => !el.hidden);
+  }
+  function showTab(t) {
+    const btns = [...document.querySelectorAll('#set-tabs [data-tab]')];
+    btns.forEach(b => { b.hidden = !tabHas(b.dataset.tab); });
+    if (!tabHas(t)) t = (btns.find(b => !b.hidden) || {}).dataset?.tab;
+    btns.forEach(b => { b.setAttribute('aria-selected', String(b.dataset.tab === t)); });
+    document.querySelectorAll('#shop-body section[data-tab]').forEach(el => el.classList.toggle('st-tabhide', el.dataset.tab !== t));
+    try { localStorage.setItem(TAB_KEY, t); } catch { /* ไม่เป็นไร */ }
+  }
+  $('#set-tabs').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tab]');
+    if (b) showTab(b.dataset.tab);
+  });
+  window.ST_SHOP_TAB = showTab;
+  showTab((() => { try { return localStorage.getItem(TAB_KEY); } catch { return null; } })() || 'open');
 })();

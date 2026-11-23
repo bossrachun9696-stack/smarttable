@@ -55,7 +55,7 @@
       </a>
       <a id="link-menu" class="st-item" href="#">
         <div class="st-logo">📖</div>
-        <div class="st-item-main"><b>เมนูอาหาร</b><small>หมวดหมู่ เมนู รูป ตัวเลือกเพิ่ม และกด "หมด"</small></div>
+        <div class="st-item-main"><b>เมนูอาหาร / สินค้า</b><small>หมวดหมู่ เมนู รูป ตัวเลือกเพิ่ม และกด "หมด"</small></div>
         <span class="st-arrow" aria-hidden="true">›</span>
       </a>
       <a id="link-reports" class="st-item" href="#" hidden>
@@ -95,8 +95,40 @@
       </a>
     </nav>
 
+    <!-- ตั้งค่าร้าน: แยกเป็นหมวด (รอบ N) -->
+    <h2 class="st-h st-set-title">⚙️ ตั้งค่าร้าน</h2>
+    <div id="set-tabs" class="st-tabs" role="tablist" aria-label="หมวดการตั้งค่า">
+      <button type="button" role="tab" data-tab="open">🕒 เปิด-ปิดร้าน</button>
+      <button type="button" role="tab" data-tab="info">🏪 ข้อมูลร้าน</button>
+      <button type="button" role="tab" data-tab="order">🧭 ประเภท / การสั่ง</button>
+      <button type="button" role="tab" data-tab="look">🎨 หน้าตาร้าน</button>
+      <button type="button" role="tab" data-tab="staff">👥 พนักงาน</button>
+      <button type="button" role="tab" data-tab="tools">🧰 เครื่องมือ</button>
+      <button type="button" role="tab" data-tab="danger">🧹 ล้าง / ลบ</button>
+    </div>
+
+    <!-- เปิด / ปิดร้าน + ตั้งเวลา (รอบ N) -->
+    <section class="st-card" id="hours-card" data-tab="open">
+      <h3>🕒 เปิด / ปิดร้าน</h3>
+      <div class="st-openbig">
+        <label class="st-switch st-switch--big"><input type="checkbox" id="open-now" aria-label="เปิดร้าน"><span></span></label>
+        <div><b id="open-text">…</b><small id="open-sub" class="st-sub"></small></div>
+      </div>
+      <p class="st-sub">ปิดร้าน = ลูกค้าสแกน QR แล้วสั่งไม่ได้ · สั่งกลับบ้าน / คิว / ร้านชำ ใช้ไม่ได้ · พนักงานยังเก็บเงินโต๊ะที่ค้างอยู่ได้</p>
+      <form id="form-hours" novalidate>
+        <label class="st-check st-check--box"><input type="checkbox" name="auto">
+          <span><b>เปิด / ปิดตามเวลาอัตโนมัติ</b><small>ถึงเวลาเปิด ระบบเปิดร้านให้ · ถึงเวลาปิด ระบบปิดให้ · กดสวิตช์ด้านบนเองได้ตลอด (มีผลจนถึงเวลาเปิด/ปิดรอบถัดไป)</small></span></label>
+        <div id="hours-days" class="st-hours"></div>
+        <div class="st-row-between">
+          <button type="button" id="hours-copy" class="st-chip st-chip--sm">ใช้เวลาของวันจันทร์กับทุกวัน</button>
+          <small class="st-sub">ปิดเลยเที่ยงคืนได้ เช่น 18:00–02:00</small>
+        </div>
+        <button class="st-btn" type="submit">บันทึกเวลา</button>
+      </form>
+    </section>
+
     <!-- ประเภทร้าน -->
-    <section class="st-card" id="type-card" hidden>
+    <section class="st-card" id="type-card" data-tab="order" hidden>
       <h3>ประเภทร้าน</h3>
       <form id="form-type" class="st-choices">
         <label class="st-choice"><input type="radio" name="shop_type" value="restaurant">
@@ -113,7 +145,7 @@
     </section>
 
     <!-- ร้านขายของชำ: รับที่ร้าน / ส่งถึงบ้าน (รอบ M) -->
-    <section class="st-card" id="grocery-card" hidden>
+    <section class="st-card" id="grocery-card" data-tab="order" hidden>
       <h3>🛒 รับที่ร้าน / ส่งถึงบ้าน</h3>
       <form id="form-grocery" novalidate>
         <label class="st-check st-check--box"><input type="checkbox" name="pickup"> <span><b>ลูกค้ามารับที่ร้านได้</b></span></label>
@@ -159,7 +191,7 @@
     </section>
 
     <!-- ตั้งค่าเพิ่มเติม: ขายพ่วง คอมโบ ปิดกะ ต้นทุน การพิมพ์ (รอบ M) -->
-    <section class="st-card" id="tools-card" hidden>
+    <section class="st-card" id="tools-card" data-tab="tools" hidden>
       <h3>⚙️ ตั้งค่าเพิ่มเติม</h3>
       <form id="form-tools" novalidate>
         <h4>🍟 ขายพ่วง "มักสั่งคู่กับ…"</h4>
@@ -198,7 +230,7 @@
     </section>
 
     <!-- รูปแบบการสั่งอาหาร -->
-    <section class="st-card">
+    <section class="st-card" data-tab="order">
       <h3>รูปแบบการสั่งอาหาร</h3>
       <form id="form-mode" class="st-choices">
         <label class="st-choice">
@@ -220,10 +252,9 @@
     </section>
 
     <!-- ข้อมูลร้าน -->
-    <section class="st-card">
+    <section class="st-card" data-tab="info">
       <h3>ข้อมูลร้าน</h3>
       <form id="form-shop" novalidate>
-        <label class="st-check"><input type="checkbox" name="is_open"> <span>เปิดรับออร์เดอร์อยู่</span></label>
         <label class="st-field"><span>ชื่อร้าน</span>
           <input name="shop_name" type="text" maxlength="80" required>
         </label>
@@ -273,7 +304,7 @@
     </section>
 
     <!-- หน้าตาร้าน -->
-    <section id="brand-card" class="st-card">
+    <section id="brand-card" class="st-card" data-tab="look">
       <h3>หน้าตาร้าน (ลูกค้าเห็นตอนสแกน QR)</h3>
       <div class="st-brand-edit">
         <div>
@@ -298,7 +329,7 @@
     </section>
 
     <!-- พนักงาน -->
-    <section class="st-card" id="staff-card">
+    <section class="st-card" id="staff-card" data-tab="staff">
       <h3>พนักงาน</h3>
       <div id="member-list"></div>
 
@@ -347,8 +378,29 @@
       <button id="btn-leave" class="st-btn st-btn--ghost st-danger" type="button" hidden>ออกจากร้านนี้</button>
     </section>
 
+    <!-- ล้างข้อมูลร้าน (เจ้าของ · รอบ N) -->
+    <section id="reset-card" class="st-card st-card--danger" data-tab="danger" hidden>
+      <h3>🧹 ล้างข้อมูลร้าน</h3>
+      <p class="st-sub">เลือกสิ่งที่จะล้าง · <b>ลบถาวร กู้คืนไม่ได้</b> · ร้าน พนักงาน และการตั้งค่ายังอยู่ ·
+        แนะนำ <a id="reset-export" href="#">ดาวน์โหลด Excel ที่หน้ารายงาน</a> เก็บไว้ก่อน</p>
+      <form id="form-reset" novalidate>
+        <div class="st-reset-kinds">
+          <label class="st-check st-check--box"><input type="checkbox" value="sales"><span><b>ประวัติการขาย</b><small>ออร์เดอร์ บิล ใบเสร็จ สลิป คิว คะแนนรีวิว · รายงานเริ่มนับใหม่ · โต๊ะที่เปิดอยู่ถูกปิดหมด</small></span></label>
+          <label class="st-check st-check--box"><input type="checkbox" value="shifts"><span><b>ประวัติปิดกะ</b><small>กะทั้งหมด รวมกะที่เปิดอยู่</small></span></label>
+          <label class="st-check st-check--box"><input type="checkbox" value="audit"><span><b>ประวัติการทำงาน</b><small>ใครยกเลิก ให้ส่วนลด ปิดโต๊ะ ฯลฯ</small></span></label>
+          <label class="st-check st-check--box"><input type="checkbox" value="menu"><span><b>เมนูอาหาร / สินค้า</b><small>หมวดหมู่ เมนู ตัวเลือก รูปเมนู (ชื่อเมนูในบิลเก่ายังอยู่)</small></span></label>
+          <label class="st-check st-check--box"><input type="checkbox" value="tables"><span><b>โต๊ะและ QR</b><small>ต้องเพิ่มโต๊ะและพิมพ์ QR ใหม่ · บิลของโต๊ะเหล่านั้นหายด้วย</small></span></label>
+          <label class="st-check st-check--box"><input type="checkbox" value="promos"><span><b>โปรโมชันและคูปอง</b></span></label>
+          <label class="st-check st-check--box"><input type="checkbox" value="buffet"><span><b>แพ็กเกจบุฟเฟ่ต์ / รีฟิล</b></span></label>
+        </div>
+        <label class="st-field"><span>รหัสผ่านบัญชีเจ้าของร้าน <small id="reset-email"></small></span>
+          <input name="password" type="password" autocomplete="current-password" required></label>
+        <button class="st-btn st-btn--ghost st-danger" type="submit">🧹 ล้างข้อมูลที่เลือก…</button>
+      </form>
+    </section>
+
     <!-- ลบร้าน (เจ้าของ) -->
-    <section id="danger-card" class="st-card st-card--danger" hidden>
+    <section id="danger-card" class="st-card st-card--danger" data-tab="danger" hidden>
       <h3>ลบร้าน</h3>
       <p class="st-sub">ลบร้านนี้และ<b>ทุกอย่าง</b>ของร้านถาวร: เมนู รูป โต๊ะ QR ออร์เดอร์ ใบเสร็จ รายงาน ประวัติ คิว พนักงาน · <b>กู้คืนไม่ได้</b>
         · ถ้าต้องเก็บยอดขายไว้ทำบัญชี/ภาษี ให้ดาวน์โหลด CSV ที่หน้ารายงานยอดขายก่อน</p>

@@ -23,7 +23,10 @@
     member_add:        { th: 'เพิ่มพนักงาน', icon: '+', risk: 0 },
     member_role:       { th: 'เปลี่ยนตำแหน่งพนักงาน', icon: '↻', risk: 1 },
     member_remove:     { th: 'นำพนักงานออก', icon: '−', risk: 1 },
-    shift_close:       { th: 'ปิดกะ (เงินขาด/เกิน)', icon: '💵', risk: 1 }
+    shift_close:       { th: 'ปิดกะ (เงินขาด/เกิน)', icon: '💵', risk: 1 },
+    shop_open:         { th: 'เปิดร้าน', icon: '🟢', risk: 0 },
+    shop_close:        { th: 'ปิดร้าน', icon: '🔴', risk: 0 },
+    shop_reset:        { th: 'ล้างข้อมูลร้าน', icon: '🧹', risk: 1 }
   };
   const role = (r) => ROLE_TH[r] || r || '';
   function detailText(e) {

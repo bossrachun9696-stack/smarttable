@@ -1,4 +1,4 @@
-// ===== หน้า เมนูอาหาร (menu.html?id=<shop_id>) =====
+// ===== หน้า เมนูอาหาร / สินค้า (menu.html?id=<shop_id>) =====
 (async function () {
   const { sb, configOk, $, esc, ROLE_TH, thaiError, showMsg, setBusy, requireUser, TAGS } = ST;
   if (!configOk) return;
@@ -12,7 +12,7 @@
   $('#back').href = 'shop.html?id=' + encodeURIComponent(shopId);
 
   const [{ data: shop }, { data: me }] = await Promise.all([
-    sb.from('st_shops').select('id, name, languages').eq('id', shopId).maybeSingle(),
+    sb.from('st_shops').select('id, name, languages, shop_type').eq('id', shopId).maybeSingle(),
     sb.from('st_shop_members').select('role').eq('shop_id', shopId).eq('user_id', user.id).maybeSingle()
   ]);
   if (!shop || !me) { $('#shop-sub').textContent = ''; return showMsg('ไม่พบร้านนี้ หรือคุณไม่ได้เป็นพนักงานของร้าน'); }
@@ -31,6 +31,16 @@
   const SPICY = ['', '🌶', '🌶🌶', '🌶🌶🌶'];
   let data = { categories: [], items: [] };
   let stations = [];
+  // รอบ N: แสดงตามประเภทร้าน
+  const TYPES = [['restaurant', '🍽 ร้านอาหาร'], ['buffet', '🍖 บุฟเฟ่ต์'], ['grocery', '🛒 ของชำ'], ['queue', '🧋 ร้านน้ำ/คิว'], ['small', '⚡ ร้านเล็ก']];
+  const TYPE_TH = Object.fromEntries(TYPES);
+  const shopType = shop.shop_type || 'restaurant';
+  const shownNow = (it) => !(it.show_types && it.show_types.length) || it.show_types.includes(shopType);
+  let typeFilter = 'all';
+  let picking = false;
+  const picked = new Set();
+  const typeBoxes = (sel, name) => TYPES.map(([k, l]) =>
+    `<label class="st-tagchip"><input type="checkbox" name="${name}" value="${k}"${sel.includes(k) ? ' checked' : ''}><span>${l}${k === shopType ? ' (ตอนนี้)' : ''}</span></label>`).join('');
 
   // ---------- โหลดและแสดงผล ----------
   async function load() {
@@ -87,9 +97,12 @@
     if (loose.length || !cats.length) groups.push({ id: '', name: cats.length ? 'ไม่มีหมวด' : 'เมนูทั้งหมด', items: loose });
 
     $('#item-count').textContent = `(${data.items.length})`;
-    $('#item-groups').innerHTML = groups.map(g => `
+    const hiddenN = data.items.filter(it => !shownNow(it)).length;
+    $('#type-now').innerHTML = `ร้านตอนนี้เป็น <b>${esc(TYPE_TH[shopType] || shopType)}</b> · ลูกค้าเห็น ${data.items.length - hiddenN} เมนู${hiddenN ? ` · ซ่อน ${hiddenN} เมนู` : ''}`;
+    groups.forEach(g => { g.items = g.items.filter(it => typeFilter === 'all' || (typeFilter === 'shown') === shownNow(it)); });
+    $('#item-groups').innerHTML = groups.filter(g => typeFilter === 'all' || g.items.length).map(g => `
       <section class="st-card st-menu-group" data-group="${esc(g.id)}">
-        <h3>${esc(g.name)}</h3>
+        <h3>${picking && g.items.length ? `<label class="st-check"><input type="checkbox" data-act="pick-group"${g.items.every(it => picked.has(it.id)) ? ' checked' : ''}> ` : ''}${esc(g.name)}${picking && g.items.length ? '</label>' : ''}</h3>
         ${g.items.length ? g.items.map((it, i) => itemRow(it, i, g.items.length)).join('')
           : `<p class="st-sub">${canEdit ? 'ยังไม่มีเมนูในหมวดนี้ กด "+ เพิ่มเมนู"' : 'ยังไม่มีเมนู'}</p>`}
       </section>`).join('');
@@ -100,9 +113,12 @@
     if (it.is_recommended) tags.push('⭐ แนะนำ');
     if (it.spicy_level) tags.push(SPICY[it.spicy_level]);
     if (it.options.length) tags.push(`${it.options.length} กลุ่มตัวเลือก`);
+    if (it.show_types && it.show_types.length) tags.push('👁 ' + it.show_types.map(t => (TYPE_TH[t] || t).replace(/^\S+ /, '')).join(', '));
+    if (!shownNow(it)) tags.push('🙈 ลูกค้าไม่เห็นตอนนี้');
     (it.tags || []).forEach(t => TAGS[t] && tags.push(TAGS[t].icon + ' ' + TAGS[t].th));
     return `
-      <div class="st-mi${it.is_available ? '' : ' st-mi--off'}" data-id="${esc(it.id)}">
+      <div class="st-mi${it.is_available ? '' : ' st-mi--off'}${shownNow(it) ? '' : ' st-mi--hidden'}" data-id="${esc(it.id)}">
+        ${picking ? `<input type="checkbox" class="st-pick" data-act="pick" aria-label="เลือก ${esc(it.name)}"${picked.has(it.id) ? ' checked' : ''}>` : ''}
         <div class="st-thumb">${it.image_path ? ST.thumbImg(it.image_path) : esc(it.name.charAt(0))}</div>
         <div class="st-item-main"${canEdit ? ' data-act="edit" role="button" tabindex="0"' : ''}>
           <b>${esc(it.name)}</b><small>${esc(tags.join(' · '))}</small>
@@ -223,6 +239,52 @@
   }
 
   // ---------- รายการเมนู: หมด/มี, เลื่อน, แก้ไข ----------
+  // ---------- รอบ N: กรอง / เลือกหลายเมนู ตั้งประเภทร้าน ----------
+  if (canEdit) $('#type-bar').hidden = false;
+  $('#type-filter').addEventListener('change', (e) => { typeFilter = e.target.value; render(); });
+  function pickUi() {
+    $('#pick-bar').hidden = !picking;
+    document.body.classList.toggle('st-picking', picking);
+    $('#pick-count').textContent = `เลือก ${picked.size} เมนู`;
+    $('#pick-save').disabled = !picked.size;
+    $('#btn-pick').textContent = picking ? '✕ เลิกเลือก' : '☑ เลือกหลายเมนู ตั้งประเภทร้านพร้อมกัน';
+  }
+  $('#btn-pick').addEventListener('click', () => {
+    picking = !picking;
+    picked.clear();
+    if (picking) $('#pick-types').innerHTML = typeBoxes([], 'pick_type');
+    render(); pickUi();
+  });
+  $('#pick-cancel').addEventListener('click', () => { picking = false; picked.clear(); render(); pickUi(); });
+  $('#pick-save').addEventListener('click', async () => {
+    const types = [...$('#pick-types').querySelectorAll('input:checked')].map(i => i.value);
+    const what = types.length ? 'แสดงเฉพาะร้าน: ' + types.map(t => TYPE_TH[t]).join(', ') : 'แสดงทุกประเภทร้าน';
+    if (!confirm(`ตั้ง ${picked.size} เมนู → ${what}?`)) return;
+    $('#pick-save').disabled = true;
+    const { data: n, error } = await sb.rpc('st_set_items_types', { p_shop: shopId, p_items: [...picked], p_types: types });
+    $('#pick-save').disabled = false;
+    if (error) return showMsg(thaiError(error));
+    picking = false; picked.clear(); pickUi();
+    showMsg(`ตั้งแล้ว ${n} เมนู ✓`, 'ok');
+    load();
+  });
+  $('#item-groups').addEventListener('change', (e) => {
+    const a = e.target.dataset.act;
+    if (a === 'pick') {
+      const id = e.target.closest('[data-id]').dataset.id;
+      if (e.target.checked) picked.add(id); else picked.delete(id);
+      pickUi();
+    }
+    if (a === 'pick-group') {
+      e.target.closest('.st-menu-group').querySelectorAll('[data-act=pick]').forEach(c => {
+        c.checked = e.target.checked;
+        const id = c.closest('[data-id]').dataset.id;
+        if (e.target.checked) picked.add(id); else picked.delete(id);
+      });
+      pickUi();
+    }
+  });
+
   $('#item-groups').addEventListener('change', async (e) => {
     if (e.target.dataset.act !== 'avail') return;
     const row = e.target.closest('[data-id]');
@@ -237,9 +299,14 @@
 
   $('#item-groups').addEventListener('click', async (e) => {
     const el = e.target.closest('[data-act]');
-    if (!el || el.dataset.act === 'avail') return;
+    if (!el || el.dataset.act === 'avail' || el.dataset.act === 'pick' || el.dataset.act === 'pick-group') return;
     const id = el.closest('[data-id]')?.dataset.id;
     if (!id) return;
+    if (el.dataset.act === 'edit' && picking) {
+      const cb = el.closest('[data-id]').querySelector('[data-act=pick]');
+      cb.checked = !cb.checked; cb.dispatchEvent(new Event('change', { bubbles: true }));
+      return;
+    }
     if (el.dataset.act === 'edit') return openSheet(data.items.find(x => x.id === id));
     if (el.dataset.act === 'stock') {
       const it = data.items.find(x => x.id === id);
@@ -303,6 +370,7 @@
     fi.is_recommended.checked = item ? item.is_recommended : false;
     fi.stock_left.value = item && item.stock_left != null ? item.stock_left : '';
     fillBiz(item);
+    $('#item-types').innerHTML = typeBoxes((item && item.show_types) || [], 'show_type');
     i18nDraft = JSON.parse(JSON.stringify((item && item.i18n) || {}));
     renderI18n();
     const have = new Set(item ? item.tags || [] : []);
@@ -580,6 +648,9 @@
       p_stock: stockRaw === '' ? null : Math.max(0, parseInt(stockRaw, 10) || 0)
     });
     if (exErr) { showMsg('บันทึกเมนูแล้ว แต่บันทึกป้าย/จำนวนไม่สำเร็จ: ' + thaiError(exErr)); }
+    const types = [...$('#item-types').querySelectorAll('input:checked')].map(i => i.value);
+    const { error: tyErr } = await sb.rpc('st_set_items_types', { p_shop: shopId, p_items: [savedId], p_types: types });
+    if (tyErr && !/st_set_items_types|PGRST202|function/i.test(tyErr.message || '')) showMsg('บันทึกเมนูแล้ว แต่ตั้งประเภทร้านไม่สำเร็จ: ' + thaiError(tyErr));
     const biz = collectBiz();
     const { error: bzErr } = await sb.rpc('st_set_item_biz', { p_item: savedId, p_cost: biz.cost, p_combo: biz.combo, p_upsell: biz.upsell });
     if (bzErr && !/st_set_item_biz|PGRST202|function/i.test(bzErr.message || '')) showMsg('บันทึกเมนูแล้ว แต่บันทึกต้นทุน/ชุด/ขายพ่วงไม่สำเร็จ: ' + thaiError(bzErr));
