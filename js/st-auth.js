@@ -21,6 +21,7 @@
 
   // ข้อความผิดพลาดภาษาไทย
   const MAP = {
+    st_receipt_not_found: 'ไม่พบใบเสร็จนี้', st_receipt_expired: 'ลิงก์ใบเสร็จนี้หมดอายุแล้ว — ติดต่อร้านถ้าต้องการสำเนา', st_receipt_off: 'ร้านปิดใบเสร็จดิจิทัลแล้ว — ติดต่อร้าน',
     invalid_credentials: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
     email_not_confirmed: 'ยังไม่ได้ยืนยันอีเมล กรุณากดลิงก์ในอีเมลที่เราส่งไปก่อน (ดูในจดหมายขยะด้วย)',
     user_already_exists: 'อีเมลนี้มีบัญชีอยู่แล้ว ลองเข้าสู่ระบบ หรือกด "ลืมรหัสผ่าน"',
@@ -276,7 +277,7 @@
 
   // ---------- ธีม (สว่าง / มืด / ตามเครื่อง) + รูปแบบหน้าร้าน — เก็บในเครื่อง + โปรไฟล์ ----------
   // หน้าลูกค้า ใบเสร็จ และหน้าพิมพ์ ใช้ธีมสว่างเสมอ
-  const NO_THEME = /\/(table|queue-tv|receipt|print|offline)\.html$/.test(location.pathname);
+  const NO_THEME = /\/(table|queue-tv|receipt|ereceipt|print|offline)\.html$/.test(location.pathname);
   const PREF_KEY = 'st-prefs';
   function getPrefs() {
     try { return Object.assign({ theme: 'auto', layout: 'list' }, JSON.parse(localStorage.getItem(PREF_KEY) || '{}')); }

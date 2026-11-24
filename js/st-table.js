@@ -84,7 +84,7 @@
     if (!b) return;
     lang = b.dataset.lang;
     ls.set('st-lang', lang);
-    renderLang(); renderState(); renderTicket(); renderDiet(); renderMenu(); renderButtons(); renderRate(); renderPay(); renderDealsBtn(); renderBuffet();
+    renderLang(); renderState(); renderTicket(); renderDiet(); renderMenu(); renderButtons(); renderRate(); renderPay(); renderDealsBtn(); renderBuffet(); renderReceipts();
     if (sheetMode === 'deals') renderDeals();
     if (sheetMode === 'cart') renderCart();
     if (sheetMode === 'orders') renderOrders();
@@ -208,6 +208,7 @@
     const wasPending = !!(lastScan && lastScan.confirm === 'pending' && token);
     const hadBuffet = !!(lastScan && lastScan.buffet && lastScan.buffet.mode === 'package');
     const prevBufKey = lastScan && lastScan.buffet ? JSON.stringify([lastScan.buffet.mode, lastScan.buffet.package_id, lastScan.buffet.adults, lastScan.buffet.children, (lastScan.buffet.addons || []).map(x => x.id + ':' + x.qty)]) : null;
+    const prevState = state;
     lastScan = data;
     if (data.now) skew = Date.parse(data.now) - Date.now();
     const bufKey = data.buffet ? JSON.stringify([data.buffet.mode, data.buffet.package_id, data.buffet.adults, data.buffet.children, (data.buffet.addons || []).map(x => x.id + ':' + x.qty)]) : null;
@@ -246,6 +247,7 @@
     renderTicket();
     renderCartBar();
     if (token) refreshGuest(); else { renderButtons(); renderRate(); renderPay(); }
+    loadReceipts(prevState !== state);
     // โปร/คูปอง: โหลดครั้งแรก, เมื่อเปลี่ยนรอบโต๊ะ, หรือทุก 5 นาที (ไม่ต้องดึงทุกครั้งที่เช็กสถานะ)
     if (!dealsAt || dealsFor !== token || sheetMode === 'deals' || Date.now() - dealsAt > 300000) {
       dealsAt = Date.now(); dealsFor = token;
@@ -327,6 +329,60 @@
     renderPay();
     if (sheetMode === 'orders') renderOrders();
   }
+
+  // ---------- ใบเสร็จดิจิทัล (รอบ Q · st-25) ----------
+  // แสดงเมื่อรอบนี้ (หรือรอบล่าสุดที่เครื่องนี้สั่ง ภายใน 3 ชม.) มีใบเสร็จ · หายเมื่อลูกค้าโต๊ะถัดไปเปิดโต๊ะ
+  let rcData = null, rcTok = null, rcAt = 0, rcSeen = -1;
+  let rcHold = false;                               // จ่ายแล้วกลับมาเปิดหน้าเดิม: ยังไม่เปิดรอบใหม่ จนกว่าจะกด "เริ่มสั่งรอบใหม่"
+  function lastTok() {
+    try {
+      const last = JSON.parse(ls.get(KEY_LAST) || 'null');
+      if (last && last.token && Date.now() - last.at < 3 * 3600 * 1000) return last.token;
+    } catch { /* ไม่เป็นไร */ }
+    return null;
+  }
+  const receiptTok = () => staffMode ? null : (token || lastTok());
+  async function fetchReceipts(tok) {
+    const { data, error } = await sb.rpc('st_guest_receipts', { p_qr: qr, p_session_token: tok });
+    return error ? null : data;                     // ยังไม่รัน st-25 → ไม่แสดง
+  }
+  async function loadReceipts(force) {
+    const tok = receiptTok();
+    if (!tok) { rcData = null; rcTok = null; renderReceipts(); return; }
+    if (!force && tok === rcTok && Date.now() - rcAt < 15000) return;
+    rcTok = tok; rcAt = Date.now();
+    rcData = await fetchReceipts(tok);
+    if (tok !== rcTok) return;
+    renderReceipts();
+  }
+  function renderReceipts() {
+    const box = $('#g-receipts');
+    const list = rcData && rcData.ok ? (rcData.receipts || []) : [];
+    if (!list.length) { box.hidden = true; box.innerHTML = ''; if (rcHold) rcHold = false; rcSeen = 0; return; }
+    const paid = list.filter(x => x.status === 'paid').length;
+    if (rcSeen >= 0 && paid > rcSeen) toast(t('er_paid_toast'));
+    rcSeen = paid;
+    const one = list.length === 1;
+    const href = (k) => 'ereceipt.html?k=' + encodeURIComponent(k) + (lang !== 'th' ? '&lang=' + lang : '');
+    box.innerHTML = `
+      <b>${esc(t('er_title'))}</b>
+      <div class="st-rc-list">
+        ${list.map(x => `<a class="st-btn st-rc-link${x.status === 'void' ? ' is-void' : ''}" href="${href(x.key)}">
+          <span>${esc(one ? t('er_one', { n: baht(x.total) }) : t('er_part', { p: x.part_no, n: baht(x.total) }))}${x.status === 'void' ? ' · ' + esc(t('er_void')) : ''}</span><i aria-hidden="true">›</i></a>`).join('')}
+      </div>
+      <small>${esc(t('er_hint', { d: rcData.days || 90 }))}</small>
+      ${rcHold ? `<button type="button" class="st-btn st-btn--ghost" data-er-new>${esc(t('er_new'))}</button>` : ''}`;
+    box.hidden = false;
+  }
+  $('#g-receipts').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-er-new]');
+    if (!b) return;
+    b.disabled = true;
+    rcHold = false;
+    ls.set(KEY_LAST, null);                         // รอบเก่าจบแล้ว · ใบเสร็จยังเปิดจากลิงก์ที่บันทึกไว้ได้
+    rcData = null; renderReceipts();
+    await scan(true);
+  });
 
   // ---------- ให้คะแนน (ตอนเช็กบิล หรือภายใน 3 ชม. หลังจ่ายเงิน) ----------
   let stars = 0;
@@ -1889,7 +1945,12 @@
 
   // ---------- เริ่มต้น ----------
   if (!qr) { $('#g-shop').textContent = 'SmartTable'; return showMsg(t('bad_link')); }
-  const first = await scan(!staffMode);
+  let autoOpen = !staffMode;
+  if (autoOpen && lastTok()) {                      // จ่ายแล้วกลับมาเปิดหน้านี้: แสดงใบเสร็จก่อน ไม่เปิดรอบใหม่ทับ
+    const r0 = await fetchReceipts(lastTok());
+    if (r0 && r0.ok && r0.closed && (r0.receipts || []).length) { rcHold = true; autoOpen = false; }
+  }
+  const first = await scan(autoOpen);
   if (!first) return;
   if (!(await loadMenu())) return;
   $('#g-menu').hidden = false;

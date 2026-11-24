@@ -334,6 +334,9 @@
       ftl.shift_blind.checked = !!t.shift_blind;
       ftl.cost_fallback.checked = t.cost_fallback !== false;
       ftl.togo_service.checked = !!t.togo_service;
+      ftl.er_on.checked = t.ereceipt !== false;              // รอบ Q
+      ftl.er_days.value = String(t.ereceipt_days || 90);
+      ftl.er_note.value = t.ereceipt_note || '';
       ftl.p_paper.value = p.paper || '58';
       ftl.p_font.value = p.font || 'm';
       ftl.p_copies.value = String(p.copies || 1);
@@ -359,6 +362,7 @@
     ftl.addEventListener('change', (e) => {
       const n = e.target.name || '';
       if (n.startsWith('p_')) { if (e.target.type !== 'text') saveTools('print'); return; }
+      if (n.startsWith('er_')) { if (n !== 'er_note') saveEreceipt(); return; }   // รอบ Q
       if (n === 'togo_service') {               // รอบ P
         sb.rpc('st_set_togo_service', { p_shop: shopId, p_on: e.target.checked }).then(({ data, error }) => {
           if (error) { e.target.checked = !e.target.checked; return showMsg(thaiError(error)); }
@@ -368,7 +372,16 @@
       }
       saveTools(n);
     });
+    let et = 0;
+    async function saveEreceipt() {                   // รอบ Q: ใบเสร็จดิจิทัล
+      const { data, error } = await sb.rpc('st_set_ereceipt', { p_shop: shopId, p_on: ftl.er_on.checked,
+        p_days: Number(ftl.er_days.value), p_note: ftl.er_note.value.trim() });
+      if (error) { fillTools(); return showMsg(thaiError(error)); }
+      current.tool_cfg = data;
+      showMsg('บันทึกแล้ว ✓', 'ok');
+    }
     ftl.addEventListener('input', (e) => {
+      if (e.target.name === 'er_note') { clearTimeout(et); et = setTimeout(saveEreceipt, 900); return; }
       if (!['p_header', 'p_footer'].includes(e.target.name)) return;
       clearTimeout(tt); tt = setTimeout(() => saveTools('print'), 900);
     });
