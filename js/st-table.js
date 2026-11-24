@@ -110,6 +110,7 @@
   let cartSig = '';
   let cartCh = null, cartTopic = null;
   let guestInfo = null;     // ผลล่าสุดจาก st_guest_orders
+  let rcFirstDone = false;  // รอบ Q: สแกนครั้งแรกของหน้านี้แล้วหรือยัง
   let dealsAt = 0, dealsFor = null;   // โหลดโปร/คูปองล่าสุดเมื่อไร / ของรอบโต๊ะไหน
 
   const isHub = () => !!lastScan && lastScan.table.kind === 'hub';
@@ -227,6 +228,11 @@
       else if (wasPending && !newToken) showMsg(t('cf_rejected'));
       if (data.table && data.table.kind !== 'hub') ls.set('st-last-table', JSON.stringify({ qr, shop: data.shop.id, at: Date.now() }));
     }
+    // รอบ Q: จำรอบไว้ดูใบเสร็จ — เฉพาะตอนเปิดหน้า (สแกนจริง) · รอบที่ได้มาจากเช็กสถานะเบื้องหลัง จำเมื่อแตะหน้าจอ
+    // (กันมือถือลูกค้าเก่าที่เปิดหน้าค้างไว้ ไปจำรอบของลูกค้าโต๊ะถัดไป)
+    // ถ้าเครื่องนี้มีใบเสร็จรอบก่อนอยู่แล้ว (จ่ายแล้ว) รอบใหม่ที่ได้จากเบื้องหลังจะยังไม่จำ จนกว่าจะแตะหน้าจอ
+    if (newToken && !staffMode && (!rcFirstDone || !(rcData && rcData.receipts.length))) rememberTok(newToken);
+    rcFirstDone = true;
     if (newToken !== token) {
       token = newToken;
       if (!staffMode) ls.set(KEY_SESSION, token);
@@ -331,34 +337,54 @@
   }
 
   // ---------- ใบเสร็จดิจิทัล (รอบ Q · st-25) ----------
-  // แสดงเมื่อรอบนี้ (หรือรอบล่าสุดที่เครื่องนี้สั่ง ภายใน 3 ชม.) มีใบเสร็จ · หายเมื่อลูกค้าโต๊ะถัดไปเปิดโต๊ะ
-  let rcData = null, rcTok = null, rcAt = 0, rcSeen = -1;
+  // เครื่องนี้จำรหัสรอบโต๊ะที่เคยสแกน (สูงสุด 5 รอบ · 12 ชม.) → ใบเสร็จของรอบเหล่านั้นแสดงได้ 3 ชม. หลังปิดโต๊ะ
+  // ลูกค้าโต๊ะถัดไปไม่เห็น เพราะมือถือเขาไม่มีรหัสรอบเก่า (เจ้าของสั่ง: ไม่ซ่อนเมื่อมีลูกค้าใหม่เปิดโต๊ะ)
+  const KEY_RCS = 'st-rcs:' + qr;
+  let rcData = null, rcAt = 0, rcSig = '', rcSeen = -1;
   let rcHold = false;                               // จ่ายแล้วกลับมาเปิดหน้าเดิม: ยังไม่เปิดรอบใหม่ จนกว่าจะกด "เริ่มสั่งรอบใหม่"
-  function lastTok() {
-    try {
-      const last = JSON.parse(ls.get(KEY_LAST) || 'null');
-      if (last && last.token && Date.now() - last.at < 3 * 3600 * 1000) return last.token;
-    } catch { /* ไม่เป็นไร */ }
-    return null;
+  function rcToks() {
+    let list = [];
+    try { list = JSON.parse(ls.get(KEY_RCS) || '[]') || []; } catch { list = []; }
+    return list.filter(x => x && x.t && Date.now() - x.at < 12 * 3600 * 1000);
   }
-  const receiptTok = () => staffMode ? null : (token || lastTok());
+  function rememberTok(tok) {
+    if (!tok || staffMode) return;
+    const list = [{ t: tok, at: Date.now() }, ...rcToks().filter(x => x.t !== tok)].slice(0, 5);
+    ls.set(KEY_RCS, JSON.stringify(list));
+  }
   async function fetchReceipts(tok) {
     const { data, error } = await sb.rpc('st_guest_receipts', { p_qr: qr, p_session_token: tok });
     return error ? null : data;                     // ยังไม่รัน st-25 → ไม่แสดง
   }
+  // รวมใบเสร็จจากทุกรอบที่เครื่องนี้จำไว้
+  async function fetchAll() {
+    const toks = rcToks().map(x => x.t);
+    const res = await Promise.all(toks.map(fetchReceipts));
+    const out = { receipts: [], days: 90, closedOnly: true };
+    const seen = new Set();
+    res.forEach((r, i) => {
+      if (!r || !r.ok) return;
+      out.days = r.days || out.days;
+      if (!r.closed && toks[i] === token) out.closedOnly = false;
+      for (const x of r.receipts || []) if (!seen.has(x.key)) { seen.add(x.key); out.receipts.push(x); }
+    });
+    out.receipts.sort((x, y) => String(x.created_at).localeCompare(String(y.created_at)));
+    return out;
+  }
   async function loadReceipts(force) {
-    const tok = receiptTok();
-    if (!tok) { rcData = null; rcTok = null; renderReceipts(); return; }
-    if (!force && tok === rcTok && Date.now() - rcAt < 15000) return;
-    rcTok = tok; rcAt = Date.now();
-    rcData = await fetchReceipts(tok);
-    if (tok !== rcTok) return;
+    if (staffMode) return;
+    const sig = rcToks().map(x => x.t).join();
+    if (!force && sig === rcSig && Date.now() - rcAt < 15000) return;
+    rcSig = sig; rcAt = Date.now();
+    if (!sig) { rcData = null; renderReceipts(); return; }
+    rcData = await fetchAll();
     renderReceipts();
   }
   function renderReceipts() {
     const box = $('#g-receipts');
-    const list = rcData && rcData.ok ? (rcData.receipts || []) : [];
-    if (!list.length) { box.hidden = true; box.innerHTML = ''; if (rcHold) rcHold = false; rcSeen = 0; return; }
+    const list = rcData ? rcData.receipts : [];
+    if (token && state === 'open') rcHold = false;  // นั่งรอบใหม่แล้ว ไม่ต้องมีปุ่มเริ่มใหม่
+    if (!list.length) { box.hidden = true; box.innerHTML = ''; rcHold = false; rcSeen = 0; return; }
     const paid = list.filter(x => x.status === 'paid').length;
     if (rcSeen >= 0 && paid > rcSeen) toast(t('er_paid_toast'));
     rcSeen = paid;
@@ -374,14 +400,15 @@
       ${rcHold ? `<button type="button" class="st-btn st-btn--ghost" data-er-new>${esc(t('er_new'))}</button>` : ''}`;
     box.hidden = false;
   }
+  document.addEventListener('pointerdown', (e) => { if (e.target.closest && e.target.closest('#g-receipts, #g-lang')) return; if (token && !staffMode && (rcToks()[0] || {}).t !== token) rememberTok(token); }, { passive: true });
   $('#g-receipts').addEventListener('click', async (e) => {
     const b = e.target.closest('[data-er-new]');
     if (!b) return;
     b.disabled = true;
     rcHold = false;
-    ls.set(KEY_LAST, null);                         // รอบเก่าจบแล้ว · ใบเสร็จยังเปิดจากลิงก์ที่บันทึกไว้ได้
-    rcData = null; renderReceipts();
+    renderReceipts();
     await scan(true);
+    if (token) { rememberTok(token); loadReceipts(true); }   // ลูกค้ากดเริ่มรอบใหม่เอง = จำรอบใหม่ด้วย
   });
 
   // ---------- ให้คะแนน (ตอนเช็กบิล หรือภายใน 3 ชม. หลังจ่ายเงิน) ----------
@@ -1946,8 +1973,8 @@
   // ---------- เริ่มต้น ----------
   if (!qr) { $('#g-shop').textContent = 'SmartTable'; return showMsg(t('bad_link')); }
   let autoOpen = !staffMode;
-  if (autoOpen && lastTok()) {                      // จ่ายแล้วกลับมาเปิดหน้านี้: แสดงใบเสร็จก่อน ไม่เปิดรอบใหม่ทับ
-    const r0 = await fetchReceipts(lastTok());
+  if (autoOpen && rcToks().length) {                 // จ่ายแล้วกลับมาเปิดหน้านี้: แสดงใบเสร็จก่อน ไม่เปิดรอบใหม่ทับ
+    const r0 = await sb.rpc('st_guest_receipts', { p_qr: qr, p_session_token: rcToks()[0].t }).then(r => r.data, () => null);
     if (r0 && r0.ok && r0.closed && (r0.receipts || []).length) { rcHold = true; autoOpen = false; }
   }
   const first = await scan(autoOpen);
