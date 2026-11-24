@@ -66,6 +66,31 @@
   });
   loadInvites();
 
+  // ---------- รอบ R: สิทธิ์ส่วนขยาย SmartTable (ซื้อ/ทดลองใน DarkChat) ----------
+  let EXTS = null;
+  async function loadExt() {
+    const { data, error } = await sb.rpc('st_ext_status');
+    if (error) { EXTS = null; return; }            // ยังไม่ได้รัน st-26 = ไม่มีด่าน
+    EXTS = data;
+    const card = $('#ext-card');
+    const days = (t) => Math.max(0, Math.ceil((new Date(t) - Date.now()) / 864e5));
+    const dc = esc(data.darkchat_url || 'https://bossrachun9696-stack.github.io/darkchat/');
+    if (!data.ok) {
+      const price = data.price ? `฿${Number(data.price).toLocaleString('th-TH')}` : '';
+      card.innerHTML = `<h3>🔒 ${data.reason === 'trial_expired' ? 'หมดช่วงทดลองใช้แล้ว' : 'ยังไม่ได้เปิดใช้ SmartTable'}</h3>
+        <p>SmartTable เป็นส่วนขยายของ DarkChat · เจ้าของร้านเปิดสิทธิ์ครั้งเดียว พนักงานในร้านใช้ได้ทุกคน ลูกค้าสแกน QR ไม่ต้องสมัคร</p>
+        <p>${price ? `ราคา ${price}` : ''}${data.family_price ? ` · แบบครอบครัว ฿${Number(data.family_price).toLocaleString('th-TH')}` : ''}${data.trial_days && !data.trial_used ? ` · ทดลองฟรี ${data.trial_days} วัน` : ''}</p>
+        <a class="st-btn" href="${dc}" target="_blank" rel="noopener">🧩 เปิด DarkChat เพื่อ${data.trial_days && !data.trial_used ? 'ทดลองใช้ / ' : ''}ซื้อสิทธิ์</a>
+        <small>เปิดสิทธิ์แล้วกลับมาที่หน้านี้ กดรีเฟรช</small>`;
+      card.hidden = false;
+      $('#create-card').hidden = true;
+    } else if (data.trial_until) {
+      card.innerHTML = `<b>⏳ ทดลองใช้ SmartTable เหลือ ${days(data.trial_until)} วัน</b> · <a href="${dc}" target="_blank" rel="noopener">ซื้อสิทธิ์ที่ DarkChat</a>`;
+      card.hidden = false;
+    } else card.hidden = true;
+  }
+  await loadExt();
+
   // ---------- รายการร้าน ----------
   async function loadShops() {
     const { data, error } = await sb.rpc('st_my_shops');
@@ -85,6 +110,13 @@
       const t = h.days && h.days[today];
       return ' · ⏰ ' + (t && t.on ? `${t.open}–${t.close}` : 'วันนี้ปิด');
     };
+    const extBadge = (id) => {
+      const x = EXTS && (EXTS.shops || []).find(r => r.shop_id === id);
+      if (!x) return '';
+      if (!x.licensed) return ' · <b style="color:var(--st-err)">🔒 หมดสิทธิ์ SmartTable (ลูกค้าสั่งไม่ได้)</b>';
+      if (x.trial_until) return ` · ⏳ ทดลองเหลือ ${Math.max(0, Math.ceil((new Date(x.trial_until) - Date.now()) / 864e5))} วัน`;
+      return '';
+    };
     list.innerHTML = data.map(s => {
       const can = s.role === 'owner' || s.role === 'manager';
       return `
@@ -93,7 +125,7 @@
           <div class="st-logo">${s.logo_path ? `<img src="${esc(ST.avatarUrl(s.logo_path))}" alt="" loading="lazy">` : esc(s.name.charAt(0))}</div>
           <div class="st-item-main">
             <b>${esc(s.name)}</b>
-            <small>${esc(ROLE_TH[s.role] || s.role)} · <span data-state>${s.is_open ? '🟢 เปิดอยู่' : '🔴 ปิดร้าน'}</span>${esc(autoText(H.get(s.id)))}${s.status === 'suspended' ? ' · ถูกระงับ' : ''}</small>
+            <small>${esc(ROLE_TH[s.role] || s.role)} · <span data-state>${s.is_open ? '🟢 เปิดอยู่' : '🔴 ปิดร้าน'}</span>${esc(autoText(H.get(s.id)))}${s.status === 'suspended' ? ' · ถูกระงับ' : ''}${extBadge(s.id)}</small>
           </div>
           <span class="st-arrow" aria-hidden="true">›</span>
         </a>

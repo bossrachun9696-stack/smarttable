@@ -134,6 +134,7 @@
     st_coupon_no_promo: 'คูปองนี้ใช้ร่วมกับโปรลดราคาตามเวลาไม่ได้',
     st_coupon_need_staff: 'มีคูปองที่ใส่ไว้ กรุณากด "ขอเช็กบิล" ให้พนักงานคิดส่วนลดให้',
     st_wait_confirm: 'ร้านยังไม่ได้ยืนยันโต๊ะ รอสักครู่แล้วกดส่งอีกครั้ง',
+    st_ext_locked: 'ร้านนี้ยังไม่ได้เปิดใช้ SmartTable หรือสิทธิ์หมดแล้ว · เจ้าของร้านเปิดสิทธิ์ได้ที่ DarkChat > 🧩 ส่วนขยาย',
     st_buffet_wait: 'รอพนักงานเริ่มบุฟเฟ่ต์ (นับจำนวนคน/เลือกแพ็กเกจ) ก่อน แล้วค่อยกดส่ง',
     st_buffet_gap: 'ต้องเว้นระยะระหว่างรอบ · สั่งรอบถัดไปได้ในอีก (นาที)',
     st_buffet_round_limit: 'รอบนี้สั่งเมนูบุฟเฟ่ต์เกินจำนวนที่ร้านกำหนด · สูงสุดรอบละ (จาน)',
@@ -236,6 +237,15 @@
   async function ensureProfile(name) {
     const { data, error } = await sb.rpc('st_ensure_profile', { p_display_name: name || null });
     if (error) throw error;
+    // สมัครแล้วยืนยันอีเมลทีหลัง: ตั้งรหัสกู้คืนที่กรอกไว้ตอนสมัครให้ (ระบบบัญชีร่วมของ DarkChat)
+    try {
+      const p = JSON.parse(localStorage.getItem('darkchat_rec_pending') || 'null');
+      const { data: { user } } = await sb.auth.getUser();
+      if (p && p.code && user && (!p.email || p.email === String(user.email || '').toLowerCase())) {
+        const { error: re } = await sb.rpc('acct_set_recovery', { p_code: p.code });
+        if (!re) localStorage.removeItem('darkchat_rec_pending');
+      }
+    } catch (x) { /* ไม่เป็นไร */ }
     return data;
   }
 

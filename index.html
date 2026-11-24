@@ -41,6 +41,7 @@
       <button type="button" data-view="signup" role="tab">สมัครสมาชิก</button>
     </div>
 
+    <div class="st-msg st-msg--ok" style="display:block">🔑 ใช้อีเมลและรหัสผ่าน<b>เดียวกับ DarkChat</b> (บัญชีเดียวกันทุกแอป) · ยังไม่มีบัญชีก็สมัครที่นี่ได้เลย</div>
     <div id="st-msg" class="st-msg" role="status" hidden></div>
 
     <!-- เข้าสู่ระบบ -->
@@ -78,17 +79,27 @@
           <button type="button" data-eye>แสดง</button>
         </div>
       </label>
+      <label class="st-field"><span>รหัสกู้คืน (ไว้ใช้ตอนลืมรหัสผ่าน · อย่างน้อย 6 ตัว)</span>
+        <input name="rec" type="text" autocomplete="off" minlength="6" maxlength="64" required placeholder="จดเก็บไว้ ใช้ร่วมกับ DarkChat">
+      </label>
       <button class="st-btn" type="submit">สมัครสมาชิก</button>
     </form>
 
-    <!-- ลืมรหัสผ่าน -->
+    <!-- ลืมรหัสผ่าน (รหัสกู้คืนของบัญชี DarkChat) -->
     <form id="form-forgot" data-view="forgot" hidden novalidate>
       <h2>ลืมรหัสผ่าน</h2>
-      <p class="st-sub">กรอกอีเมลที่ใช้สมัคร เราจะส่งลิงก์สำหรับตั้งรหัสผ่านใหม่ไปให้</p>
+      <p class="st-sub">ใส่อีเมลและ<b>รหัสกู้คืน</b>ที่ตั้งไว้ (ชุดเดียวกับ DarkChat) แล้วตั้งรหัสผ่านใหม่</p>
       <label class="st-field"><span>อีเมล</span>
         <input name="email" type="email" autocomplete="email" inputmode="email" required placeholder="you@example.com">
       </label>
-      <button class="st-btn" type="submit">ส่งลิงก์ตั้งรหัสผ่านใหม่</button>
+      <label class="st-field"><span>รหัสกู้คืน</span>
+        <input name="code" type="text" autocomplete="off" required>
+      </label>
+      <label class="st-field"><span>รหัสผ่านใหม่ (อย่างน้อย 8 ตัว)</span>
+        <div class="st-input"><input name="password" type="password" autocomplete="new-password" minlength="8" required><button type="button" data-eye>แสดง</button></div>
+      </label>
+      <button class="st-btn" type="submit">ตั้งรหัสผ่านใหม่</button>
+      <p class="st-center"><button type="button" class="st-link" id="btn-mail-reset" style="background:none;border:0;cursor:pointer">ยังไม่เคยตั้งรหัสกู้คืน? ส่งลิงก์ทางอีเมลแทน</button></p>
       <p class="st-center"><a class="st-link" href="#login">← กลับไปเข้าสู่ระบบ</a></p>
     </form>
   </section>
