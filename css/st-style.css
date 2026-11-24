@@ -1443,3 +1443,4 @@ html[data-width="large"] body { font-size: 17.5px; }
 .st-shoprow--flash { animation: st-flash 1.6s ease-out 2; }
 @keyframes st-flash { 0% { background: color-mix(in srgb, #f5b041 45%, transparent); } 100% { background: transparent; } }
 @media (max-width: 420px) { .st-live { margin-left: 8px; } }
+.st-push-shops { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }

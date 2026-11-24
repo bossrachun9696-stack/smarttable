@@ -2,8 +2,8 @@
 // ทำให้ติดตั้งเป็นแอปได้ + เปิดหน้าเดิมได้ตอนเน็ตหลุดชั่วคราว
 // * โหลดจากเน็ตก่อนเสมอ (ไฟล์ใหม่บน GitHub ขึ้นทันที) — ใช้ของที่เก็บไว้เฉพาะตอนออฟไลน์
 // * ไม่เก็บข้อมูลจาก Supabase (ออร์เดอร์ เงิน) — เก็บแค่ไฟล์หน้าเว็บของเว็บนี้
-// * ยังไม่มีแจ้งเตือน Push (จะเพิ่มหลังย้ายรวม DarkChat)
-const VERSION = 'st-v14';
+// * แจ้งเตือน Push (st-31): ออร์เดอร์ใหม่ / เรียกพนักงาน / เปิดโต๊ะ / คิว — ส่งจาก Edge Function st-push
+const VERSION = 'st-v15';
 const SHELL = [
   './', 'index.html', 'home.html', 'settings.html', 'offline.html', 'manifest.webmanifest',
   'css/st-style.css', 'js/st-auth.js', 'js/st-config.js',
@@ -58,5 +58,33 @@ self.addEventListener('fetch', (event) => {
       }
       throw err;
     }
+  })());
+});
+
+// ---------- แจ้งเตือน Push ----------
+self.addEventListener('push', (event) => {
+  let d = {};
+  try { d = event.data ? event.data.json() : {}; } catch { d = { title: 'SmartTable', body: event.data ? event.data.text() : '' }; }
+  event.waitUntil(self.registration.showNotification(d.title || 'SmartTable', {
+    body: d.body || '',
+    tag: d.tag || undefined,
+    renotify: !!d.tag,
+    icon: 'icons/st-192.png',
+    badge: 'icons/favicon-32.png',
+    vibrate: [180, 80, 180],
+    data: { url: d.url || 'home.html' }
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = new URL((event.notification.data && event.notification.data.url) || 'home.html', self.registration.scope).href;
+  event.waitUntil((async () => {
+    const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const same = list.find(c => c.url === target);
+    if (same) return same.focus();
+    const mine = list.find(c => c.url.startsWith(self.registration.scope));
+    if (mine) { try { await mine.navigate(target); return mine.focus(); } catch { /* เปิดใหม่ด้านล่าง */ } }
+    return self.clients.openWindow(target);
   })());
 });

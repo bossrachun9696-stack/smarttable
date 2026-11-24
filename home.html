@@ -63,6 +63,13 @@
 
   <!-- รอบ R: สิทธิ์ส่วนขยาย SmartTable ใน DarkChat -->
   <section id="ext-card" class="st-card st-card--alert" hidden></section>
+  <section id="push-card" class="st-card" hidden>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div style="flex:1;min-width:0"><b>🔔 แจ้งเตือนบนมือถือ</b><br><small id="push-text">มีคนสั่งอาหาร เรียกพนักงาน หรือเปิดโต๊ะ เด้งแจ้งแม้ปิดแอปอยู่</small></div>
+      <button id="push-btn" class="st-btn st-btn--sm" type="button">เปิด</button>
+    </div>
+    <div id="push-shops" class="st-push-shops" hidden></div>
+  </section>
 
   <div id="home-body" hidden>
     <h2 class="st-h">ร้านของฉัน</h2>
@@ -88,6 +95,7 @@
 <script src="js/st-config.js"></script>
 <script src="js/st-auth.js"></script>
 <script src="js/st-home.js"></script>
+<script src="js/st-push.js"></script>
 <script src="js/st-pwa.js"></script>
 </body>
 </html>
