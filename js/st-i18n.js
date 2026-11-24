@@ -2,6 +2,8 @@
 // ชื่อเมนูและคำอธิบาย ร้านใส่คำแปลเองในหน้าเมนู (ถ้าไม่ใส่จะแสดงภาษาไทย)
 window.ST_I18N = {
   th: {
+    svc_togo: '(ไม่คิดส่วนห่อกลับบ้าน)',
+    sum_dine: '🍽 ทานที่ร้าน', sum_togo: '🛍 ห่อกลับบ้าน', bs_title: 'ขอเช็กบิลแบบไหน', bs_hint: 'โต๊ะนี้มีรายการห่อกลับบ้าน เลือกว่าจะจ่ายรวมหรือแยกบิล', bs_one: 'รวมบิลเดียว', bs_one_sub: 'จ่ายทั้งหมด ฿{n} ในบิลเดียว', bs_togo: 'แยกบิล ทานที่ร้าน / ห่อกลับบ้าน', bs_togo_sub: 'ทานที่ร้าน ฿{a} · ห่อกลับบ้าน ฿{b} · ได้ใบเสร็จ 2 ใบ',
     hr_days: 'จ.,อ.,พ.,พฤ.,ศ.,ส.,อา.', hr_off: 'ปิด', hr_today: 'เวลาเปิดวันนี้: {x}', hr_all: 'เวลาเปิดทั้งสัปดาห์',
     up_title: '🍟 มักสั่งคู่กับ', up_added: '✓ ใส่ตะกร้าแล้ว: {x}', up_no: 'ไม่เป็นไร ขอบคุณ', up_add: '+ เพิ่ม', up_pick: 'เลือก', combo_in: 'ในชุด', combo_save: 'ประหยัด ฿{n}',
     gr_how: 'รับสินค้าอย่างไร', gr_pickup: '🏪 มารับที่ร้าน', gr_pickup_sub: 'สั่งไว้ แล้วมารับเมื่อพร้อม', gr_delivery: '🛵 ส่งถึงบ้าน', gr_delivery_sub: 'ส่งได้ไม่เกิน {km} กม. จากร้าน',
@@ -71,6 +73,8 @@ window.ST_I18N = {
     cart_sent_other: 'มีคนในโต๊ะส่งรายการแล้ว'
   },
   en: {
+    svc_togo: '(not on take-away)',
+    sum_dine: '🍽 Dine in', sum_togo: '🛍 Take away', bs_title: 'How would you like the bill?', bs_hint: 'This table has take-away items. Pay together or split?', bs_one: 'One bill', bs_one_sub: 'Pay ฿{n} together', bs_togo: 'Split: dine in / take away', bs_togo_sub: 'Dine in ฿{a} · take away ฿{b} · 2 receipts',
     hr_days: 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', hr_off: 'Closed', hr_today: 'Open today: {x}', hr_all: 'Opening hours',
     up_title: '🍟 Goes well with', up_added: '✓ Added: {x}', up_no: 'No thanks', up_add: '+ Add', up_pick: 'Choose', combo_in: 'Set includes', combo_save: 'Save ฿{n}',
     gr_how: 'How would you like it?', gr_pickup: '🏪 Pick up at shop', gr_pickup_sub: 'Order now, collect when ready', gr_delivery: '🛵 Delivery', gr_delivery_sub: 'Within {km} km of the shop',
@@ -140,6 +144,8 @@ window.ST_I18N = {
     cart_sent_other: 'Someone at your table sent the order'
   },
   zh: {
+    svc_togo: '（打包不收）',
+    sum_dine: '🍽 堂食', sum_togo: '🛍 打包', bs_title: '如何结账', bs_hint: '本桌有打包菜品，合并结账还是分开？', bs_one: '合并一张账单', bs_one_sub: '一起支付 ฿{n}', bs_togo: '分开：堂食 / 打包', bs_togo_sub: '堂食 ฿{a} · 打包 ฿{b} · 两张收据',
     hr_days: '周一,周二,周三,周四,周五,周六,周日', hr_off: '休息', hr_today: '今日营业：{x}', hr_all: '营业时间',
     up_title: '🍟 常一起点', up_added: '✓ 已加入：{x}', up_no: '不用了，谢谢', up_add: '+ 加入', up_pick: '选择', combo_in: '套餐包含', combo_save: '省 ฿{n}',
     gr_how: '取货方式', gr_pickup: '🏪 到店自取', gr_pickup_sub: '先下单，准备好后来取', gr_delivery: '🛵 送货上门', gr_delivery_sub: '距店 {km} 公里内',

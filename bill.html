@@ -42,6 +42,15 @@
 
     <section class="st-card">
       <h3>เก็บเงินแบบไหน</h3>
+      <!-- รอบ O: มีห่อกลับบ้าน → จ่ายรวม หรือแยกบิล -->
+      <div id="b-togo" class="st-togo-box" hidden>
+        <p><b>🛍 มีรายการห่อกลับบ้าน</b> <span id="b-togo-sum"></span></p>
+        <div class="st-togo-btns">
+          <button type="button" class="st-chip" data-togo="all">💳 จ่ายรวมบิลเดียว</button>
+          <button type="button" class="st-chip" data-togo="togo">🛍 แยกบิล: จ่ายห่อกลับบ้าน</button>
+          <button type="button" class="st-chip" data-togo="dine">🍽 แยกบิล: จ่ายทานที่ร้าน</button>
+        </div>
+      </div>
       <div id="b-split" class="st-seg st-seg--3" role="tablist">
         <button type="button" data-s="all">ทั้งหมด</button>
         <button type="button" data-s="equal">หารเท่ากัน</button>

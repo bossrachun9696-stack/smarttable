@@ -388,7 +388,7 @@
     const orders = detail.orders.slice().reverse().map(o => `
       <div class="st-order st-order--${o.status}">
         <div class="st-order-head">
-          <b>#${o.order_no}</b>
+          <b>#${o.order_no}</b>${o.to_go ? ' <em class="st-badge st-badge--togo">🛍 ห่อกลับบ้าน</em>' : ''}
           <span>${new Date(o.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}${o.guest_name ? ' · ' + esc(o.guest_name) : ''}</span>
           <em class="st-ostat st-ostat--${o.status}">${ORDER_TH[o.status]}</em>
         </div>

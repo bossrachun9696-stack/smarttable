@@ -786,11 +786,13 @@
     if (!info) { $('#sheet-body').innerHTML = `<p class="st-sub">${esc(t('loading'))}</p>`; return; }
     const orders = info.orders.slice().reverse();
     const b = info.bill;
+    const sp = splitTotals(info);
     $('#sheet-body').innerHTML = `
       ${orders.length ? orders.map(o => `
         <div class="st-order st-order--${o.status}">
           <div class="st-order-head">
             <b>#${o.order_no}</b>
+            ${o.to_go ? `<em class="st-badge st-badge--togo">${esc(t('togo_tag'))}</em>` : ''}
             <span>${new Date(o.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}${o.guest_name ? ' · ' + esc(o.guest_name) : ''}</span>
             <em class="st-ostat st-ostat--${o.status}">${esc(t('o_' + o.status))}</em>
           </div>
@@ -806,8 +808,10 @@
         </div>`).join('') : `<div class="st-empty">${esc(t('nothing_yet'))}</div>`}
       ${orders.length ? `
         <div class="st-bill">
+          ${sp.togo ? `<div><span>${esc(t('sum_dine'))}</span><span>${baht(sp.dine)}</span></div>
+          <div><span>${esc(t('sum_togo'))}</span><span>${baht(sp.togo)}</span></div>` : ''}
           <div><span>${esc(t('b_food'))}</span><span>${baht(b.subtotal)}</span></div>
-          ${Number(b.service_pct) ? `<div><span>${esc(t('b_service', { p: Number(b.service_pct) }))}</span><span>${baht(b.service)}</span></div>` : ''}
+          ${Number(b.service_pct) ? `<div><span>${esc(t('b_service', { p: Number(b.service_pct) }))}${Number(b.togo) ? `<small> ${esc(t('svc_togo'))}</small>` : ''}</span><span>${baht(b.service)}</span></div>` : ''}
           ${Number(b.vat_pct) ? `<div><span>${esc(t('b_vat', { p: Number(b.vat_pct) }))}${b.vat_included ? esc(t('b_vat_inc')) : ''}</span><span>${b.vat_included ? `<small>${baht(b.vat)}</small>` : baht(b.vat)}</span></div>` : ''}
           <div class="st-bill-total"><span>${esc(t('b_total'))}</span><b>${baht(b.total)}</b></div>
           ${info.pay && Number(info.pay.paid_total) > 0 ? `
@@ -815,6 +819,47 @@
             <div class="st-bill-total"><span>${esc(t('pay_left'))}</span><b>${baht(info.pay.remaining.total)}</b></div>` : ''}
         </div>` : ''}`;
   }
+  // รอบ O: ยอดทานที่ร้าน / ห่อกลับบ้าน
+  function splitTotals(info) {
+    let dine = 0, togo = 0;
+    ((info && info.orders) || []).forEach(o => {
+      if (o.status === 'cancelled') return;
+      if (o.to_go) togo += Number(o.subtotal || 0); else dine += Number(o.subtotal || 0);
+    });
+    return { dine, togo };
+  }
+  // ขอเช็กบิล: มีห่อกลับบ้าน → ถามว่ารวมบิลหรือแยกบิล
+  function renderBillAsk() {
+    const sp = splitTotals(guestInfo);
+    $('#sheet-body').innerHTML = `
+      <p class="st-sub">${esc(t('bs_hint'))}</p>
+      <div class="st-fulfil">
+        <button type="button" class="st-fulfil-opt st-bs" data-billsplit="one"><span><b>💳 ${esc(t('bs_one'))}</b><small>${esc(t('bs_one_sub', { n: Math.round((sp.dine + sp.togo) * 100) / 100 }))}</small></span></button>
+        <button type="button" class="st-fulfil-opt st-bs" data-billsplit="togo"><span><b>🧾 ${esc(t('bs_togo'))}</b><small>${esc(t('bs_togo_sub', { a: sp.dine, b: sp.togo }))}</small></span></button>
+      </div>`;
+  }
+  async function sendBill(split) {
+    let r = await sb.rpc('st_guest_bill_request', { p_qr: qr, p_session_token: token, p_split: split });
+    if (r.error && /st_guest_bill_request|PGRST202|function/i.test(r.error.message || '')) {
+      r = await sb.rpc('st_guest_call', { p_qr: qr, p_session_token: token, p_kind: 'bill' });   // ยังไม่รัน st-23
+    }
+    return r;
+  }
+  $('#sheet-body').addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-billsplit]');
+    if (!b) return;
+    b.disabled = true;
+    const { error } = await sendBill(b.dataset.billsplit);
+    b.disabled = false;
+    if (error) {
+      if (error.message === 'st_session_invalid') { closeSheet(); scan(false); }
+      return sheetMsg(gErr(error));
+    }
+    closeSheet();
+    toast(t('toast_bill'));
+    await scan(false);
+  });
+
   $('#btn-orders').addEventListener('click', async () => {
     openSheet('orders', t('ordered'));
     renderOrders();
@@ -827,9 +872,16 @@
     const b = e.target.closest('[data-call]');
     if (!b || !token) return;
     const kind = b.dataset.call;
+    if (kind === 'bill') {
+      if (!guestInfo) { try { await refreshGuest(); } catch { /* ไม่เป็นไร */ } }
+      if (splitTotals(guestInfo).togo > 0) {           // มีห่อกลับบ้าน → ให้เลือกรวม/แยกบิล
+        openSheet('billask', t('bs_title'));
+        return renderBillAsk();
+      }
+    }
     if (kind === 'bill' && !confirm(t('confirm_bill'))) return;
     b.disabled = true;
-    const { error } = await sb.rpc('st_guest_call', { p_qr: qr, p_session_token: token, p_kind: kind });
+    const { error } = kind === 'bill' ? await sendBill('one') : await sb.rpc('st_guest_call', { p_qr: qr, p_session_token: token, p_kind: kind });
     if (error) {
       b.disabled = false;
       if (error.message === 'st_session_invalid') scan(false);

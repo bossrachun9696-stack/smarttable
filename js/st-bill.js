@@ -190,6 +190,7 @@
         + (nEqual > 1 ? ` · คนสุดท้ายจ่ายส่วนที่เหลือพอดี` : '');
     }
     renderItems();
+    renderTogo();
 
     // บิล
     if (noItemsPicked()) {
@@ -201,7 +202,7 @@
       ${Number(m.paid_sub) ? `<div><span>จ่ายไปแล้ว (ค่าอาหาร)</span><span>−${baht(m.paid_sub)}</span></div>` : ''}
       <div><span>${split === 'all' && !d.payments.length ? 'ค่าอาหาร' : 'ค่าอาหารของใบนี้'}</span><span>${baht(b.subtotal)}</span></div>
       ${Number(b.discount) ? `<div><span>ส่วนลด</span><span>−${baht(b.discount)}</span></div>` : ''}
-      ${Number(b.service_pct) ? `<div><span>ค่าบริการ ${Number(b.service_pct)}%</span><span>${baht(b.service)}</span></div>` : ''}
+      ${Number(b.service_pct) ? `<div><span>ค่าบริการ ${Number(b.service_pct)}%${Number(b.togo) ? `<small class="st-sub"> (ไม่คิดส่วนห่อกลับบ้าน ${baht(b.togo)})</small>` : ''}</span><span>${baht(b.service)}</span></div>` : ''}
       ${Number(b.vat_pct) ? `<div><span>VAT ${Number(b.vat_pct)}%${b.vat_included ? ' (รวมในราคาแล้ว)' : ''}</span><span>${baht(b.vat)}</span></div>` : ''}
       <div class="st-bill-total"><span>ยอดที่ต้องชำระ</span><b>${baht(b.total)}</b></div>
       ${d.tax_invoice ? '<p class="st-sub" style="margin:6px 0 0">🧾 ออกเป็นใบกำกับภาษีอย่างย่อ</p>' : ''}`;
@@ -215,14 +216,21 @@
       // รวมรายการซ้ำ (ชื่อ + ตัวเลือก + ราคาเดียวกัน)
       const lines = new Map();
       d.lines.forEach(i => {
-        const k = [i.name, i.options || '', i.unit_price].join('|');
-        const l = lines.get(k) || { name: i.name, opts: i.options, qty: 0, paid: 0, total: 0 };
+        const k = [i.to_go ? 1 : 0, i.name, i.options || '', i.unit_price].join('|');
+        const l = lines.get(k) || { name: i.name, opts: i.options, qty: 0, paid: 0, total: 0, togo: !!i.to_go };
         l.qty += i.qty; l.paid += i.paid_qty; l.total += Number(i.line_total);
         lines.set(k, l);
       });
-      $('#b-items').innerHTML = (lines.size ? [...lines.values()].map(l => `
-        <div class="st-oline${l.paid >= l.qty ? ' st-paid' : ''}"><span>${l.qty}× ${esc(l.name)}${l.opts ? `<small>${esc(l.opts)}</small>` : ''}${l.paid ? `<small>✓ จ่ายแล้ว ${l.paid}</small>` : ''}</span><span>${baht(l.total)}</span></div>`).join('')
-        : '<p class="st-sub">ยังไม่มีรายการ</p>')
+      const row = (l) => `
+        <div class="st-oline${l.paid >= l.qty ? ' st-paid' : ''}"><span>${l.qty}× ${esc(l.name)}${l.togo ? ' <em class="st-badge st-badge--togo">🛍 ห่อกลับบ้าน</em>' : ''}${l.opts ? `<small>${esc(l.opts)}</small>` : ''}${l.paid ? `<small>✓ จ่ายแล้ว ${l.paid}</small>` : ''}</span><span>${baht(l.total)}</span></div>`;
+      const all = [...lines.values()];
+      const tg = all.filter(l => l.togo), dn = all.filter(l => !l.togo);
+      const sum = (a) => a.reduce((s, l) => s + l.total, 0);
+      $('#b-items').innerHTML = (!all.length ? '<p class="st-sub">ยังไม่มีรายการ</p>'
+        : tg.length
+          ? `<div class="st-billgrp"><div class="st-billgrp-h"><b>🍽 ทานที่ร้าน</b><span>${baht(sum(dn))}</span></div>${dn.map(row).join('') || '<p class="st-sub">—</p>'}</div>
+             <div class="st-billgrp st-billgrp--togo"><div class="st-billgrp-h"><b>🛍 ห่อกลับบ้าน</b><span>${baht(sum(tg))}</span></div>${tg.map(row).join('')}</div>`
+          : all.map(row).join(''))
         + (d.cancelled ? `<p class="st-sub" style="margin:8px 0 0">ไม่นับ ${d.cancelled} ออร์เดอร์ที่ยกเลิก</p>` : '');
       return;
     }
@@ -234,7 +242,7 @@
       }
       return `
         <div class="st-pick${n ? ' on' : ''}" data-line="${esc(l.id)}">
-          <span><b>${esc(l.name)}</b>${l.options ? `<small>${esc(l.options)}</small>` : ''}
+          <span><b>${esc(l.name)}</b>${l.to_go ? ' <em class="st-badge st-badge--togo">🛍 ห่อกลับบ้าน</em>' : ''}${l.options ? `<small>${esc(l.options)}</small>` : ''}
             <small>${baht(l.unit_price)} · เหลือ ${left}${l.paid_qty ? ` (จ่ายแล้ว ${l.paid_qty})` : ''}</small></span>
           <div class="st-qty st-qty--sm">
             <button type="button" data-pick="-1" aria-label="ลด" ${n ? '' : 'disabled'}>−</button><b>${n}</b><button type="button" data-pick="1" aria-label="เพิ่ม" ${n >= left ? 'disabled' : ''}>+</button>
@@ -242,9 +250,43 @@
         </div>`;
     }).join('') + `<div class="st-row-between" style="margin-top:8px">
         <button type="button" class="st-chip" data-pick-all>เลือกที่เหลือทั้งหมด</button>
-        <button type="button" class="st-chip" data-pick-none>ล้าง</button></div>`;
+        <button type="button" class="st-chip" data-pick-none>ล้าง</button></div>
+        ${d.lines.some(l => l.to_go && l.qty > l.paid_qty) ? `<div class="st-row-between" style="margin-top:6px">
+        <button type="button" class="st-chip" data-pick-togo="1">🛍 เลือกห่อกลับบ้าน</button>
+        <button type="button" class="st-chip" data-pick-togo="0">🍽 เลือกทานที่ร้าน</button></div>` : ''}`;
   }
 
+  // รอบ O: ห่อกลับบ้าน → จ่ายรวม / แยกบิล
+  function pickGroup(togo) {
+    sel.clear();
+    data.lines.forEach(l => { if (!!l.to_go === togo && l.qty > l.paid_qty) sel.set(l.id, l.qty - l.paid_qty); });
+  }
+  function renderTogo() {
+    const d = data;
+    const left = (l) => (l.qty - l.paid_qty) * Number(l.unit_price);
+    const tg = d.lines.filter(l => l.to_go && l.qty > l.paid_qty);
+    const dn = d.lines.filter(l => !l.to_go && l.qty > l.paid_qty);
+    const box = $('#b-togo');
+    box.hidden = !tg.length || !!(d.money && d.money.by_amount);
+    if (box.hidden) return;
+    const st = tg.reduce((s, l) => s + left(l), 0), sd = dn.reduce((s, l) => s + left(l), 0);
+    $('#b-togo-sum').textContent = `· ห่อกลับบ้าน ${baht(st)}${dn.length ? ' · ทานที่ร้าน ' + baht(sd) : ''}`;
+    const cur = split === 'all' ? 'all'
+      : split === 'items' && sel.size && [...sel.keys()].every(id => (d.lines.find(l => l.id === id) || {}).to_go) ? 'togo'
+      : split === 'items' && sel.size && [...sel.keys()].every(id => !(d.lines.find(l => l.id === id) || {}).to_go) ? 'dine' : '';
+    box.querySelectorAll('[data-togo]').forEach(b => {
+      b.classList.toggle('st-chip--accent', b.dataset.togo === cur);
+      b.hidden = b.dataset.togo === 'dine' && !dn.length;
+    });
+  }
+
+  $('#b-togo').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-togo]');
+    if (!b) return;
+    if (b.dataset.togo === 'all') { split = 'all'; sel.clear(); }
+    else { split = 'items'; pickGroup(b.dataset.togo === 'togo'); }
+    partChanged();
+  });
   $('#b-split').addEventListener('click', (e) => {
     const b = e.target.closest('[data-s]');
     if (!b || b.disabled) return;
@@ -264,6 +306,8 @@
       return partChanged();
     }
     if (e.target.closest('[data-pick-none]')) { sel.clear(); return partChanged(); }
+    const pg = e.target.closest('[data-pick-togo]');
+    if (pg) { pickGroup(pg.dataset.pickTogo === '1'); return partChanged(); }
     const b = e.target.closest('[data-pick]');
     if (!b) return;
     const id = b.closest('[data-line]').dataset.line;

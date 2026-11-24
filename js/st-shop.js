@@ -333,6 +333,7 @@
       ftl.shift_waiter.checked = !!t.shift_waiter;
       ftl.shift_blind.checked = !!t.shift_blind;
       ftl.cost_fallback.checked = t.cost_fallback !== false;
+      ftl.togo_service.checked = !!t.togo_service;
       ftl.p_paper.value = p.paper || '58';
       ftl.p_font.value = p.font || 'm';
       ftl.p_copies.value = String(p.copies || 1);
@@ -358,6 +359,13 @@
     ftl.addEventListener('change', (e) => {
       const n = e.target.name || '';
       if (n.startsWith('p_')) { if (e.target.type !== 'text') saveTools('print'); return; }
+      if (n === 'togo_service') {               // รอบ P
+        sb.rpc('st_set_togo_service', { p_shop: shopId, p_on: e.target.checked }).then(({ data, error }) => {
+          if (error) { e.target.checked = !e.target.checked; return showMsg(thaiError(error)); }
+          current.tool_cfg = data; showMsg('บันทึกแล้ว ✓', 'ok');
+        });
+        return;
+      }
       saveTools(n);
     });
     ftl.addEventListener('input', (e) => {

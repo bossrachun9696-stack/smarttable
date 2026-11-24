@@ -1403,3 +1403,15 @@ html[data-width="large"] body { font-size: 17.5px; }
 @media (min-width: 1500px) {
   html[data-width="full"] .st-guest .st-gsec, html[data-width="full"] #item-groups { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
+
+/* ===== รอบ O: ห่อกลับบ้านในบิล ===== */
+.st-order-head .st-badge--togo { font-size: 12px; padding: 2px 8px; border-radius: 999px; font-style: normal; }
+.st-oline .st-badge--togo { font-size: 11px; padding: 1px 7px; border-radius: 999px; font-style: normal; white-space: nowrap; vertical-align: 1px; }
+.st-bs { width: 100%; text-align: left; font: inherit; color: inherit; grid-template-columns: 1fr; }
+.st-bs b { font-size: 16px; }
+.st-togo-box { border: 1.5px dashed #3B5BDB; background: color-mix(in srgb, #3B5BDB 7%, var(--st-card)); border-radius: 14px; padding: 10px 12px; margin: 0 0 12px; }
+.st-togo-box p { margin: 0 0 8px; }
+.st-togo-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.st-billgrp { margin: 0 0 10px; }
+.st-billgrp-h { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--st-line); margin-bottom: 4px; }
+.st-billgrp--togo .st-billgrp-h { color: #3B5BDB; }
