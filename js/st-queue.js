@@ -250,6 +250,25 @@
     load();
   });
 
+  // ---------- ล้างคิว (เจ้าของ/ผู้จัดการ · st-29) ----------
+  $('#q-clear').hidden = !canManage;
+  async function clearQueue(scope) {
+    const msg = scope === 'paid'
+      ? 'ปิดทุกคิวที่จ่ายครบแล้ว (ถือว่าลูกค้ารับของแล้ว)?'
+      : 'ล้างคิวค้างทั้งหมด?\n• คิวที่จ่ายครบ = ปิด (รับของแล้ว)\n• คิวที่ยังไม่จ่ายเลย = ยกเลิกออร์เดอร์ทั้งหมด\n• คิวที่จ่ายไปบางส่วน = ไม่แตะ ให้จัดการเอง\n\nย้อนกลับไม่ได้';
+    if (!confirm(msg)) return;
+    const { data, error } = await sb.rpc('st_takeaway_clear', { p_shop: shopId, p_scope: scope });
+    if (error) return showMsg(/st_takeaway_clear/.test(error.message || '') ? 'ยังไม่ได้รัน st-29-queue-clear.sql' : thaiError(error));
+    const parts = [];
+    if (data.picked) parts.push(`ปิด ${data.picked} คิว`);
+    if (data.cancelled) parts.push(`ยกเลิก ${data.cancelled} คิว`);
+    if (data.skipped) parts.push(`เหลือ ${data.skipped} คิว (${scope === 'paid' ? 'ยังค้างจ่าย' : 'จ่ายไปบางส่วน'})`);
+    showMsg(parts.length ? parts.join(' · ') + ' ✓' : 'ไม่มีคิวค้าง', 'ok');
+    load();
+  }
+  $('#q-clear-paid').addEventListener('click', () => clearQueue('paid'));
+  $('#q-clear-all').addEventListener('click', () => clearQueue('all'));
+
   // ---------- Realtime ----------
   const live = $('#live');
   const filter = `shop_id=eq.${shopId}`;

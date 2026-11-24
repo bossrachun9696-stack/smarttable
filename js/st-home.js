@@ -133,9 +133,92 @@
           <input type="checkbox" data-open${s.is_open ? ' checked' : ''}${can ? '' : ' disabled'} aria-label="เปิดร้าน ${esc(s.name)}">
           <span></span><em>${s.is_open ? 'เปิด' : 'ปิด'}</em>
         </label>
+        <div class="st-live" data-live hidden></div>
       </div>`;
     }).join('');
+    startLive(data);
   }
+
+  // ---------- แจ้งสด: ร้านไหนมีคนเปิดโต๊ะ / สั่งอาหาร (st-30) ----------
+  let liveSeen = null, liveTimer = null, liveChans = [], liveBusy = false, liveOff = false;
+  const ago = (iso) => {
+    const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    return m < 1 ? 'เมื่อกี้' : m < 60 ? m + ' นาทีที่แล้ว' : new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+  };
+  const EV_ICON = { order: '🍽️', queue: '🛍', open: '🪑', call: '🙋' };
+  let actx = null;
+  const ding = () => {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      [880, 1320].forEach((f, i) => {
+        const o = actx.createOscillator(), g = actx.createGain();
+        o.frequency.value = f; o.connect(g); g.connect(actx.destination);
+        const t = actx.currentTime + i * 0.16;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.15);
+        o.start(t); o.stop(t + 0.16);
+      });
+    } catch { /* ไม่เป็นไร */ }
+    try { navigator.vibrate && navigator.vibrate([120, 60, 120]); } catch { /* ไม่เป็นไร */ }
+  };
+  document.addEventListener('pointerdown', () => { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch { /* ไม่เป็นไร */ } }, { once: true });
+  const baseTitle = document.title;
+
+  async function loadLive() {
+    if (liveOff || liveBusy) return;
+    liveBusy = true;
+    const { data, error } = await sb.rpc('st_my_shops_live');
+    liveBusy = false;
+    if (error) { if (/st_my_shops_live/.test(error.message || '')) liveOff = true; return; }
+    const fresh = [];
+    let alerts = 0;
+    (data || []).forEach(x => {
+      const row = document.querySelector(`.st-shoprow[data-shop="${CSS.escape(x.shop_id)}"]`);
+      if (!row) return;
+      const box = row.querySelector('[data-live]');
+      const chips = [];
+      if (x.tables) chips.push(`<span>🪑 ${x.tables} โต๊ะ${x.guests ? ` · ${x.guests} คน` : ''}</span>`);
+      if (x.new_orders) chips.push(`<span class="hot">🍽️ ใหม่ ${x.new_orders}</span>`);
+      if (x.cooking) chips.push(`<span>🍳 กำลังทำ ${x.cooking}</span>`);
+      if (x.calls) chips.push(`<span class="hot">🙋 เรียก ${x.calls}</span>`);
+      if (x.confirm) chips.push(`<span class="hot">⏳ รอยืนยันโต๊ะ ${x.confirm}</span>`);
+      if (x.queue) chips.push(`<span>🛍 คิว ${x.queue}</span>`);
+      if (Number(x.sales)) chips.push(`<span>💰 ฿${Number(x.sales).toLocaleString('th-TH')}</span>`);
+      const last = (x.events || [])[0];
+      box.hidden = !chips.length && !last;
+      box.innerHTML = (chips.length ? `<div class="st-live-chips">${chips.join('')}</div>` : '')
+        + (last ? `<a class="st-live-last" href="orders.html?id=${encodeURIComponent(x.shop_id)}">${EV_ICON[last.kind] || '🔔'} ${esc(last.text)} · <small>${esc(ago(last.at))}</small></a>` : '');
+      row.classList.toggle('st-shoprow--busy', !!(x.new_orders || x.calls || x.confirm));
+      alerts += (x.new_orders || 0) + (x.calls || 0) + (x.confirm || 0);
+      (x.events || []).forEach(e => {
+        const k = e.kind + ':' + e.id;
+        if (liveSeen && !liveSeen.has(k)) fresh.push({ shop: row.dataset.name, e, row });
+        (liveSeen = liveSeen || new Set()).add(k);
+      });
+    });
+    if (!liveSeen) liveSeen = new Set();
+    document.title = (alerts ? `(${alerts}) ` : '') + baseTitle;
+    if (fresh.length) {
+      const f = fresh[0];
+      showMsg(`🔔 ${f.shop}: ${EV_ICON[f.e.kind] || ''} ${f.e.text}${fresh.length > 1 ? ` (+${fresh.length - 1})` : ''}`, 'ok');
+      fresh.forEach(x => { x.row.classList.remove('st-shoprow--flash'); void x.row.offsetWidth; x.row.classList.add('st-shoprow--flash'); });
+      ding();
+    }
+  }
+  const liveSoon = () => { clearTimeout(liveTimer); liveTimer = setTimeout(loadLive, 600); };
+  function startLive(shops) {
+    liveChans.forEach(c => sb.removeChannel(c));
+    liveChans = shops.slice(0, 10).map(s => {
+      const filter = 'shop_id=eq.' + s.id;
+      return sb.channel('st-home-' + s.id)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'st_orders', filter }, liveSoon)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'st_table_sessions', filter }, liveSoon)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'st_service_calls', filter }, liveSoon)
+        .subscribe();
+    });
+    loadLive();
+  }
+  setInterval(() => { if (!document.hidden) loadLive(); }, 20000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) loadLive(); });
   $('#shop-list').addEventListener('change', async (e) => {
     if (!e.target.matches('[data-open]')) return;
     const row = e.target.closest('[data-shop]');

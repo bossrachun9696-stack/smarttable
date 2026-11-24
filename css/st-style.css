@@ -1431,3 +1431,15 @@ html[data-width="large"] body { font-size: 17.5px; }
 .st-er-imgbox[hidden] { display: none; }
 .st-er-imgpanel { background: var(--st-card, #fff); border-radius: 18px; padding: 14px; max-width: 420px; width: 100%; max-height: 92dvh; overflow: auto; display: grid; gap: 10px; text-align: center; }
 .st-er-imgpanel img { width: 100%; height: auto; border: 1px solid var(--st-line); border-radius: 8px; }
+
+/* st-30 · ร้านของฉัน แจ้งสด */
+.st-live { grid-column: 1 / -1; margin: -2px 4px 6px 62px; font-size: .84rem; }
+.st-live-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.st-live-chips span { padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, var(--st-muted) 12%, transparent); white-space: nowrap; }
+.st-live-chips span.hot { background: var(--st-err, #c0392b); color: #fff; font-weight: 600; }
+.st-live-last { display: block; color: inherit; text-decoration: none; opacity: .85; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-live-last small { opacity: .7; }
+.st-shoprow--busy { box-shadow: inset 3px 0 0 var(--st-err, #c0392b); border-radius: 12px; }
+.st-shoprow--flash { animation: st-flash 1.6s ease-out 2; }
+@keyframes st-flash { 0% { background: color-mix(in srgb, #f5b041 45%, transparent); } 100% { background: transparent; } }
+@media (max-width: 420px) { .st-live { margin-left: 8px; } }

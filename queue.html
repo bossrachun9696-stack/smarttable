@@ -75,6 +75,14 @@
       <button type="button" data-tab="done">เสร็จแล้ว <b id="n-done"></b></button>
     </nav>
     <div id="q-list"></div>
+    <div id="q-clear" class="st-card" hidden style="margin-top:16px">
+      <strong>🧹 ล้างคิว</strong>
+      <p style="margin:4px 0 10px;font-size:.88rem;color:var(--st-muted)">เลขคิวเริ่ม 1 ใหม่ทุกวันเอง · คิวที่ไม่มีความเคลื่อนไหว 12 ชม. ระบบปิดให้ · ใช้ปุ่มนี้เมื่ออยากเคลียร์คิวค้างเอง</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <button type="button" class="st-chip" id="q-clear-paid">✓ ปิดคิวที่จ่ายครบแล้ว</button>
+        <button type="button" class="st-chip" id="q-clear-all">🗑 ล้างคิวค้างทั้งหมด</button>
+      </div>
+    </div>
   </div>
 </main>
 
