@@ -348,6 +348,13 @@
   // ---------- แอปบนมือถือ (PWA): ติดตั้งได้ + เปิดได้ตอนเน็ตหลุดชั่วคราว ----------
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => null); });
+    // ตัวเลขบนไอคอนแอป: เปิดแอปแล้วนับใหม่ตามแจ้งเตือนที่ยังค้าง (หน้าโฮมส่งจำนวนงานค้างจริงทับอีกที)
+    const badgeSync = () => {
+      if (document.hidden) return;
+      navigator.serviceWorker.ready.then(r => r.active && r.active.postMessage({ type: 'st-badge' })).catch(() => null);
+    };
+    window.addEventListener('load', badgeSync);
+    document.addEventListener('visibilitychange', badgeSync);
   }
 
   // เวลาที่เปิดดูหน้าต่าง ๆ ล่าสุด (ใช้นับป้ายแจ้งเตือนบนหน้าร้าน) · เก็บในเครื่อง

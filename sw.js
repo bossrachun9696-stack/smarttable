@@ -3,7 +3,8 @@
 // * โหลดจากเน็ตก่อนเสมอ (ไฟล์ใหม่บน GitHub ขึ้นทันที) — ใช้ของที่เก็บไว้เฉพาะตอนออฟไลน์
 // * ไม่เก็บข้อมูลจาก Supabase (ออร์เดอร์ เงิน) — เก็บแค่ไฟล์หน้าเว็บของเว็บนี้
 // * แจ้งเตือน Push (st-31): ออร์เดอร์ใหม่ / เรียกพนักงาน / เปิดโต๊ะ / คิว — ส่งจาก Edge Function st-push
-const VERSION = 'st-v15';
+const VERSION = 'st-v16';
+const META = 'stmeta-badge';   // ห้ามขึ้นต้นด้วย 'st-' (activate จะลบทิ้ง)
 const SHELL = [
   './', 'index.html', 'home.html', 'settings.html', 'offline.html', 'manifest.webmanifest',
   'css/st-style.css', 'js/st-auth.js', 'js/st-config.js',
@@ -65,19 +66,49 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   let d = {};
   try { d = event.data ? event.data.json() : {}; } catch { d = { title: 'SmartTable', body: event.data ? event.data.text() : '' }; }
-  event.waitUntil(self.registration.showNotification(d.title || 'SmartTable', {
-    body: d.body || '',
-    tag: d.tag || undefined,
-    renotify: !!d.tag,
-    icon: 'icons/st-192.png',
-    badge: 'icons/favicon-32.png',
-    vibrate: [180, 80, 180],
-    data: { url: d.url || 'home.html' }
-  }));
+  event.waitUntil((async () => {
+    await self.registration.showNotification(d.title || 'SmartTable', {
+      body: d.body || '',
+      tag: d.tag || undefined,
+      renotify: !!d.tag,
+      icon: 'icons/st-192.png',
+      badge: 'icons/favicon-32.png',
+      vibrate: [180, 80, 180],
+      data: { url: d.url || 'home.html' }
+    });
+    await setBadge(null, 1);
+  })());
+});
+
+// ตัวเลขบนไอคอนแอป: n = ค่าที่ตั้ง · add = บวกเพิ่มจากค่าเดิม
+async function setBadge(n, add) {
+  try {
+    const cache = await caches.open(META);
+    if (n == null) {
+      const hit = await cache.match('badge');
+      n = (hit ? parseInt(await hit.text(), 10) || 0 : 0) + (add || 0);
+    }
+    n = Math.max(0, Math.min(999, n | 0));
+    await cache.put('badge', new Response(String(n)));
+    if (n > 0 && self.navigator.setAppBadge) await self.navigator.setAppBadge(n);
+    else if (self.navigator.clearAppBadge) await self.navigator.clearAppBadge();
+  } catch { /* อุปกรณ์ไม่รองรับป้าย */ }
+}
+
+// หน้าแอปส่งจำนวนงานค้างจริงมา (หน้าโฮม) หรือขอให้นับตามแจ้งเตือนที่ยังค้าง
+self.addEventListener('message', (event) => {
+  const m = event.data || {};
+  if (m.type !== 'st-badge') return;
+  event.waitUntil((async () => {
+    if (typeof m.count === 'number') return setBadge(m.count);
+    const left = (await self.registration.getNotifications()).length;
+    return setBadge(left);
+  })());
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  event.waitUntil(self.registration.getNotifications().then(l => setBadge(l.length)).catch(() => null));
   const target = new URL((event.notification.data && event.notification.data.url) || 'home.html', self.registration.scope).href;
   event.waitUntil((async () => {
     const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });

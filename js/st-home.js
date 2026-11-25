@@ -197,6 +197,9 @@
     });
     if (!liveSeen) liveSeen = new Set();
     document.title = (alerts ? `(${alerts}) ` : '') + baseTitle;
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(r => r.active && r.active.postMessage({ type: 'st-badge', count: alerts })).catch(() => null);
+    }
     if (fresh.length) {
       const f = fresh[0];
       showMsg(`🔔 ${f.shop}: ${EV_ICON[f.e.kind] || ''} ${f.e.text}${fresh.length > 1 ? ` (+${fresh.length - 1})` : ''}`, 'ok');
