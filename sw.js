@@ -1,9 +1,9 @@
 // ===== SmartTable service worker =====
 // ทำให้ติดตั้งเป็นแอปได้ + เปิดหน้าเดิมได้ตอนเน็ตหลุดชั่วคราว
-// * โหลดจากเน็ตก่อนเสมอ (ไฟล์ใหม่บน GitHub ขึ้นทันที) — ใช้ของที่เก็บไว้เฉพาะตอนออฟไลน์
+// * เปิดจากไฟล์ในเครื่องก่อน แล้วอัปเดตเบื้องหลัง (ต้องเปลี่ยน VERSION ทุกครั้งที่อัปโหลด)
 // * ไม่เก็บข้อมูลจาก Supabase (ออร์เดอร์ เงิน) — เก็บแค่ไฟล์หน้าเว็บของเว็บนี้
 // * แจ้งเตือน Push (st-31): ออร์เดอร์ใหม่ / เรียกพนักงาน / เปิดโต๊ะ / คิว — ส่งจาก Edge Function st-push
-const VERSION = 'st-v16';
+const VERSION = 'st-v17';
 const META = 'stmeta-badge';   // ห้ามขึ้นต้นด้วย 'st-' (activate จะลบทิ้ง)
 const SHELL = [
   './', 'index.html', 'home.html', 'settings.html', 'offline.html', 'manifest.webmanifest',
@@ -27,36 +27,29 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// เปิดเร็ว (stale-while-revalidate): ส่งไฟล์หน้าเว็บจากเครื่องทันที แล้วโหลดตัวใหม่เก็บไว้เบื้องหลัง (เปิดครั้งหน้าได้ตัวใหม่)
+// ไม่มีในเครื่อง = รอเน็ต · ออฟไลน์ = offline.html · ข้อมูลร้าน/ออร์เดอร์มาจาก Supabase เสมอ (ไม่เก็บ)
+// อัปเดตแอป: เปลี่ยนเลข VERSION ทุกครั้งที่อัปโหลดไฟล์ใหม่
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;            // Supabase / CDN / ฟอนต์ ปล่อยเบราว์เซอร์จัดการ
   if (!url.pathname.startsWith(new URL(self.registration.scope).pathname)) return;
+  const nav = req.mode === 'navigate';
+  const key = nav ? new Request(url.origin + url.pathname) : req;   // หน้าเว็บ: ไม่สน ?shop=… (ข้อมูลอ่านจาก URL ตอนเปิด)
 
   event.respondWith((async () => {
-    try {
-      // เน็ตช้า/สัญญาณอ่อน: รอเน็ตไม่เกิน 4 วินาที แล้วใช้ไฟล์ที่เก็บไว้แทน (ถ้ามี) ไม่ค้างหน้าขาว
-      const net = fetch(req);
-      const res = await Promise.race([net, new Promise((_, rej) => setTimeout(() => rej(new Error('slow')), 4000))])
-        .catch(async (e) => {
-          const hit = await (await caches.open(VERSION)).match(req);
-          if (hit) { net.then(r => { if (r && r.ok && r.type === 'basic') caches.open(VERSION).then(c => c.put(req, r)); }).catch(() => null); return hit; }
-          return net;                                  // ไม่มีในเครื่อง -> รอเน็ตต่อ
-        });
-      if (res && res.ok && res.type === 'basic') {
-        const copy = res.clone();
-        caches.open(VERSION).then(c => c.put(req, copy)).catch(() => null);
-      }
+    const cache = await caches.open(VERSION);
+    const hit = await cache.match(key) || (nav ? await cache.match(key, { ignoreSearch: true }) : null);
+    const net = fetch(req).then((res) => {
+      if (res && res.ok && res.type === 'basic') cache.put(key, res.clone()).catch(() => null);
       return res;
-    } catch (err) {
-      const cache = await caches.open(VERSION);
-      const hit = await cache.match(req) || await cache.match(req, { ignoreSearch: true });
-      if (hit) return hit;
-      if (req.mode === 'navigate') {
-        const off = await cache.match('offline.html');
-        if (off) return off;
-      }
+    });
+    if (hit) { event.waitUntil(net.catch(() => null)); return hit; }
+    try { return await net; }
+    catch (err) {
+      if (nav) { const off = await cache.match('offline.html'); if (off) return off; }
       throw err;
     }
   })());

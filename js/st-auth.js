@@ -240,7 +240,7 @@
     // สมัครแล้วยืนยันอีเมลทีหลัง: ตั้งรหัสกู้คืนที่กรอกไว้ตอนสมัครให้ (ระบบบัญชีร่วมของ DarkChat)
     try {
       const p = JSON.parse(localStorage.getItem('darkchat_rec_pending') || 'null');
-      const { data: { user } } = await sb.auth.getUser();
+      const user = p && p.code ? (await sb.auth.getUser()).data.user : null;   // ถามเซิร์ฟเวอร์เฉพาะตอนมีรหัสรอตั้ง
       if (p && p.code && user && (!p.email || p.email === String(user.email || '').toLowerCase())) {
         const { error: re } = await sb.rpc('acct_set_recovery', { p_code: p.code });
         if (!re) localStorage.removeItem('darkchat_rec_pending');

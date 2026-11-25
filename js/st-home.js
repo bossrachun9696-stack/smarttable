@@ -6,6 +6,10 @@
   const user = await requireUser();
   if (!user) return;
   history.replaceState(null, '', location.pathname);
+  // เปิดเร็ว: ขอรายการร้าน + สิทธิ์ส่วนขยาย พร้อมกับโปรไฟล์ (เดิมรอทีละอย่าง)
+  const go = (b) => b.then(r => r, e => ({ data: null, error: e }));
+  const PRE = { shops: go(sb.rpc('st_my_shops')), ext: go(sb.rpc('st_ext_status')) };
+  const pre = (k, fresh) => { const p = PRE[k]; PRE[k] = null; return p || fresh(); };
 
   sb.auth.onAuthStateChange((event) => { if (event === 'SIGNED_OUT') location.replace('index.html'); });
 
@@ -69,7 +73,7 @@
   // ---------- รอบ R: สิทธิ์ส่วนขยาย SmartTable (ซื้อ/ทดลองใน DarkChat) ----------
   let EXTS = null;
   async function loadExt() {
-    const { data, error } = await sb.rpc('st_ext_status');
+    const { data, error } = await pre('ext', () => sb.rpc('st_ext_status'));
     if (error) { EXTS = null; return; }            // ยังไม่ได้รัน st-26 = ไม่มีด่าน
     EXTS = data;
     const card = $('#ext-card');
@@ -93,7 +97,7 @@
 
   // ---------- รายการร้าน ----------
   async function loadShops() {
-    const { data, error } = await sb.rpc('st_my_shops');
+    const { data, error } = await pre('shops', () => sb.rpc('st_my_shops'));
     if (error) return showMsg(thaiError(error));
     const list = $('#shop-list');
     if (!data.length) {
